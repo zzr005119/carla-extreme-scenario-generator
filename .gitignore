@@ -1,0 +1,24 @@
+﻿# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# 虚拟环境
+venv/
+.venv/
+env/
+
+# 传感器数据（不入库）
+output/
+frame_*.png
+*.npy
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
