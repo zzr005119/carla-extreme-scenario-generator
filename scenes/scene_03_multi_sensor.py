@@ -28,7 +28,13 @@ weather = carla.WeatherParameters(
 world.set_weather(weather)
 print('[WEATHER] 暴雨 + 浓雾 + 夜间')
 
-# ==================== 3. 生成主车 ====================
+# ==================== 3. 交通管理器（忽略红绿灯） ====================
+traffic_manager = client.get_trafficmanager(8000)
+traffic_manager.set_global_distance_to_leading_vehicle(2.5)
+traffic_manager.set_synchronous_mode(False)
+print('[TRAFFIC] 交通管理器已配置（忽略红绿灯）')
+
+# ==================== 4. 生成主车 ====================
 bp_lib = world.get_blueprint_library()
 ego_bp = bp_lib.filter('vehicle.tesla.model3')[0]
 spawn_points = world.get_map().get_spawn_points()
@@ -42,7 +48,7 @@ if not ego_vehicle:
             break
 print(f'[EGO] {ego_vehicle.type_id}')
 
-# ==================== 4. 传感器安装 ====================
+# ==================== 5. 传感器安装 ====================
 SENSOR_POS = carla.Transform(carla.Location(x=1.5, z=2.4))
 
 rgb_bp = bp_lib.find('sensor.camera.rgb')
@@ -65,7 +71,7 @@ sem_cam = world.spawn_actor(sem_bp, SENSOR_POS, attach_to=ego_vehicle)
 
 print('[SENSORS] RGB + Depth + SemanticSeg 已安装')
 
-# ==================== 5. 传感器回调 ====================
+# ==================== 6. 传感器回调 ====================
 
 def save_rgb(image):
     image.save_to_disk(os.path.join(OUTPUT_DIR, 'rgb', f'frame_{image.frame:06d}.png'))
@@ -94,7 +100,7 @@ depth_cam.listen(save_depth)
 sem_cam.listen(save_semantic)
 print('[CALLBACK] 三路传感器回调已注册')
 
-# ==================== 6. 前车 ====================
+# ==================== 7. 前车 ====================
 lead_bp = bp_lib.filter('vehicle.audi.a2')[0]
 yaw_rad = math.radians(ego_sp.rotation.yaw)
 lead_x = ego_sp.location.x + 25 * math.cos(yaw_rad)
@@ -112,40 +118,45 @@ if not lead_vehicle:
                 break
 print(f'[LEAD] 前车: {lead_vehicle.type_id}' if lead_vehicle else '[LEAD] 失败')
 
-# ==================== 7. 行人 ====================
+# ==================== 8. 行人（路边待命，不设目标=不动） ====================
 road_right = 8.0
 walker_bp = bp_lib.filter('walker.pedestrian.0007')[0]
 wx = ego_sp.location.x + 30 * math.cos(yaw_rad) - road_right * math.sin(yaw_rad)
 wy = ego_sp.location.y + 30 * math.sin(yaw_rad) + road_right * math.cos(yaw_rad)
 walker_start = carla.Location(x=wx, y=wy, z=ego_sp.location.z)
 walker = world.try_spawn_actor(walker_bp, carla.Transform(walker_start))
-walker_ctrl = None
 
+# 横穿终点（道路左侧）
 dx = ego_sp.location.x + 30 * math.cos(yaw_rad) + road_right * math.sin(yaw_rad)
 dy = ego_sp.location.y + 30 * math.sin(yaw_rad) - road_right * math.cos(yaw_rad)
 walker_dest = carla.Location(x=dx, y=dy, z=ego_sp.location.z)
 
+walker_ctrl = None
 if walker:
     ctrl_bp = bp_lib.find('controller.ai.walker')
     walker_ctrl = world.spawn_actor(ctrl_bp, carla.Transform(), attach_to=walker)
     walker_ctrl.start()
-    walker_ctrl.stop()
-    print(f'[WALKER] 行人已在路边等待 ({wx:.1f}, {wy:.1f})')
+    # 不设置 go_to_location，行人原地站立待命
+    print(f'[WALKER] 行人已在路边待命 ({wx:.1f}, {wy:.1f})')
 else:
     print('[WALKER] 失败')
 
-# ==================== 8. 运行场景 ====================
-ego_vehicle.set_autopilot(True)
+# ==================== 9. 开启自动驾驶（忽略红绿灯） ====================
+ego_vehicle.set_autopilot(True, 8000)
+traffic_manager.ignore_lights_percentage(ego_vehicle, 100)
 if lead_vehicle:
-    lead_vehicle.set_autopilot(True)
+    lead_vehicle.set_autopilot(True, 8000)
+    traffic_manager.ignore_lights_percentage(lead_vehicle, 100)
+print('[AUTOPILOT] 两车自动驾驶已开启 (忽略红绿灯)')
 
+# ==================== 10. 运行场景 ====================
 print()
 print('=' * 50)
 print('  多传感器场景运行中 (20s)')
 print('  RGB     -> output/rgb/')
 print('  Depth   -> output/depth/')
 print('  SemSeg  -> output/semantic/')
-print('  第 5s 前车急刹 | 第 3s 行人突然冲出横穿')
+print('  红绿灯全部忽略 | 第 5s 前车急刹 | 第 3s 行人冲出')
 print('=' * 50)
 print()
 
@@ -162,28 +173,29 @@ try:
 
         msg = f'  [{t:2d}s] 速度:{speed:5.1f}km/h | 车距:{dist:5.1f}m'
 
+        # 第 3 秒：行人突然冲出
         if t == 3 and walker_ctrl and not walker_triggered:
-            walker_ctrl.start()
             walker_ctrl.go_to_location(walker_dest)
             walker_ctrl.set_max_speed(3.5)
             walker_triggered = True
-            msg += ' 行人突然冲出!'
+            msg += ' >>> 行人冲出!'
 
+        # 第 5 秒：前车急刹
         if t == 5 and lead_vehicle and not brake_done:
             lead_vehicle.apply_control(carla.VehicleControl(throttle=0.0, brake=1.0))
             brake_done = True
-            msg += ' 急刹!'
+            msg += ' >>> 急刹!'
 
         print(msg)
         if lead_vehicle and dist < 1.5:
-            print('  碰撞!')
+            print('  !!! 碰撞 !!!')
             break
 
 except KeyboardInterrupt:
     print()
     print('[STOP] 用户中断')
 
-# ==================== 9. 清理 ====================
+# ==================== 11. 清理 ====================
 print()
 print('[CLEANUP]')
 for s in [rgb_cam, depth_cam, sem_cam]:
