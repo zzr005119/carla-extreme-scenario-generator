@@ -28,11 +28,21 @@ weather = carla.WeatherParameters(
 world.set_weather(weather)
 print('[WEATHER] 暴雨 + 浓雾 + 夜间')
 
-# ==================== 3. 交通管理器（忽略红绿灯） ====================
-traffic_manager = client.get_trafficmanager(8000)
+# ==================== 3. 交通管理器与绿灯锁定 ====================
+TM_PORT = 8000
+traffic_manager = client.get_trafficmanager(TM_PORT)
 traffic_manager.set_global_distance_to_leading_vehicle(2.5)
 traffic_manager.set_synchronous_mode(False)
-print('[TRAFFIC] 交通管理器已配置（忽略红绿灯）')
+
+traffic_lights = list(world.get_actors().filter('traffic.traffic_light*'))
+traffic_light_states = [
+    (light, light.get_state(), light.is_frozen())
+    for light in traffic_lights
+]
+for light in traffic_lights:
+    light.set_state(carla.TrafficLightState.Green)
+    light.freeze(True)
+print(f'[TRAFFIC] {len(traffic_lights)} 个交通灯已锁定为绿灯')
 
 # ==================== 4. 生成主车 ====================
 bp_lib = world.get_blueprint_library()
@@ -118,8 +128,9 @@ if not lead_vehicle:
                 break
 print(f'[LEAD] 前车: {lead_vehicle.type_id}' if lead_vehicle else '[LEAD] 失败')
 
-# ==================== 8. 行人（路边待命，不设目标=不动） ====================
+# ==================== 8. 行人（路边待命 -> 直接冲出） ====================
 road_right = 8.0
+walker_speed = 4.5
 walker_bp = bp_lib.filter('walker.pedestrian.0007')[0]
 wx = ego_sp.location.x + 30 * math.cos(yaw_rad) - road_right * math.sin(yaw_rad)
 wy = ego_sp.location.y + 30 * math.sin(yaw_rad) + road_right * math.cos(yaw_rad)
@@ -129,25 +140,32 @@ walker = world.try_spawn_actor(walker_bp, carla.Transform(walker_start))
 # 横穿终点（道路左侧）
 dx = ego_sp.location.x + 30 * math.cos(yaw_rad) + road_right * math.sin(yaw_rad)
 dy = ego_sp.location.y + 30 * math.sin(yaw_rad) - road_right * math.cos(yaw_rad)
-walker_dest = carla.Location(x=dx, y=dy, z=ego_sp.location.z)
+crossing_dx = dx - wx
+crossing_dy = dy - wy
+crossing_length = math.hypot(crossing_dx, crossing_dy)
+walker_direction = carla.Vector3D(
+    x=crossing_dx / crossing_length,
+    y=crossing_dy / crossing_length,
+    z=0.0,
+)
 
-walker_ctrl = None
 if walker:
-    ctrl_bp = bp_lib.find('controller.ai.walker')
-    walker_ctrl = world.spawn_actor(ctrl_bp, carla.Transform(), attach_to=walker)
-    walker_ctrl.start()
-    # 不设置 go_to_location，行人原地站立待命
+    walker.apply_control(carla.WalkerControl(
+        direction=walker_direction,
+        speed=0.0,
+        jump=False,
+    ))
     print(f'[WALKER] 行人已在路边待命 ({wx:.1f}, {wy:.1f})')
 else:
     print('[WALKER] 失败')
 
 # ==================== 9. 开启自动驾驶（忽略红绿灯） ====================
-ego_vehicle.set_autopilot(True, 8000)
+ego_vehicle.set_autopilot(True, TM_PORT)
 traffic_manager.ignore_lights_percentage(ego_vehicle, 100)
 if lead_vehicle:
-    lead_vehicle.set_autopilot(True, 8000)
+    lead_vehicle.set_autopilot(True, TM_PORT)
     traffic_manager.ignore_lights_percentage(lead_vehicle, 100)
-print('[AUTOPILOT] 两车自动驾驶已开启 (忽略红绿灯)')
+print('[AUTOPILOT] 两车自动驾驶已开启，且忽略信号灯规则')
 
 # ==================== 10. 运行场景 ====================
 print()
@@ -173,18 +191,34 @@ try:
 
         msg = f'  [{t:2d}s] 速度:{speed:5.1f}km/h | 车距:{dist:5.1f}m'
 
-        # 第 3 秒：行人突然冲出
-        if t == 3 and walker_ctrl and not walker_triggered:
-            walker_ctrl.go_to_location(walker_dest)
-            walker_ctrl.set_max_speed(3.5)
+        # 冻结状态下持续保持全图绿灯
+        for light in traffic_lights:
+            if light.is_alive:
+                light.set_state(carla.TrafficLightState.Green)
+                light.freeze(True)
+
+        # 第 3 秒：绕过导航网格，直接驱动行人本体冲出
+        if t == 3 and walker and not walker_triggered:
             walker_triggered = True
             msg += ' >>> 行人冲出!'
+        if walker_triggered and walker:
+            walker.apply_control(carla.WalkerControl(
+                direction=walker_direction,
+                speed=walker_speed,
+                jump=False,
+            ))
 
         # 第 5 秒：前车急刹
         if t == 5 and lead_vehicle and not brake_done:
-            lead_vehicle.apply_control(carla.VehicleControl(throttle=0.0, brake=1.0))
+            lead_vehicle.set_autopilot(False, TM_PORT)
             brake_done = True
             msg += ' >>> 急刹!'
+        if brake_done and lead_vehicle:
+            lead_vehicle.apply_control(carla.VehicleControl(
+                throttle=0.0,
+                brake=1.0,
+                hand_brake=False,
+            ))
 
         print(msg)
         if lead_vehicle and dist < 1.5:
@@ -201,7 +235,13 @@ print('[CLEANUP]')
 for s in [rgb_cam, depth_cam, sem_cam]:
     s.stop()
 
-for a in [walker_ctrl, walker, lead_vehicle, ego_vehicle, rgb_cam, depth_cam, sem_cam]:
+for light, state, was_frozen in traffic_light_states:
+    if light.is_alive:
+        light.freeze(False)
+        light.set_state(state)
+        light.freeze(was_frozen)
+
+for a in [walker, lead_vehicle, ego_vehicle, rgb_cam, depth_cam, sem_cam]:
     try:
         a.destroy() if a else None
     except:

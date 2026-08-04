@@ -1,0 +1,75 @@
+{
+  "scenario": {
+    "name": "multi_hazard_rainy_night",
+    "duration_seconds": 20.0,
+    "ego_spawn_index": 40,
+    "traffic_manager_port": 8000,
+    "stop_on_collision": false
+  },
+  "weather": {
+    "cloudiness": 100.0,
+    "precipitation": 95.0,
+    "precipitation_deposits": 85.0,
+    "wind_intensity": 70.0,
+    "fog_density": 85.0,
+    "fog_distance": 8.0,
+    "sun_altitude_angle": -15.0,
+    "wetness": 90.0
+  },
+  "traffic": {
+    "force_green_lights": true,
+    "ignore_lights_percentage": 100.0,
+    "leading_distance_m": 2.5
+  },
+  "ego_vehicle": {
+    "blueprint": "vehicle.tesla.model3"
+  },
+  "lead_vehicle": {
+    "blueprint": "vehicle.audi.a2",
+    "initial_distance_m": 25.0,
+    "brake_trigger_seconds": 5.0,
+    "brake_intensity": 1.0
+  },
+  "pedestrian": {
+    "blueprint": "walker.pedestrian.0007",
+    "forward_distance_m": 30.0,
+    "roadside_offset_m": 8.0,
+    "spawn_z_offset_m": 0.5,
+    "trigger_seconds": 3.0,
+    "speed_mps": 4.5
+  },
+  "sensors": {
+    "transform": {
+      "x": 1.5,
+      "y": 0.0,
+      "z": 2.4,
+      "pitch": 0.0,
+      "yaw": 0.0,
+      "roll": 0.0
+    },
+    "camera": {
+      "width": 1280,
+      "height": 720,
+      "fov": 90.0,
+      "sensor_tick": 0.1
+    },
+    "rgb": {
+      "enabled": true
+    },
+    "depth": {
+      "enabled": true,
+      "visualization_max_distance_m": 100.0
+    },
+    "semantic": {
+      "enabled": true,
+      "save_raw_labels": true
+    },
+    "collision": {
+      "enabled": true
+    }
+  },
+  "output": {
+    "root": "../output",
+    "timestamp_format": "%Y%m%d_%H%M%S"
+  }
+}
