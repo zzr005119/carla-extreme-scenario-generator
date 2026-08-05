@@ -1,0 +1,37 @@
+{
+  "batch_name": "rainy_night_variants",
+  "base_config": "multi_hazard_rainy_night.json",
+  "continue_on_error": true,
+  "variants": [
+    {
+      "name": "baseline",
+      "overrides": {}
+    },
+    {
+      "name": "dense_fog",
+      "overrides": {
+        "weather.fog_density": 95.0,
+        "weather.fog_distance": 5.0
+      }
+    },
+    {
+      "name": "late_braking",
+      "overrides": {
+        "lead_vehicle.brake_trigger_seconds": 7.0
+      }
+    },
+    {
+      "name": "fast_pedestrian",
+      "overrides": {
+        "pedestrian.speed_mps": 6.0
+      }
+    },
+    {
+      "name": "short_headway",
+      "overrides": {
+        "lead_vehicle.initial_distance_m": 18.0,
+        "lead_vehicle.brake_trigger_seconds": 4.0
+      }
+    }
+  ]
+}

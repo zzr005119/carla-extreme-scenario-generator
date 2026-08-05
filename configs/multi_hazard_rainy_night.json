@@ -68,6 +68,33 @@
       "enabled": true
     }
   },
+  "risk_evaluation": {
+    "method": "heuristic_v1",
+    "vehicle_distance_buffer_m": 4.5,
+    "ttc": {
+      "critical_seconds": 1.0,
+      "safe_seconds": 5.0,
+      "weight": 35.0
+    },
+    "lead_distance": {
+      "critical_m": 2.0,
+      "safe_m": 10.0,
+      "weight": 15.0
+    },
+    "pedestrian_distance": {
+      "critical_m": 1.0,
+      "safe_m": 8.0,
+      "weight": 20.0
+    },
+    "collision": {
+      "weight": 30.0
+    },
+    "levels": {
+      "medium": 25.0,
+      "high": 50.0,
+      "critical": 75.0
+    }
+  },
   "output": {
     "root": "../output",
     "timestamp_format": "%Y%m%d_%H%M%S"

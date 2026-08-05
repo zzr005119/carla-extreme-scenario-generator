@@ -5,6 +5,7 @@ import argparse
 import json
 import math
 import os
+import sys
 import threading
 import time
 from datetime import datetime
@@ -15,6 +16,18 @@ from PIL import Image
 
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from core.risk_metrics import (  # noqa: E402
+    calculate_ttc,
+    evaluate_risk,
+    vehicle_speed_kmh,
+    write_telemetry_csv,
+)
+
+
 DEFAULT_CONFIG = os.path.join(
     SCRIPT_DIR,
     "..",
@@ -55,6 +68,7 @@ def validate_config(config):
         "lead_vehicle",
         "pedestrian",
         "sensors",
+        "risk_evaluation",
         "output",
     }
     missing = sorted(required_sections - set(config))
@@ -98,6 +112,22 @@ def validate_config(config):
     camera_names = ("rgb", "depth", "semantic")
     if not any(config["sensors"][name]["enabled"] for name in camera_names):
         raise ValueError("RGB、Depth、Semantic 至少启用一个")
+
+    risk_config = config["risk_evaluation"]
+    risk_thresholds = (
+        ("ttc", "critical_seconds", "safe_seconds"),
+        ("lead_distance", "critical_m", "safe_m"),
+        ("pedestrian_distance", "critical_m", "safe_m"),
+    )
+    for section, critical_key, safe_key in risk_thresholds:
+        critical_value = float(risk_config[section][critical_key])
+        safe_value = float(risk_config[section][safe_key])
+        if critical_value < 0 or safe_value <= critical_value:
+            raise ValueError(
+                f"risk_evaluation.{section} 要求 0 <= critical < safe"
+            )
+    if float(risk_config["vehicle_distance_buffer_m"]) < 0:
+        raise ValueError("risk_evaluation.vehicle_distance_buffer_m 不能小于 0")
 
 
 def create_run_directory(config_path, config):
@@ -361,15 +391,30 @@ def main():
             "status": "starting",
             "collision_count": 0,
             "minimum_lead_distance_m": None,
+            "minimum_lead_gap_m": None,
+            "minimum_ttc_seconds": None,
+            "minimum_pedestrian_distance_m": None,
+            "risk_evaluation": None,
         },
     }
 
+    risk_config = config["risk_evaluation"]
+    telemetry_rows = []
+    minimum_lead_distance = None
+    minimum_lead_gap_m = None
+    minimum_ttc_seconds = None
+    minimum_pedestrian_distance_m = None
     actors = []
     sensor_actors = []
     traffic_light_states = []
+    client = None
     world = None
     original_weather = None
     start_time = None
+    walker = None
+    walker_direction = None
+    callback_condition = threading.Condition()
+    active_sensor_callbacks = 0
 
     def record_event(event_type, elapsed_seconds, **details):
         event = {
@@ -383,6 +428,74 @@ def main():
     def count_frame(sensor_name):
         with metadata_lock:
             frame_counts[sensor_name] += 1
+
+    def guarded_callback(callback):
+        def listener(data):
+            nonlocal active_sensor_callbacks
+            with callback_condition:
+                active_sensor_callbacks += 1
+            try:
+                callback(data)
+            finally:
+                with callback_condition:
+                    active_sensor_callbacks -= 1
+                    callback_condition.notify_all()
+
+        return listener
+
+    def persist_results(cleanup_status):
+        if start_time is not None:
+            metadata["result"]["actual_duration_seconds"] = round(
+                time.monotonic() - start_time,
+                3,
+            )
+        metadata["finished_at"] = datetime.now().astimezone().isoformat(
+            timespec="seconds"
+        )
+        metadata["cleanup"] = {"status": cleanup_status}
+        with metadata_lock:
+            metadata["frames"] = dict(frame_counts)
+
+        if minimum_lead_gap_m is not None and math.isfinite(minimum_lead_gap_m):
+            metadata["result"]["minimum_lead_gap_m"] = round(
+                minimum_lead_gap_m,
+                3,
+            )
+        if minimum_ttc_seconds is not None:
+            metadata["result"]["minimum_ttc_seconds"] = round(
+                minimum_ttc_seconds,
+                3,
+            )
+        if minimum_pedestrian_distance_m is not None:
+            metadata["result"]["minimum_pedestrian_distance_m"] = round(
+                minimum_pedestrian_distance_m,
+                3,
+            )
+        if telemetry_rows:
+            metadata["result"]["risk_evaluation"] = evaluate_risk(
+                minimum_ttc_seconds,
+                (
+                    minimum_lead_gap_m
+                    if minimum_lead_gap_m is not None
+                    and math.isfinite(minimum_lead_gap_m)
+                    else None
+                ),
+                minimum_pedestrian_distance_m,
+                metadata["result"]["collision_count"],
+                risk_config,
+            )
+
+        telemetry_path = os.path.join(run_dir, "telemetry.csv")
+        write_telemetry_csv(telemetry_path, telemetry_rows)
+        metadata["telemetry"] = {
+            "path": telemetry_path,
+            "sample_count": len(telemetry_rows),
+        }
+
+        metadata_path = os.path.join(run_dir, "metadata.json")
+        with open(metadata_path, "w", encoding="utf-8") as file:
+            json.dump(metadata, file, ensure_ascii=False, indent=2)
+        return metadata_path
 
     try:
         client = carla.Client("localhost", 2000)
@@ -480,7 +593,7 @@ def main():
                 )
                 count_frame("rgb")
 
-            rgb_camera.listen(save_rgb)
+            rgb_camera.listen(guarded_callback(save_rgb))
 
         if sensor_config["depth"]["enabled"]:
             depth_blueprint = blueprint_library.find("sensor.camera.depth")
@@ -518,7 +631,7 @@ def main():
                 )
                 count_frame("depth")
 
-            depth_camera.listen(save_depth)
+            depth_camera.listen(guarded_callback(save_depth))
 
         if sensor_config["semantic"]["enabled"]:
             semantic_blueprint = blueprint_library.find(
@@ -557,7 +670,7 @@ def main():
                 )
                 count_frame("semantic")
 
-            semantic_camera.listen(save_semantic)
+            semantic_camera.listen(guarded_callback(save_semantic))
 
         if sensor_config["collision"]["enabled"]:
             collision_blueprint = blueprint_library.find("sensor.other.collision")
@@ -586,7 +699,7 @@ def main():
                 )
                 collision_detected.set()
 
-            collision_sensor.listen(on_collision)
+            collision_sensor.listen(guarded_callback(on_collision))
 
         ego_vehicle.set_autopilot(True, tm_port)
         lead_vehicle.set_autopilot(True, tm_port)
@@ -621,6 +734,7 @@ def main():
         pedestrian_finished = False
         brake_started = False
         minimum_lead_distance = float("inf")
+        minimum_lead_gap_m = float("inf")
 
         print("[RUN] 场景开始")
         print(
@@ -672,16 +786,65 @@ def main():
                     )
                 )
 
-            lead_distance = ego_vehicle.get_location().distance(
-                lead_vehicle.get_location()
+            ego_location = ego_vehicle.get_location()
+            lead_location = lead_vehicle.get_location()
+            ego_velocity = ego_vehicle.get_velocity()
+            lead_velocity = lead_vehicle.get_velocity()
+            lead_distance, lead_gap_distance, closing_speed, ttc_seconds = calculate_ttc(
+                ego_location,
+                ego_velocity,
+                lead_location,
+                lead_velocity,
+                risk_config["vehicle_distance_buffer_m"],
             )
+            pedestrian_distance = None
+            if pedestrian_started:
+                pedestrian_distance = ego_location.distance(walker.get_location())
+
             minimum_lead_distance = min(minimum_lead_distance, lead_distance)
+            minimum_lead_gap_m = min(minimum_lead_gap_m, lead_gap_distance)
+            if ttc_seconds is not None and math.isfinite(ttc_seconds):
+                if minimum_ttc_seconds is None:
+                    minimum_ttc_seconds = ttc_seconds
+                else:
+                    minimum_ttc_seconds = min(minimum_ttc_seconds, ttc_seconds)
+            if pedestrian_distance is not None:
+                if minimum_pedestrian_distance_m is None:
+                    minimum_pedestrian_distance_m = pedestrian_distance
+                else:
+                    minimum_pedestrian_distance_m = min(
+                        minimum_pedestrian_distance_m,
+                        pedestrian_distance,
+                    )
+
+            with metadata_lock:
+                collision_count = metadata["result"]["collision_count"]
+            telemetry_rows.append(
+                {
+                    "elapsed_seconds": round(elapsed, 3),
+                    "ego_speed_kmh": round(vehicle_speed_kmh(ego_velocity), 3),
+                    "lead_speed_kmh": round(vehicle_speed_kmh(lead_velocity), 3),
+                    "lead_center_distance_m": round(lead_distance, 3),
+                    "lead_gap_distance_m": round(lead_gap_distance, 3),
+                    "closing_speed_mps": round(closing_speed, 3),
+                    "ttc_seconds": (
+                        round(ttc_seconds, 3)
+                        if ttc_seconds is not None and math.isfinite(ttc_seconds)
+                        else None
+                    ),
+                    "pedestrian_distance_m": (
+                        round(pedestrian_distance, 3)
+                        if pedestrian_distance is not None
+                        else None
+                    ),
+                    "pedestrian_active": pedestrian_started and not pedestrian_finished,
+                    "lead_braking": brake_started,
+                    "collision_count": collision_count,
+                }
+            )
 
             if elapsed >= next_status_time:
-                velocity = ego_vehicle.get_velocity()
-                speed_kmh = 3.6 * math.sqrt(
-                    velocity.x ** 2 + velocity.y ** 2 + velocity.z ** 2
-                )
+                speed_kmh = vehicle_speed_kmh(ego_velocity)
                 print(
                     f"[STATE {elapsed:5.1f}s] 主车 {speed_kmh:5.1f} km/h, "
                     f"距前车 {lead_distance:5.1f} m"
@@ -702,6 +865,20 @@ def main():
             minimum_lead_distance,
             3,
         )
+        metadata["result"]["minimum_lead_gap_m"] = round(
+            minimum_lead_gap_m,
+            3,
+        )
+        if minimum_ttc_seconds is not None:
+            metadata["result"]["minimum_ttc_seconds"] = round(
+                minimum_ttc_seconds,
+                3,
+            )
+        if minimum_pedestrian_distance_m is not None:
+            metadata["result"]["minimum_pedestrian_distance_m"] = round(
+                minimum_pedestrian_distance_m,
+                3,
+            )
 
     except KeyboardInterrupt:
         metadata["result"]["status"] = "interrupted"
@@ -711,20 +888,26 @@ def main():
         metadata["result"]["error"] = f"{type(error).__name__}: {error}"
         raise
     finally:
-        print("[CLEANUP] 清理传感器和场景 Actor")
+        checkpoint_path = persist_results("pending")
+        print(f"[CHECKPOINT] 运行数据已保存: {checkpoint_path}", flush=True)
+        print("[CLEANUP] 清理传感器和场景 Actor", flush=True)
         for sensor in sensor_actors:
             try:
                 sensor.stop()
             except RuntimeError:
                 pass
-        time.sleep(0.2)
-
-        for actor in reversed(actors):
-            try:
-                if actor.is_alive:
-                    actor.destroy()
-            except RuntimeError:
-                pass
+        print("[CLEANUP] 传感器监听已停止", flush=True)
+        callback_deadline = time.monotonic() + 5.0
+        with callback_condition:
+            while active_sensor_callbacks > 0:
+                remaining = callback_deadline - time.monotonic()
+                if remaining <= 0:
+                    break
+                callback_condition.wait(timeout=remaining)
+        print(
+            f"[CLEANUP] 传感器回调剩余: {active_sensor_callbacks}",
+            flush=True,
+        )
 
         for light, state, was_frozen in traffic_light_states:
             try:
@@ -740,21 +923,21 @@ def main():
                 world.set_weather(original_weather)
             except RuntimeError:
                 pass
+        print("[CLEANUP] 交通灯和天气已恢复", flush=True)
 
-        if start_time is not None:
-            metadata["result"]["actual_duration_seconds"] = round(
-                time.monotonic() - start_time,
-                3,
-            )
-        metadata["finished_at"] = datetime.now().astimezone().isoformat(
-            timespec="seconds"
-        )
-        with metadata_lock:
-            metadata["frames"] = dict(frame_counts)
+        if client is not None and actors:
+            destroy_commands = [
+                carla.command.DestroyActor(actor.id)
+                for actor in reversed(actors)
+            ]
+            try:
+                client.apply_batch(destroy_commands)
+            except RuntimeError as error:
+                print(f"[CLEANUP] Actor 批量销毁失败: {error}", flush=True)
+        time.sleep(0.5)
+        print("[CLEANUP] Actor 批量销毁请求已完成", flush=True)
 
-        metadata_path = os.path.join(run_dir, "metadata.json")
-        with open(metadata_path, "w", encoding="utf-8") as file:
-            json.dump(metadata, file, ensure_ascii=False, indent=2)
+        metadata_path = persist_results("completed")
         print(f"[DONE] 元数据: {metadata_path}")
         print(f"[DONE] 帧数: {metadata['frames']}")
 
