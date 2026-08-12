@@ -22,10 +22,11 @@ if PROJECT_ROOT not in sys.path:
 
 from core.risk_metrics import (  # noqa: E402
     calculate_ttc,
-    evaluate_risk,
+    evaluate_telemetry_risk,
     vehicle_speed_kmh,
     write_telemetry_csv,
 )
+from core.sensor_pipeline import SensorWritePipeline  # noqa: E402
 
 
 DEFAULT_CONFIG = os.path.join(
@@ -81,6 +82,18 @@ def validate_config(config):
     if not str(config["scenario"]["name"]).strip():
         raise ValueError("scenario.name 不能为空")
 
+    synchronous_mode = bool(config["scenario"].get("synchronous_mode", False))
+    fixed_delta_seconds = float(
+        config["scenario"].get("fixed_delta_seconds", 0.05)
+    )
+    if synchronous_mode and fixed_delta_seconds <= 0:
+        raise ValueError("同步模式下 scenario.fixed_delta_seconds 必须大于 0")
+    traffic_manager_seed = int(
+        config["scenario"].get("traffic_manager_seed", 0)
+    )
+    if traffic_manager_seed < 0:
+        raise ValueError("scenario.traffic_manager_seed 不能小于 0")
+
     for section, field in [
         ("lead_vehicle", "brake_trigger_seconds"),
         ("pedestrian", "trigger_seconds"),
@@ -92,8 +105,23 @@ def validate_config(config):
     camera = config["sensors"]["camera"]
     if int(camera["width"]) <= 0 or int(camera["height"]) <= 0:
         raise ValueError("相机分辨率必须为正整数")
-    if float(camera["sensor_tick"]) < 0:
+    sensor_tick = float(camera["sensor_tick"])
+    if sensor_tick < 0:
         raise ValueError("sensors.camera.sensor_tick 不能小于 0")
+    if synchronous_mode and sensor_tick > 0:
+        tick_ratio = sensor_tick / fixed_delta_seconds
+        if not math.isclose(tick_ratio, round(tick_ratio), abs_tol=1e-6):
+            raise ValueError(
+                "同步模式下 sensors.camera.sensor_tick 必须是固定步长的整数倍"
+            )
+    if int(camera.get("writer_workers", 2)) <= 0:
+        raise ValueError("sensors.camera.writer_workers 必须大于 0")
+    if int(camera.get("writer_queue_size", 16)) <= 0:
+        raise ValueError("sensors.camera.writer_queue_size 必须大于 0")
+    if float(camera.get("frame_wait_timeout_seconds", 30.0)) <= 0:
+        raise ValueError("sensors.camera.frame_wait_timeout_seconds 必须大于 0")
+    if float(camera.get("flush_timeout_seconds", 120.0)) <= 0:
+        raise ValueError("sensors.camera.flush_timeout_seconds 必须大于 0")
     if float(config["sensors"]["depth"]["visualization_max_distance_m"]) <= 0:
         raise ValueError("深度图最大可视距离必须大于 0")
 
@@ -128,6 +156,13 @@ def validate_config(config):
             )
     if float(risk_config["vehicle_distance_buffer_m"]) < 0:
         raise ValueError("risk_evaluation.vehicle_distance_buffer_m 不能小于 0")
+    risk_method = risk_config.get("method", "heuristic_v1")
+    if risk_method not in {"heuristic_v1", "heuristic_v2"}:
+        raise ValueError(f"不支持的风险评估方法: {risk_method}")
+    if risk_method == "heuristic_v2":
+        v2_weights = risk_config.get("v2", {}).get("weights", {})
+        if v2_weights and sum(float(value) for value in v2_weights.values()) <= 0:
+            raise ValueError("risk_evaluation.v2.weights 权重之和必须大于 0")
 
 
 def create_run_directory(config_path, config):
@@ -377,6 +412,32 @@ def main():
     run_dir, run_id = create_run_directory(config_path, config)
     print(f"[OUTPUT] 本次运行目录: {run_dir}")
 
+    scenario_config = config["scenario"]
+    synchronous_mode = bool(scenario_config.get("synchronous_mode", False))
+    fixed_delta_seconds = float(
+        scenario_config.get("fixed_delta_seconds", 0.05)
+    )
+    traffic_manager_seed = int(
+        scenario_config.get("traffic_manager_seed", 0)
+    )
+    sensor_config = config["sensors"]
+    camera_config = sensor_config["camera"]
+    enabled_camera_names = [
+        name
+        for name in ("rgb", "depth", "semantic")
+        if sensor_config[name]["enabled"]
+    ]
+    sensor_tick = float(camera_config["sensor_tick"])
+    writer_workers = int(camera_config.get("writer_workers", 2))
+    writer_queue_size = int(camera_config.get("writer_queue_size", 16))
+    frame_wait_timeout = float(
+        camera_config.get("frame_wait_timeout_seconds", 30.0)
+    )
+    flush_timeout = float(camera_config.get("flush_timeout_seconds", 120.0))
+    sensor_pipeline = SensorWritePipeline(
+        queue_size=writer_queue_size,
+        workers_per_sensor=writer_workers,
+    )
     metadata_lock = threading.Lock()
     collision_detected = threading.Event()
     frame_counts = {"rgb": 0, "depth": 0, "semantic": 0}
@@ -387,6 +448,18 @@ def main():
         "started_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "events": [],
         "frames": frame_counts,
+        "simulation": {
+            "synchronous_mode": synchronous_mode,
+            "fixed_delta_seconds": fixed_delta_seconds,
+            "traffic_manager_seed": traffic_manager_seed,
+        },
+        "sensor_pipeline": {
+            "status": "starting",
+            "queue_size": writer_queue_size,
+            "workers_per_sensor": writer_workers,
+            "sensors": {},
+        },
+        "server_health": {"status": "not_checked"},
         "result": {
             "status": "starting",
             "collision_count": 0,
@@ -408,9 +481,13 @@ def main():
     sensor_actors = []
     traffic_light_states = []
     client = None
+    traffic_manager = None
     world = None
+    original_settings = None
     original_weather = None
     start_time = None
+    simulation_elapsed = 0.0
+    simulation_step = 0
     walker = None
     walker_direction = None
     callback_condition = threading.Condition()
@@ -424,10 +501,6 @@ def main():
         event.update(details)
         with metadata_lock:
             metadata["events"].append(event)
-
-    def count_frame(sensor_name):
-        with metadata_lock:
-            frame_counts[sensor_name] += 1
 
     def guarded_callback(callback):
         def listener(data):
@@ -443,18 +516,88 @@ def main():
 
         return listener
 
+    def expected_sensor_frame_counts():
+        if not synchronous_mode or simulation_step <= 0:
+            return {}
+        if sensor_tick <= 0:
+            expected_count = simulation_step
+        else:
+            interval_steps = max(
+                1,
+                round(sensor_tick / fixed_delta_seconds),
+            )
+            expected_count = simulation_step // interval_steps
+        return {
+            sensor_name: expected_count
+            for sensor_name in enabled_camera_names
+        }
+
+    def update_sensor_metadata():
+        snapshot = sensor_pipeline.snapshot(expected_sensor_frame_counts())
+        metadata["sensor_pipeline"] = snapshot
+        saved_counts = {
+            sensor_name: snapshot["sensors"].get(sensor_name, {}).get("saved", 0)
+            for sensor_name in frame_counts
+        }
+        with metadata_lock:
+            frame_counts.update(saved_counts)
+            metadata["frames"] = dict(frame_counts)
+        return snapshot
+
+    def destroy_actor_group(actor_group, label):
+        if client is None or not actor_group:
+            return True
+        commands = [
+            carla.command.DestroyActor(actor.id)
+            for actor in reversed(actor_group)
+        ]
+        try:
+            responses = client.apply_batch_sync(commands, synchronous_mode)
+        except RuntimeError as error:
+            print(f"[CLEANUP] {label}同步销毁失败: {error}", flush=True)
+            return False
+        errors = [
+            response.error
+            for response in (responses or [])
+            if response.error
+        ]
+        if errors:
+            print(
+                f"[CLEANUP] {label}销毁错误: {'; '.join(errors)}",
+                flush=True,
+            )
+            return False
+        print(f"[CLEANUP] {label}同步销毁完成", flush=True)
+        return True
+
     def persist_results(cleanup_status):
         if start_time is not None:
+            wall_duration = time.monotonic() - start_time
+            actual_duration = (
+                simulation_elapsed if synchronous_mode else wall_duration
+            )
             metadata["result"]["actual_duration_seconds"] = round(
-                time.monotonic() - start_time,
+                actual_duration,
+                3,
+            )
+            metadata["result"]["wall_duration_seconds"] = round(
+                wall_duration,
                 3,
             )
         metadata["finished_at"] = datetime.now().astimezone().isoformat(
             timespec="seconds"
         )
         metadata["cleanup"] = {"status": cleanup_status}
-        with metadata_lock:
-            metadata["frames"] = dict(frame_counts)
+        metadata["simulation"]["elapsed_seconds"] = round(
+            simulation_elapsed,
+            3,
+        )
+        metadata["simulation"]["completed_steps"] = (
+            round(simulation_elapsed / fixed_delta_seconds)
+            if synchronous_mode
+            else len(telemetry_rows)
+        )
+        update_sensor_metadata()
 
         if minimum_lead_gap_m is not None and math.isfinite(minimum_lead_gap_m):
             metadata["result"]["minimum_lead_gap_m"] = round(
@@ -472,17 +615,14 @@ def main():
                 3,
             )
         if telemetry_rows:
-            metadata["result"]["risk_evaluation"] = evaluate_risk(
-                minimum_ttc_seconds,
-                (
-                    minimum_lead_gap_m
-                    if minimum_lead_gap_m is not None
-                    and math.isfinite(minimum_lead_gap_m)
-                    else None
-                ),
-                minimum_pedestrian_distance_m,
+            metadata["result"]["risk_evaluation"] = evaluate_telemetry_risk(
+                telemetry_rows,
                 metadata["result"]["collision_count"],
                 risk_config,
+                weather_config=config["weather"],
+                pedestrian_config=config["pedestrian"],
+                scenario_config=config["scenario"],
+                events=metadata["events"],
             )
 
         telemetry_path = os.path.join(run_dir, "telemetry.csv")
@@ -501,18 +641,34 @@ def main():
         client = carla.Client("localhost", 2000)
         client.set_timeout(20.0)
         world = client.get_world()
+        original_settings = world.get_settings()
         original_weather = world.get_weather()
-        world.set_weather(build_weather(config["weather"]))
-        metadata["map"] = world.get_map().name
-        print(f"[CONNECT] CARLA 地图: {metadata['map']}")
-
         traffic_config = config["traffic"]
-        tm_port = int(config["scenario"]["traffic_manager_port"])
+        tm_port = int(scenario_config["traffic_manager_port"])
         traffic_manager = client.get_trafficmanager(tm_port)
         traffic_manager.set_global_distance_to_leading_vehicle(
             float(traffic_config["leading_distance_m"])
         )
-        traffic_manager.set_synchronous_mode(False)
+        traffic_manager.set_random_device_seed(traffic_manager_seed)
+
+        if synchronous_mode:
+            settings = world.get_settings()
+            settings.synchronous_mode = True
+            settings.fixed_delta_seconds = fixed_delta_seconds
+            world.apply_settings(settings)
+            traffic_manager.set_synchronous_mode(True)
+            world.tick()
+        else:
+            traffic_manager.set_synchronous_mode(False)
+
+        world.set_weather(build_weather(config["weather"]))
+        metadata["map"] = world.get_map().name
+        print(f"[CONNECT] CARLA 地图: {metadata['map']}")
+        print(
+            f"[SIM] sync={synchronous_mode} | "
+            f"delta={fixed_delta_seconds:.3f}s | "
+            f"TM seed={traffic_manager_seed}"
+        )
 
         if traffic_config["force_green_lights"]:
             traffic_lights = list(
@@ -560,7 +716,10 @@ def main():
         actors.append(walker)
         print("[WALKER] 行人已在路边待命")
 
-        world.wait_for_tick(2.0)
+        if synchronous_mode:
+            world.tick()
+        else:
+            world.wait_for_tick(2.0)
         measured_initial_distance = ego_vehicle.get_location().distance(
             lead_vehicle.get_location()
         )
@@ -572,8 +731,6 @@ def main():
             )
         print(f"[LEAD] 实际初始距离 {measured_initial_distance:.1f} m")
 
-        sensor_config = config["sensors"]
-        camera_config = sensor_config["camera"]
         camera_transform = camera_transform_from_config(sensor_config["transform"])
 
         if sensor_config["rgb"]["enabled"]:
@@ -591,9 +748,13 @@ def main():
                 image.save_to_disk(
                     os.path.join(run_dir, "rgb", f"frame_{image.frame:06d}.png")
                 )
-                count_frame("rgb")
 
-            rgb_camera.listen(guarded_callback(save_rgb))
+            sensor_pipeline.register("rgb", save_rgb)
+            rgb_camera.listen(
+                guarded_callback(
+                    lambda image: sensor_pipeline.submit("rgb", image)
+                )
+            )
 
         if sensor_config["depth"]["enabled"]:
             depth_blueprint = blueprint_library.find("sensor.camera.depth")
@@ -629,9 +790,13 @@ def main():
                         f"frame_{image.frame:06d}.png",
                     )
                 )
-                count_frame("depth")
 
-            depth_camera.listen(guarded_callback(save_depth))
+            sensor_pipeline.register("depth", save_depth)
+            depth_camera.listen(
+                guarded_callback(
+                    lambda image: sensor_pipeline.submit("depth", image)
+                )
+            )
 
         if sensor_config["semantic"]["enabled"]:
             semantic_blueprint = blueprint_library.find(
@@ -668,9 +833,13 @@ def main():
                         f"frame_{image.frame:06d}.png",
                     )
                 )
-                count_frame("semantic")
 
-            semantic_camera.listen(guarded_callback(save_semantic))
+            sensor_pipeline.register("semantic", save_semantic)
+            semantic_camera.listen(
+                guarded_callback(
+                    lambda image: sensor_pipeline.submit("semantic", image)
+                )
+            )
 
         if sensor_config["collision"]["enabled"]:
             collision_blueprint = blueprint_library.find("sensor.other.collision")
@@ -687,7 +856,13 @@ def main():
                 intensity = math.sqrt(
                     impulse.x ** 2 + impulse.y ** 2 + impulse.z ** 2
                 )
-                elapsed = time.monotonic() - start_time if start_time else 0.0
+                elapsed = (
+                    simulation_elapsed
+                    if synchronous_mode
+                    else time.monotonic() - start_time
+                    if start_time
+                    else 0.0
+                )
                 with metadata_lock:
                     metadata["result"]["collision_count"] += 1
                 record_event(
@@ -729,6 +904,7 @@ def main():
         metadata["result"]["status"] = "running"
 
         start_time = time.monotonic()
+        simulation_elapsed = 0.0
         next_status_time = 1.0
         pedestrian_started = False
         pedestrian_finished = False
@@ -743,9 +919,35 @@ def main():
         )
 
         while True:
-            elapsed = time.monotonic() - start_time
-            if elapsed >= duration:
-                break
+            if synchronous_mode:
+                if simulation_elapsed >= duration:
+                    break
+                world.tick()
+                simulation_step += 1
+                simulation_elapsed = min(
+                    simulation_step * fixed_delta_seconds,
+                    duration,
+                )
+                elapsed = simulation_elapsed
+                expected_counts = expected_sensor_frame_counts()
+                if expected_counts and not sensor_pipeline.wait_for_received(
+                    expected_counts,
+                    frame_wait_timeout,
+                ):
+                    snapshot = sensor_pipeline.snapshot(expected_counts)
+                    received = {
+                        name: details["received"]
+                        for name, details in snapshot["sensors"].items()
+                    }
+                    raise RuntimeError(
+                        "等待同步传感器帧超时: "
+                        f"expected={expected_counts}, received={received}"
+                    )
+            else:
+                elapsed = time.monotonic() - start_time
+                simulation_elapsed = elapsed
+                if elapsed >= duration:
+                    break
 
             if elapsed >= pedestrian_trigger and not pedestrian_started:
                 pedestrian_started = True
@@ -858,7 +1060,8 @@ def main():
                 print("[RUN] 检测到碰撞，按配置提前结束")
                 break
 
-            time.sleep(0.05)
+            if not synchronous_mode:
+                time.sleep(0.05)
 
         metadata["result"]["status"] = "completed"
         metadata["result"]["minimum_lead_distance_m"] = round(
@@ -891,6 +1094,17 @@ def main():
         checkpoint_path = persist_results("pending")
         print(f"[CHECKPOINT] 运行数据已保存: {checkpoint_path}", flush=True)
         print("[CLEANUP] 清理传感器和场景 Actor", flush=True)
+        expected_counts = expected_sensor_frame_counts()
+        if expected_counts and not sensor_pipeline.wait_for_received(
+            expected_counts,
+            frame_wait_timeout,
+        ):
+            snapshot = sensor_pipeline.snapshot(expected_counts)
+            print(
+                "[CLEANUP] 等待传感器接收超时: "
+                f"{snapshot['sensors']}",
+                flush=True,
+            )
         for sensor in sensor_actors:
             try:
                 sensor.stop()
@@ -908,6 +1122,26 @@ def main():
             f"[CLEANUP] 传感器回调剩余: {active_sensor_callbacks}",
             flush=True,
         )
+        pipeline_drained = sensor_pipeline.close(flush_timeout)
+        pipeline_snapshot = update_sensor_metadata()
+        print(
+            "[CLEANUP] 传感器写盘状态: "
+            f"{pipeline_snapshot['status']} | "
+            f"帧数={metadata['frames']}",
+            flush=True,
+        )
+        if not pipeline_drained or pipeline_snapshot["status"] != "completed":
+            if metadata["result"]["status"] == "completed":
+                metadata["result"]["status"] = "failed"
+                metadata["result"]["error"] = (
+                    "传感器数据写盘不完整: "
+                    f"{pipeline_snapshot['status']}"
+                )
+
+        sensor_ids = {sensor.id for sensor in sensor_actors}
+        scene_actors = [actor for actor in actors if actor.id not in sensor_ids]
+        sensors_destroyed = destroy_actor_group(sensor_actors, "传感器 Actor")
+        actors_destroyed = destroy_actor_group(scene_actors, "场景 Actor")
 
         for light, state, was_frozen in traffic_light_states:
             try:
@@ -923,21 +1157,43 @@ def main():
                 world.set_weather(original_weather)
             except RuntimeError:
                 pass
-        print("[CLEANUP] 交通灯和天气已恢复", flush=True)
-
-        if client is not None and actors:
-            destroy_commands = [
-                carla.command.DestroyActor(actor.id)
-                for actor in reversed(actors)
-            ]
+        if traffic_manager is not None and synchronous_mode:
             try:
-                client.apply_batch(destroy_commands)
-            except RuntimeError as error:
-                print(f"[CLEANUP] Actor 批量销毁失败: {error}", flush=True)
-        time.sleep(0.5)
-        print("[CLEANUP] Actor 批量销毁请求已完成", flush=True)
+                traffic_manager.set_synchronous_mode(False)
+            except RuntimeError:
+                pass
+        if world is not None and original_settings is not None:
+            try:
+                world.apply_settings(original_settings)
+            except RuntimeError:
+                pass
+        print("[CLEANUP] 交通灯、天气和世界设置已恢复", flush=True)
 
-        metadata_path = persist_results("completed")
+        cleanup_ok = sensors_destroyed and actors_destroyed
+        if client is not None:
+            try:
+                client.set_timeout(5.0)
+                time.sleep(1.0)
+                server_version = client.get_server_version()
+                health_world = client.get_world()
+                health_world.get_snapshot()
+                metadata["server_health"] = {
+                    "status": "healthy",
+                    "server_version": server_version,
+                }
+                print("[CLEANUP] CARLA 服务健康检查通过", flush=True)
+            except RuntimeError as error:
+                cleanup_ok = False
+                metadata["server_health"] = {
+                    "status": "unreachable",
+                    "error": f"{type(error).__name__}: {error}",
+                }
+                print(f"[CLEANUP] CARLA 服务健康检查失败: {error}", flush=True)
+        if not cleanup_ok and metadata["result"]["status"] == "completed":
+            metadata["result"]["status"] = "failed"
+            metadata["result"]["error"] = "Actor 清理或 CARLA 服务健康检查失败"
+
+        metadata_path = persist_results("completed" if cleanup_ok else "failed")
         print(f"[DONE] 元数据: {metadata_path}")
         print(f"[DONE] 帧数: {metadata['frames']}")
 
