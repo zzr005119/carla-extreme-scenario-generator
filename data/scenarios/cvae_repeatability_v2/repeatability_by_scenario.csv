@@ -1,0 +1,4 @@
+﻿sample_id,target_risk_level,completed_runs,expected_runs,seeds,score_mean,score_std,score_min,score_max,score_range,modal_observed_level,level_consistency_rate,all_levels_equal,target_match_rate,collision_runs,collision_events
+cvae_high_20260813_0074,high,3,3,"20260821,20260822,20260823",63.06199999999999,8.702335715267317e-15,63.062,63.062,0.0,high,1.0,True,1.0,3,3
+cvae_low_20260813_0001,low,3,3,"20260821,20260822,20260823",0.157,0.0,0.157,0.157,0.0,low,1.0,True,1.0,0,0
+cvae_medium_20260813_0103,medium,3,3,"20260821,20260822,20260823",3.4120000000000004,5.438959822042073e-16,3.412,3.412,0.0,low,1.0,True,0.0,0,0

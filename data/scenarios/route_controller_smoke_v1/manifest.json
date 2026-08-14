@@ -1,0 +1,35 @@
+{
+  "format": "cvae_carla_route_repeatability_v2",
+  "source_config": "D:\\Xx\\竞赛\\大创实施ing\\data\\scenarios\\cvae_repeatability_v2\\configs\\cvae_medium_20260813_0103__tm_20260821.json",
+  "route_lock_required": true,
+  "traffic_seeds": [
+    20260821
+  ],
+  "sample_ids": [
+    "cvae_medium_20260813_0103"
+  ],
+  "controller_mode": "waypoint_follower",
+  "acceptance_requirements": {
+    "sensor_status": "completed",
+    "server_status": "healthy",
+    "minimum_rgb_frames": 100,
+    "route_control_mode": "waypoint_follower",
+    "minimum_route_both_on_rate": 1.0,
+    "maximum_route_deviation_m": 3.0
+  },
+  "runs": [
+    {
+      "run_id": "cvae_medium_20260813_0103__route_controller_smoke",
+      "sample_id": "cvae_medium_20260813_0103",
+      "target_risk_level": "medium",
+      "traffic_manager_seed": 20260821,
+      "repeat_round": 1,
+      "source": "route_controller_smoke_v1",
+      "planned": true,
+      "run_order": 1,
+      "part_index": 1,
+      "config_path": "D:\\Xx\\竞赛\\大创实施ing\\data\\scenarios\\route_controller_smoke_v1\\config.json",
+      "expected_run_root": "F:\\Carla\\test\\output\\model_generated_validation\\route_controller_smoke_v1\\cvae_medium_20260813_0103__route_controller_smoke"
+    }
+  ]
+}

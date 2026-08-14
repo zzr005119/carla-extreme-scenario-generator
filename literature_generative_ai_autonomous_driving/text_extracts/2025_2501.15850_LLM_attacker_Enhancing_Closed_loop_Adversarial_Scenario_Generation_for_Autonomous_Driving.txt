@@ -1,0 +1,743 @@
+                                                                                                                                                                                         1
+
+
+
+
+                                          LLM-attacker: Enhancing Closed-loop Adversarial
+                                          Scenario Generation for Autonomous Driving with
+                                                      Large Language Models
+                                                                        Yuewen Mei, Tong Nie, Jian Sun† , Ye Tian, Senior Member, IEEE
+
+
+
+                                           Abstract—Ensuring and improving the safety of autonomous                    to fully support both training and testing processes. Conse-
+                                        driving systems (ADS) is crucial for deployment of highly                      quently, generating more safety-critical scenarios from real-
+                                        automated vehicles, especially in safety-critical events. To address           world traffic data becomes an appealing solution.
+arXiv:2501.15850v2 [cs.LG] 7 Jun 2025
+
+
+
+
+                                        the rarity issue, adversarial scenario generation methods are
+                                        developed, in which behaviors of traffic participants are manip-                  To effectively generate safety-critical scenarios, there exist
+                                        ulated to induce safety-critical events. However, existing methods             two directions of efforts. The first direction focuses on scenes,
+                                        still face two limitations. First, identification of the adversarial           that is, combinations of scenario parameters such as ini-
+                                        participant directly impacts the effectiveness of the generation.              tial velocity and car-following distance. Specifically, previous
+                                        However, complexity of real-world scenarios, with numerous                     work has applied importance sampling techniques [2]–[4] and
+                                        participants and diverse behaviors, makes identification chal-
+                                        lenging. Second, potential of generated safety-critical scenarios to           surrogate models [5]–[7] to accelerate the determination of
+                                        continuously improve ADS performance remains underexplored.                    safety-critical parameters. Although these approaches achieve
+                                        To address these issues, we propose LLM-attacker: a closed-                    rapid and efficient generation, they are limited to scene-level
+                                        loop adversarial scenario generation framework leveraging large                acceleration and do not fully capture the dynamic behaviors
+                                        language models (LLMs). Specifically, multiple LLM agents                      of traffic participants. On the other hand, the second direction
+                                        are designed and coordinated to identify optimal attackers.
+                                        Then, the trajectories of attackers are optimized to generate                  focuses on behaviors. Adversarial scenario generation methods
+                                        adversarial scenarios. These scenarios are iteratively refined                 are proposed to generate novel scenarios at the behavioral
+                                        based on the performance of ADS, forming a feedback loop                       level, where safety-critical events are commonly achieved
+                                        to improve ADS. Experimental results show that LLM-attacker                    by modifying the trajectory of traffic participants [8]. The
+                                        can create more dangerous scenarios than other methods, and                    participant is defined as attacker, inducing aggressive behavior
+                                        the ADS trained with it achieves a collision rate half that of
+                                        training with normal scenarios. This indicates the ability of LLM-             toward the ADS-controlled ego vehicle. This behavior-level
+                                        attacker to test and enhance the safety and robustness of ADS.                 manipulation allows for more realistic and generalizable gener-
+                                        The framework’s closed-loop design enables continuous scenario                 ation of safety-critical scenarios, promising for more effective
+                                        evolution compliant with regulatory standards, supporting both                 testing than sampling-based methods [9]–[11]. These scenarios
+                                        safety assurance and policy verification for ADS. Video demon-                 can also support regulatory sandboxes for safety assurance.
+                                        strations are provided at: https://drive.google.com/file/d/15rROV
+                                        8LUcc2jXSuSNBHVOHMCFKSn B/view.                                                   However, existing methods for generating adversarial sce-
+                                                                                                                       narios continue to face two unexplored aspects. First, since
+                                         Index Terms—Highly Automated Vehicles, Large Language                         these adversarial methods rely on the behavior of the attacker,
+                                        Models, Adversarial Scenario Generation, Adversarial Training.
+                                                                                                                       one prerequisite of an effective adversarial scenario is to iden-
+                                                                                                                       tify proper attackers. Treating all vehicles as potential attackers
+                                                                                                                       is neither efficient nor realistic. Typically, there exist a large
+                                                                  I. I NTRODUCTION                                     number of vehicles with complex behaviors in real-world
+                                                                                                                       scenarios. The interaction relationships between vehicles are
+
+                                        H      IGHLY automated vehicles (HAVs) are advancing
+                                               rapidly, but the consequences of HAVs accidents can
+                                        be fatal [1]. Therefore, ensuring the safety of autonomous
+                                                                                                                       inherently nonlinear, with vehicle states such as trajectory and
+                                                                                                                       velocity dynamically influenced by the environment and driver
+                                                                                                                       behavior [12]. Furthermore, these behavioral relationships are
+                                        driving systems (ADS) across various scenarios, particularly                   often embedded within temporal sequences and multivariate
+                                        in safety-critical scenarios prone to accidents, is vital for the              features. The nonlinearity and time-variance problems present
+                                        development and practical deployment of HAVs. Training and                     challenges in identifying the proper number of vehicles, as
+                                        testing the safety and robustness of ADS heavily rely on                       well as those are potentially aggressive, to serve as attackers.
+                                        safety-critical scenarios. However, due to their rarity in the                 In existing work, attackers are typically prescribed by manual
+                                        real world, limited high-value scenario data are insufficient                  design or predefined rules [10], lacking a standardized and
+                                                                                                                       adaptive approach applicable to various complex scenarios.
+                                          *Research supported by the National Natural Science Foundation of China
+                                        under Grants [52125208, 52422215].                                                Second, existing methods prioritize the effectiveness of at-
+                                          The authors are with the Department of Traffic Engineering and Key           tacks during the testing process, leading to limited integration
+                                        Laboratory of Road and Traffic Engineering, Ministry of Education, Tongji      with the training process. Although these methods improve
+                                        University. Shanghai, China. 201804. Tong Nie is also with the Department of
+                                        Civil & Environmental Engineering, The Hong Kong Polytechnic University.       the attack effectiveness, their practical applicability to enhance
+                                          † Corresponding authors: Jian Sun (sunjian@tongji.edu.cn)                    the robustness of ADS remains unclear. Specifically, existing
+                                                                                                                                                    2
+
+
+
+                                                                                         signed to automatically identify optimal attackers.
+        (1) Normal scenario:
+        Numerous vehicles                                                             •  A closed-loop adversarial scenario generation framework
+        Dynamic interaction
+                                                                                         using LLMs with adversarial training is developed.
+                                                                                      • The effectiveness of safety-critical scenarios is validated
+                                                                                         on both ADS safety testing and training, which achieve
+         (2) LLM-based                                                                   the evolution of scenarios and ADS simultaneously.
+         Adversarial Vehicle
+         Identifier                                                                   Rest of this paper is organized as follows. Section II briefly
+                                                                                    reviews related work. Section III formulates the methodology.
+                                                                                    Section IV conducts experiments to verify effectiveness of the
+                             Multiple LLM Agents                                    proposed methodology. Section V concludes the work.
+                                Collaboration
+
+
+                                                                                                         II. R ELATED W ORK
+         (3) Closed-loop
+         Adversarial Scenario                                                       A. Safety-critical scenarios generation of ADS
+         Generation                                                                    Safety-critical scenarios, which result in severe conse-
+                                                                                    quences, are extremely rare in real world. Consequently, recent
+                                     Training         Update ADS    Update          work increasingly focus on generating more safety-critical sce-
+                                     Testing                       Scenario
+                                                                                    narios for effective ADS safety issue [18]. Generation methods
+                  Ego vehicle          Adversarial vehicle     Background vehicle   can be categorized into knowledge-based [19], acceleration-
+                                                                                    based [6], [20], [21], and adversarial-based [8], [9]. Among
+Fig. 1. Illustration of LLM-attacker framework. (1) Normal scenario char-           these methods, adversarial-based methods are characterized by
+acterized by numerous vehicles and dynamic interactions. (2) LLM-based              efficiency and authenticity. In our work, it is expected that the
+Adversarial Vehicle Identifier. (3) Closed-loop adversarial scenario generation.    generated adversarial scenarios can be further exploited for
+       Ego vehicle                                                                  ADS safety from the perspective of testing and training.
+       Adversarial vehicle
+methods           vehicle rely on complicated generative models, such
+           typically
+       Background
+
+as diffusion model [13] and variational autoencoder [9]. The                        B. Adversarial training for ADS
+extremely high computational costs prevent these methods                               Adversarial training is a crucial method for enhancing the
+from being incorporated into the online training loop. There-                       robustness of ADS, especially in the aspect of object detection.
+fore, the impact of the generated scenarios on the continuous                       Only a few works focus on adversarial training of end-to-end
+improvement of ADS needs to be explored. It anticipates a                           driving or decision-making tasks of ADS [10], [11]. Zhang et
+simple-yet-effective framework that can ensure high attack                          al. [10] propose a closed-loop adversarial training framework
+effectiveness with a low computational budget.                                      to improve the safety performance of end-to-end ADS. The
+   The above gaps prompt us to develop an alternative adver-                        safety-critical scenarios with an attacker are resampled for
+sarial scenario generation framework. The emergence of large                        training of the ADS policy. Existing frameworks only focus on
+language models (LLMs) has attracted considerable attention                         the single and fixed attacker during the training process. How-
+due to their powerful context reasoning and understanding                           ever, complex scenarios with multi-attackers are even more
+capabilities [14], [15]. Encouragingly, LLMs have demon-                            dangerous for ADS. Meanwhile, the most-efficient attackers
+strated potential in understanding traffic situations and vehicle                   vary between different situations, which should be adaptive
+behaviors in the context of ADS perception tasks [16], [17].                        and automatic adjusted in different scenarios.
+Based on their world knowledge, LLMs can possess a pro-
+found understanding of complex traffic scenarios, especially
+multi-object interactions between the ego vehicle and back-                         C. LLMs for ADS
+ground vehicles. This provides a new perspective for solving                           LLMs have been used for the development of end-to-
+the aforementioned limitations. Consequently, we propose a                          end ADS in various aspects [16], such as improving the
+closed-loop adversarial scenario generation framework utiliz-                       adaptability of the perception system, enhancing the planning
+ing LLMs, termed LLM-attacker. Specifically, suitable prompt                        ability of ADS, generating realistic scenario videos. LLMs
+engineering is designed to elicit their scenario understanding                      also show great potential to construct traffic scenarios for
+capabilities in distinguishing interaction relationship. Then,                      ADS. For example, ChatScene [22] converts natural language
+multiple LLM agents are coordinated to identify suitable                            descriptions of traffic scenarios into practical simulations by
+attackers within complex scenarios. The identified attackers                        building a retrieval database. Meanwhile, LLMs are also
+and their adversarial trajectories, which compose the generated                     applied to generate safety-critical scenarios. CRITICAL [23]
+adversarial scenarios, are then used to test and train the                          modifies the parameters of the highway scenario by LLM to
+ADS. During the training process, the adversarial scenarios are                     make scenarios more challenging for ADS, demonstrating the
+continuously updated based on the performance of the trained                        ability of LLMs to understand the scenario. Our work aims
+ADS, forming the closed-loop adversarial scenario generation.                       to find an effective method to exploit the reasoning capability
+Our contributions can be summarized as follows.                                     of LLMs to solve the vehicle identification problem in the
+   • A collaborative LLM-based agentic framework is de-                             generation of adversarial scenarios.
+                                                                                                                                                   3
+
+
+
+                       III. M ETHODOLOGY
+   In this section, we proposed LLM-attacker: the closed-
+loop adversarial scenario generation framework leveraging
+LLMs. First, preliminaries of adversarial attack based on
+Reinforcement Learning (RL) is introduced. Second, the LLM-
+
+
+
+
+                                                                            Prompt design
+based Adversarial Vehicle Identifier, which is built on the
+collaborations of multiple LLM agents, is designed. Then, we
+elaborate on the practical implementation of LLM-attacker.
+
+A. Overview
+   Autonomous driving task based on RL can be formulated
+as a Markov Decision Process (MDP), which is defined by the
+tuple (S, A, R, f ). S represents the state space, composed of
+vehicle state, navigation information, and lidar point clouds.
+A stands for the action space that contains the acceleration               Fig. 2. Agentic Framework of the LLM-based Adversarial Vehicle Identifier.
+and steering commands of the autonomous vehicle. R is the
+reward function defined by the completion rate and safety
+status of driving task. The dynamic variation of the state                 M background vehicles, which is performed by the LLM-
+with the action is defined by the transition function f . To               based adversarial vehicle identifier (Section III-B). Second,
+perform the autonomous driving task safely, RL is required to              calculating the adversarial trajectories of the N adversarial
+maximize the expected return J(π, f ):                                     vehicles (Section III-C).
+
+                                               " T             #
+    J(π, f ) = Eat ∼π(st ),st+1 ∼f (st ,at )
+                                                X
+                                                     R(st , at ) ,   (1)   B. LLM-based Adversarial Vehicle Identifier
+                                               t=0                            The first step to generate adversarial scenarios is the identi-
+where π is the policy learned by RL. T is the duration of the              fication of attackers. Each scenario contains a large number of
+traffic scenario.                                                          background vehicles, and the scenarios faced by autonomous
+   The adversarial attack f adv aims to disturb autonomous                 driving are numerous. Manually assigning the adversarial
+driving tasks by intentionally introducing background vehicles             vehicles that have the greatest impact on the ego vehicle in
+with adversarial behaviors, increasing the risk of failure and             each scenario would be labor-intensive and time-consuming.
+decreasing the reward. The target of adversarial attack is:                Therefore, the LLM-based Adversarial Vehicle Identifier is
+                                                                           proposed to achieve automatic and efficient identification.
+                          min J(π, f adv ).                          (2)
+                          f adv                                               The agentic framework of the LLM-based Adversarial Ve-
+  Then, adversarial training aims to improve the ability of                hicle Identifier is shown in Fig. 2. There are three LLM-based
+ADS to handle unexpected adversarial situations, ultimately                modules, including Initialization, Reflection, and
+enhancing the robustness of the RL policy under f adv .                    Modification. First, the Initialization module is
+                                                                           designed to generate the initial form of the identification func-
+                       max min J(π, f adv ).                         (3)   tion code. Second, the adversarial vehicles in each scenario are
+                         π   f adv
+                                                                           identified based on the function code. The adversarial attack is
+   In each scenario, J(π, f ) equals the lowest value when RL              conducted in simulation to verify the attack success rate. Third,
+fails on the driving task, i.e., collides with other obstacles.            the generated code and the attack success rate are given to the
+Suppose that the adversarial attack starts from the moment                 Reflection module, which outputs specific analysis and
+                                    ego
+t, and current state X = (W, S1:t       , S bac
+                                            1:t ) is provided. W           modification suggestions. Last, the Modification module
+                                                        ego
+stands for the road geometry of the scenario. S1:t          is the         generates a new function code based on the suggestions. The
+                                    bac
+trajectory of the ego vehicle and S 1:t is the set of trajectories         simulation, Reflection and Modification process, i.e.,
+of the M background vehicles from initial time to moment t.                step 2 to step 4, is repeated for Z iterations. Then, a collab-
+Trajectories of the ego vehicle and the N adversarial vehicles             orative multi-agent framework is formed, where each LLM-
+                                          ego
+in the future are denoted as Y ego = St:T      and Y adv = S adv
+                                                               t:T         based module serves a specialized role and contributes to a
+respectively. Consequently, the adversarial attack can be con-             coordinated workflow. Collaboration is carried out through the
+verted to find the optimal Y adv to maximize the posterior                 structured information flow. Each module receives the previous
+probability of collision between Y adv and Y ego based on X:               output, processes it according to its task-specific prompt, and
+                                                                           passes on the enhanced result, enabling an iterative refinement
+       min J(π, f adv ) ⇔ max P(Y adv , Y ego | X, C),               (4)   process across multiple iterations.
+       f adv                  Y adv                                           Since LLM relies on textual reasoning, skillful prompt
+where C represents the occurrence of collisions.                           design can help LLM better understand the task and improve
+  The optimization of Y adv can be factorized into two steps.              the effectiveness of generation. The details of the prompt
+First, identifying the optimal N adversarial vehicles from the             engineering for the three LLM-based modules are as follows.
+                                                                                                                                     4
+
+
+
+   1) Initialization Module: The Initialization module                Algorithm 1: LLM-based Automatic Adversarial Ve-
+is responsible for generating the initial executable identifica-      hicle Identifier
+tion function code. The instructions provided for this module          Require: Number of iteration Z, Number of candidates in each
+include role setting, background information, task description,            iteration Q, Initial small-scale simulation test result e0
+                                                                        1: ▷ Initialize executable identification function code
+input parameters of the function, requirements for the func-
+                                                                        2: F0 = FunctionInit(T ask, Requi)
+tion, and output format. The input parameters include the               3: E0 = Simulation(F0 )
+state of the ego vehicle and the background vehicles. The               4: ▷ Improve executable identification function code
+Initialization module is denoted as:                                    5: for i = 1, . . . , Z do
+                                                                        6:    for j = 1, . . . , Q do ▷ Best-of-N
+              F0 = FunctionInit(T ask, Requi),                (5)       7:      Aij = FunctionRefl(T ask, Requi, M emo, Fi−1 , Ei−1 )
+                                                                        8:      Fij = FunctionModi(T ask, Requi, Fi−1 , Aij )
+where F0 is the initial function code, FunctionInit(·)                  9:      eij = TestSim(Fij )
+stands for the invocation of Initialization module,                    10:      if eij > ei−1 then
+                                                                       11:        Fi = Fij
+T ask and Requi refer to the task and requirements of                  12:        break
+Initialization Module respectively.                                    13:      elif j = Q then
+   The chain-of-thought (CoT) prompting strategy can help              14:        Fi = arg maxeij Fij
+LLM understand and solve the problem step by step [24].                15:      end if
+                                                                       16:    end for
+Therefore, CoT is applied in the prompt. For instance, in the
+                                                                       17:    Ei = Simulation(Fi )
+task description, the function code generation task is divided         18: end for
+into three reasoning steps: a) identifying the factors that should     19: Return FZ
+be considered in the function, b) considering how these factors
+change over time, and c) ensuring that the weighting and
+normalization of each item are accounted for. The CoT instruc-          3) Modification Module: The Modification module
+tions clearly state the elements to be concerned with at each        modifies the current function according to the suggestion
+step and guide LLM reason progressively. In a similar manner,        given by the Reflection module. Therefore, role setting,
+the CoT prompting is also designed in the Reflection                 input parameters of the function, current function, suggestions
+module and Modification module.                                      on modification, requirements for the function, and output
+   2) Reflection Module: Based on the generated the function         format are provided for this module to generate an improved
+code, the adversarial vehicles can be identified and attack on       executable identification function code. The Modification
+ADS can be conducted in the simulation. After verifying the          module is denoted as:
+attack success rate, it is necessary to analyze and improve
+the current function. Therefore, the Reflection module is                    Fi+1 = FunctionModi(T ask, Requi, Fi , Ai ),         (7)
+designed for analyzing the reasonableness of current function        where Fi+1 is the function code generated in iter-
+and giving specific suggestions on modification. The instruc-        ation i, FunctionModi(·) represents the invocation of
+tions provided for this module include role setting, background      Modification module.
+information, task description, current function code, current           Even with the same input, LLM can produce outputs with
+success rate, analysis requirements, and output requirements.        significant differences, both in terms of content and quality.
+The Reflection module and Simulation is denoted as:                  To address the inherent stochasticity in LLMs and improve
+ Ai = FunctionRefl(T ask, Requi, M emo, Fi−1 , Ei−1 ),               the quality of generation, the Best-of-N sampling strategy [25]
+                                                              (6)    is adopted. Specifically, in each iteration, the Reflection
+                  Ei = Simulation(Fi ),
+                                                                     and Modification modules are invoked multiple times
+where Ai is the specific suggestions on modification,                to generate up to Q different function code candidates. A
+FunctionRefl(·) represents the invocation of Reflection              small-scale simulation test is then performed to evaluate the
+module, M emo refers to memory, Fi−1 and Ei−1 are the                attack success rate for each candidate. If the test result of any
+code and evaluation result of current function, Simulation(·)        candidate surpasses the current function’s performance, that
+refers to conduct simulation test and obtain the attack success      candidate is selected as the new function code for the next
+rate based on Fi .                                                   iteration. Otherwise, when the number of generation is equal
+   After the first iteration, both the previous function and         to Q, the best performing candidate among Q is chosen and
+its corresponding attack success rate are fed as Memory              output as the final function code. The small-scale simulation
+to the module. The Reflection module is guided to ob-                test is denoted as:
+serve and learn from the differences between previous and
+                                                                                          eij = TestSim(Fij ),                    (8)
+current functions. Meanwhile, the attack success rate serves
+as the evaluation feedback to the suggestion made by the             where eij is the small-scale test result of Fij , TestSim
+Reflection module, helping it learn how to make more                 represents conduct small-scale simulation test, Fij is the jth
+appropriate suggestions. The Memory mechanism directs the            function code generated in iteration i.
+Reflection module to gradually improve toward an excel-                 Large modifications made by LLM to the function can lead
+lent analyzer and suggester in adversarial vehicle identification    to drastic decreases, even when the attack success rate has
+over successive iterations.                                          already reached a high level. To avoid such instability, a Local
+                                                                                                                                                                                                                                                     5
+
+
+
+
+     # Prompt design of the Modification module
+     ## Role Setting                                                                                                    # Suggestions provided by Reflection Module
+      You are an expert who specializes in conducting safety simulation testing of Autonomous Vehicle (AV).             """
+     Your task is to modify the current identification function code following the suggestion.                          Based on the analysis, I suggest modifying the current identification formula as follows:
+     ## Input parameters of the identification function code
+      - The x position of the AV, denoted as `x_position_AV` (global coordinates, meters).                              1. In the normalized_distance term, replace np.log(100 / (distance.max() + 1) + 1) with -np.log(distance.min() + 1).
+      -…                                                                                                                This will reflect increased danger with smaller distances more accurately.
+      **These parameters above are all numpy array.**                                                                   2. In the normalized_velocity_diff term, replace np.log((np.mean(np.abs(np.diff(np.array([velocity_BV, velocity_AV])))))
+                                                                                                                        + 1) with -np.log(velocity_diff.max() + 1). This will prioritize larger velocity differences in conflict directions.
+     ## Current identification function code
+      ```python
+      {current_risk_potential_formula}                                                                                  These modifications will improve the formula's effectiveness in selecting the most dangerous background vehicles to
+      ```                                                                                                               attack the AV.
+      **You must ensure that the modifications are made based on current code.**                                        """
+     ## Current collision rate
+      {collision_rate}
+
+     ## Suggestions for current identification function code                                                            # Modified function code output by Modification Module
+      {analysis_and_suggestions}                                                                                        def risk_potential_formula(x_position_AV, y_position_AV, velocity_AV, heading_AV, x_position_BV, y_position_BV,
+     ## Identification function code requirements                                                                       velocity_BV, heading_BV):
+       - The parameters can be used is listed in **Input parameters of the identification function code**.                # Thoughts:
+       - **The greater the value calculated by the identification function code, the higher the risk potential            # Modify the normalization method for `normalized_distance` to reflect that smaller distances are indeed more
+     of the vehicle. Therefore, the meaning of each factor in the function code is that a higher value                  dangerous due to reduced reaction time.
+     means more danger.**                                                                                                 import numpy as np
+       - First, you should understand your task based on your role, remember the input parameters, and
+     observe the composition of the current identification function code.                                                 # Calculate distance between AV and BV in each moment.
+       - Second, you should understand suggestions for current identification function code.                              distance = np.sqrt((x_position_BV - x_position_AV)**2 + (y_position_BV - y_position_AV)**2)
+       - Finally, you should modify the current function code based on the suggestions above. Remember to                 # Define weights for different factors. The weights are assigned based on the physical meaning of each factor.
+     following the basic framework of the current identification function code when current collision rate is higher
+     than 0.7.                                                                                                            weight_distance = 0.5
+                                                                                                                          weight_velocity_diff = 1
+     ## Output requirements                                                                                               weight_direction_conflict = 0.3
+       - You can both modify the current code lines and add new lines of the current identification function code.        # Normalize distance to be between [0, 1] range using logarithmic scaling to reflect increased danger with smaller
+     But you cannot write a totally different function code than the current one unless the current collision rate is   distances.
+     very low (lower than 0.4).
+       - You should provide your thoughts on improving the function code in the beginning.                              - normalized_distance = np.log(100 / (distance.max() + 1) + 1)
+       - You must output Python code block only. ** Anything else outside the code is forbidden to be                   + normalized_distance = -np.log(distance.min() + 1)
+     output.**                                                                                                            # Calculate velocity difference between AV and BV in each moment.
+       - The identification function code should be written in Python 3.9.                                                velocity_diff = np.abs(np.array(velocity_BV) - np.array(velocity_AV))
+       - If you need to import packages (e.g. math, numpy) or define helper functions, define them inside the
+     risk_potential_formula function. Do not use unimported packages and undefined functions.                             # Normalize the velocity difference
+                                                                                                                        - normalized_velocity_diff = np.log((np.mean(np.abs(np.diff(np.array([velocity_BV, velocity_AV]))))) + 1)
+     ## Output format                                                                                                   + normalized_velocity_diff = -np.log(velocity_diff.max() + 1)
+      Strictly follow the following format and you must only output the risk_potential_formula function code.             # Calculate the direction conflict term
+      def risk_potential_formula(x_position_AV, y_position_AV, velocity_AV, heading_AV, x_position_BV,
+     y_position_BV, velocity_BV, heading_BV):                                                                             direction_conflict = np.abs(np.sin(np.array(heading_BV)) - np.sin(np.array(heading_AV)))
+        # Thoughts:                                                                                                       # Calculate risk potential value
+        #…                                                                                                                risk_potential_value = weight_distance * normalized_distance + weight_velocity_diff * normalized_velocity_diff +
+        # (import packages and define helper functions)                                                                 weight_direction_conflict * direction_conflict
+        import numpy as np
+        # (calculate the risk potential)
+        …                                                                                                                 return risk_potential_value
+        return risk_potential_value
+
+
+
+
+Fig. 3. The left side of the figure presents the prompt design of the Modification module, while the upper right side shows the suggestions provided by
+the Reflection module, and the lower right side displays the modified code made by the Modification module.
+
+
+
+Optimization approach is employed in each iteration when the
+attack success rate of the current function exceeds a predefined                                                                            max P(Y adv , Y ego | X, C) ∝
+threshold. In particular, the Reflection module is firstly                                                                                  Y adv
+instructed to suggest only minor adjustments, including modi-                                                                               max P(Y adv | X)P(Y ego | X)P(C | Y ego , Y adv ) ∝
+                                                                                                                                            Y adv                                                                                                  (9)
+fying the weights of an item in the function, without modifying
+                                                                                                                                                        N
+the structure of the function. If minor adjustments fail to                                                                                             Y
+                                                                                                                                            max               P(Yiadv | X)P(Y ego | X)P(C | Y ego , Yiadv )
+make improvement after Q/2 modification, the Reflection                                                                                     Y adv
+                                                                                                                                                        i=1
+module is then allowed to propose structural modifications to
+explore the potential for better performance. In this way, it                                                                          where candidate trajectories of N adversarial vehicles Y adv
+is achieved that the function can be upgraded through both                                                                             and the corresponding probability P(Y adv | X) are given by
+controlled refinement and exploration of new structures, while                                                                         a pre-trained probabilistic traffic forecasting model DenseTNT
+maintaining its current performance.                                                                                                   [26]. The trajectory of ego vehicle Y ego and probability
+   In summary, the implementation of the LLM-based Ad-                                                                                 P(Y ego | X) are obtained from the rollouts of ego vehicle.
+versarial Vehicle Identifier is shown in Algorithm (1). The                                                                            Based on the trajectory of adversarial vehicle and ego vehicle,
+identification of N adversarial vehicles from M background                                                                             the collision likelihood P(C | Y ego , Y adv ) can be calculated.
+vehicles is denoted as: N ⇐ FZ (M ). We take the prompt of                                                                                Based on the calculation results, the adversarial vehicles
+the Modification module as an example, shown in Fig.                                                                                   follow the trajectories with the highest collision likelihood,
+3, containing the role setting, suggestions, requirements, and                                                                         which turns the normal scenario into the adversarial scenario.
+so on. A concrete example of the suggestions provided by                                                                               The N adversarial vehicles collectively form a multi-vehicle
+the Reflection module and the corresponding modified code                                                                              attack against the ADS. The generated adversarial scenarios
+made by the Modification module is also demonstrated                                                                                   are applied to both testing and training of ADS.
+in Figure 3.                                                                                                                              The pseudo code of LLM-attacker is summarized in Al-
+                                                                                                                                       gorithm (2). Given a collection of normal scenarios E for
+                                                                                                                                       training and E ′ for testing, the attacker identification function
+C. Closed-loop Trajectory Generation for Multiple Attackers                                                                            Fz is first applied to each scenario to identify the optimal N
+                                                                                                                                       attackers. Then, during training process, the traffic forecasting
+   The second step of adversarial scenario generation is to                                                                            model K generates candidate adversarial trajectories Y adv .
+compute the trajectory of multiple adversarial vehicles Y adv .                                                                        The ego trajectory Y ego is generated from the ego trajectory
+It is assumed that the state of vehicles in the future are                                                                             buffer D, which changes as the learning of the ADS policy π
+independent with each other. Meanwhile, the collision merely                                                                           continues. As π evolves, the adversarial trajectories Y adv also
+depends on the trajectories of the ego vehicle and the ad-                                                                             change accordingly, forming a closed-loop adversarial training
+versarial vehicles. Therefore, the collision probability to be                                                                         process. During testing process, Y adv is also calculated based
+maximized can be factorized to a tractable form [10] based                                                                             on the performance of ADS. The ADS policy π ∗ remains
+on the Bayes theorem under this assumption.                                                                                            unchanged. The testing evaluation metrics ϵ are calculated
+                                                                                                                                                  6
+
+
+
+by testing the ADS in all normal scenarios and generated                  The number of iterations Z and candidates in each iteration
+adversarial scenarios.                                                    Q are set to 8 and 11, respectively. The initial result of the
+                                                                          small-scale simulation test e0 is assigned to 0.4.
+ Algorithm 2: Closed-loop LLM-attacker framework
+  Require:                                                                B. LLM outputs
+      ADS policy π, Normal scenarios for training E, Normal
+      scenarios for testing E ′ , traffic forecasting model K, learning      We perform the LLM-based Adversarial Vehicle Identifier
+      algorithm F, ego trajectory buffer D, max policy training           three times and record the attack success rate in each iteration,
+      steps Kmax , trained policy π ∗ , testing evaluation metrics ϵ      which is shown in Fig.4. It can be seen that the attack
+   1: ▷ Preprocess: Identify adversarial vehicles for each scenario       success rate increases overall with the iteration of identification
+   2: for each scenario ei in E and E ′ do
+   3:    N ⇐ FZ (M )                                                      function, which demonstrates the continuous improvement
+   4: —– Training process —–                                              effect of LLM. The three rounds of identification end with at
+   5: while training steps is smaller than Kmax :                         least 83% success rate. The best performance is achieved in the
+   6: Sample one normal scenario e from E                                 11th iteration of Round 1 and the corresponding function code
+   7: ▷ Calculate adversarial trajectories                                is used in the subsequent experiments. The average time cost
+   8:     {Y adv , P(Y adv | X)} ⇐ K(X)
+   9:     {Y ego , P(Y ego | X)} ⇐ D(X)                                   for the three rounds is 4.42 hours, with LLM reasoning taking
+  10:     Y adv ⇐ P(Y adv , Y ego | X, C)                                 2.10 hours and simulation test to validate the attack success
+  11: Conduct adversarial simulation and update ego trajectory            rate taking 2.32 hours. To ensure full control of the multi-
+  12: D ⇐ D ∪ Y ego                                                       agent prompting pipeline, we run LLaMA 3.1-8B locally. If
+  13: π ⇐ F (π)                                                           commercial APIs are used instead, the inference latency can
+  14: —– Testing process —–
+  15: for each scenario ei in E ′ do
+                                                                          be significantly reduced.
+  16: ▷ Calculate adversarial trajectories
+  17:     {Y adv , P(Y adv | X)} ⇐ K(X)
+  18:     {Y ego } ⇐ π ⋆ (X)
+  19:     Y adv ⇐ P(Y adv , Y ego | X, C)
+  20: Conduct adversarial simulation and record ϵ
+  21: Return Final policy π ⋆ , evaluation metrics ϵ
+
+
+
+
+                      IV. E XPERIMENT
+   This section offers experiments to verify the effectiveness
+of the proposed LLM-attacker framework. We first describe
+the experimental setup, followed by an analysis of the outputs
+                                                                          Fig. 4. The attack success rate range with the iteration of identification
+generated by the LLM. We then test adversarial attack success             function in the LLM-based Adversarial Vehicle Identifier.
+rate and evaluate effectiveness of adversarial training.
+
+A. Experimental settings                                                  C. Performance evaluation of adversarial vehicle identifier
+    The autonomous driving task is performed based on the                    In this subsection, we evaluate the LLM-based Adversarial
+waymo open motion dataset (WOMD), which is a collection                   Vehicle Identifier by comparing the adversarial scenarios gen-
+of diverse traffic scenarios. 485 complex traffic scenarios were          erated based on different identification methods. Three other
+imported from WOMD [27], covering a wide range of road                    identification methods are compared: (1) Random: adversarial
+structures such as straight road, ramp, T-intersection, and               vehicles are randomly identified from all background vehicles.
+intersection. The lightweight and flexible driving simulator              (2) Min TTC: adversarial vehicles are the vehicles having the
+called MetaDrive [28] is applied for the experiments. The                 minimum time to collision (TTC) to ego vehicle. (3) Kinetic
+end-to-end driving policy is trained by a vanilla RL algorithm            Field: The kinetic field represents the influences of the moving
+twin delayed deep deterministic (TD3) [29]. The observation               background vehicle on driving safety, which is a component
+of RL agent contains ego states, navigation information and               of the driving safety field [31]. Two kinds of agent are tested
+surrounding information provided by 2D LiDAR sensor. The                  as the ego vehicle: (1) Log agent: Replay of the real-world
+output action includes steering, throttle, and brake. The LLM             logged ego vehicle trajectories. (2) RL agent: Pretrained RL
+we employed is LLaMA [14] with version number 3.1 and                     driving policy, which is trained by real-world logged scenarios.
+8 billion parameters, which has demonstrated impressive ca-                  Scenarios generated from different identification methods
+pabilities in various spatio-temporal reasoning tasks [30]. All           are evaluated from two aspects: the effectiveness of attack and
+experiments are implemented with an NVIDIA Quadro RTX                     the realism of driving behavior. The effectiveness is quantified
+4000 GPU and Intel Core i7-12700K CPU.                                    by the collision ratio of ego vehicle across all generated
+    The parameters in the LLM-based Adversarial Vehicle Iden-             scenarios, i.e. the attack success rate of adversarial vehicles.
+tifier are set as follows. The number of adversarial vehicles N           Higher rates indicate more effective attacks. To assess realism,
+is set to 1 or 2 for the comparison of the effects of the single-         we measure Kullback–Leibler (KL) divergence between at-
+vehicle adversarial attack and multi-vehicle adversarial attack.          tacker’s acceleration distributions in generated and real-world
+                                                                                                                                                                    7
+
+
+                                                                                    TABLE I
+                                                      A DVERSARIAL ATTACK S UCCESS R ATE AND AVERAGE C OMPUTATIONAL C OST
+
+                                            One attacker                     Two attackers            Three attackers       Four attackers        Five attackers
+           Identification Method
+                                           Log        RL                     Log       RL             Log        RL         Log        RL         Log        RL
+               Random                    18.13%     22.08%                 38.96%    26.88%         51.67%      33.3%     59.17% 36.88%         63.75% 36.88%
+               Min TTC                   54.17%     37.92%                 76.25%    45.42%         82.29% 50.21%         85.42% 53.96%         87.50% 53.96%
+             Kinetic Field               57.71%     37.50%                 83.13%    44.58%         88.13% 47.08%         89.79% 50.83%         91.88% 54.79%
+             LLM-attacker                63.54% 45.00%                     90.42% 50.83%            91.88% 54.79%         92.92% 54.79%         93.54% 54.79%
+          Computational Cost (s)               0.197                             0.263                    0.377                 0.450                 0.535
+
+
+       scenarios. The rate of abnormal jerk is also calculated. Lower                                                          TABLE II
+       values of these metrics represent higher levels of realism.                                                   R EALISM OF D RIVING B EHAVIOR
+          In terms of effectiveness, the adversarial attack success
+                                                                                                                               Acceleration       Abnormal Jerk
+       rate is shown in TABLE I. The LLM-attackers achieve the                                        Identification Method
+                                                                                                                              KL Divergence ↓        Rate ↓
+       highest success rate in all experiments. As for realism, the
+       evaluation results are shown in TABLE II. The occurrence                                             Random                0.0523             3.155%
+       of abnormal jerk rate in LLM-attacker is the lowest, with a                                         Min TTC                0.0134             1.961%
+       relatively low acceleration KL divergence, demonstrating the                                       Kinetic Field           0.0075             1.864%
+       realism of attacker’s behavior.                                                                    LLM-attacker            0.0112            1.836%
+          To verify effect of the number of adversarial vehicles
+       N , experiments are conducted to compare one, two, three,                                      Fig. 5 demonstrates a specific example of identification
+       four, and five attackers. Average computational cost for each                               results of different methods. This is an unprotected left-turn
+       scenario is also recorded. It can be concluded from TABLE I                                 intersection scenario where the goal of ego vehicle is to turn
+       that: (1) Scenarios with two attackers achieve a significantly                              left. The Min TTC identifies the vehicle from the right-side
+       higher attack success rate compared to scenarios with a single                              entrance lane as the attacker, and the Kinetic Field identifies
+       attacker. (2) When the number of attackers increases to three                               the vehicle on the adjacent right lane of the ego vehicle.
+       or four, improvement in attack success rate becomes marginal.                               However, the two methods fail to attack the ego vehicle. In
+       While multiple methods yield the same success rate of 54.79%,                               the LLM identification results, the oncoming vehicle from the
+       collisions happen in different scenarios, reflecting distinct                               opposite entrance lane is identified as the attacker, leading to
+       attack behaviors across different methods. (3) The computation                              a realistic and critical left-turn conflict. While the ego vehicle
+       time increases with the number of attackers. Therefore, con-                                does not react in time, the collision between the ego vehicle
+       sidering both attack effectiveness and computational efficiency,                            and the attacker composes the safety-critical events.
+24.4新增：two attackers yield the best overall performance.
+245
+                                                                                                   D. Adversarial training results
+           Frame 1
+                                                                                                      In adversarial training, the generated safety-critical sce-
+                                                                                                   narios act as data augmentation during the training of ADS
+                                                                                                   policy. The training dataset consists of two parts: 385 real-
+                                                                                                   world WOMD replay scenarios and the safety-critical sce-
+           Frame 2
+                                                                                                   narios generated from these 385 scenarios. Three kinds of
+                                                                                                   generation approaches are applied: (1) LLM-II: there are
+                                                                                                   two attackers identified by LLM-attacker, (2) LLM-I: only
+           Frame 3
+                                                                                                   one attacker identified by LLM-attacker, (3) Kinetic-II: two
+                                                                                                   attackers identified by Kinetic Field. Meanwhile, training
+                                                                                                   based on the Replay dataset, which consists of only real-
+                                         Safety-critical                                           world replay scenarios, is also conducted for comparison.
+           Frame 4                                                                                 The dataset includes the other 100 real-world normal replay
+                                                                                                   scenarios, and their generated safety-critical scenarios (with
+                      Replay             LLM                    Min TTC            Kinetic Field   one attacker and two attackers) are utilized for testing. In the
+                     Ego vehicle          Adversarial vehicle             Background vehicle       testing, two metrics are evaluated: (1) the crash rate, which
+                                                                                                   means the proportion of collisions between the ADS and other
+        Fig. 5. An identification and safety-critical scenario example. The blue                   vehicles in the test scenario, and the lower the better. (2) the
+        rectangle is the ego vehicle controlled by ADS and the red rectangle is the
+        identified attacker. Four frames are sampled to represent the dynamics of                  route completion, which represents the driving task completion
+        the entire scenario. The real-world replay scenario, the attacker identification           rate of ADS and the higher the better for ADS. To ensure
+        and generated adversarial scenarios by LLM, Min TTC and Kinetic Field are                  consistency, the four types of training dataset are repeated
+        displayed from left to right. LLM successfully converts real-world normal
+        scenarios into safety-critical scenarios, whereas Min TTC and Kinetic Field                three times using the same random seed. Then, mean of the test
+        fail to achieve so.                                                                        metrics and half of variance of the test metrics are calculated.
+                                                                                                                                                                                                                                                                                                                                                                                   8
+
+
+                                                                                                                                                                                                                                                                        TABLE III
+                                                                                                                                                                                                                                                              A DVERSARIAL T RAINING R ESULTS
+
+                                                                                                                                                               Normal                                                                                                                                    One attacker                                Two attackers
+          Training dataset
+                                                                                                      Crash Rate ↓                                                                                                    Route Completion ↑                                               Crash Rate ↓            Route Completion ↑        Crash Rate ↓       Route Completion ↑
+                                                              LLM-II                             08.81 ± 1.64%                                                                                                                   75.37 ± 3.41%                                   18.00 ± 1.72%                   72.60 ±03.09%          23.79 ± 1.32%         70.92 ± 2.79%
+                                                               LLM-I                             13.28 ± 1.89%                                                                                                                  78.61 ± 0.37%                                     22.78 ± 1.63%                  75.16 ± 0.55%          29.87 ± 1.15%         72.82 ± 1.26%
+                                                               Replay                            22.61 ± 5.12%                                                                                                                   74.48 ± 7.33%                                    40.25 ± 6.65%                  68.52 ± 8.28%          45.07 ± 7.01%         65.80 ± 9.05%
+                                                           Kinetic-II                            19.50 ± 3.44%                                                                                                                  61.93 ±10.95%                                     31.10 ± 1.96%                  56.91 ±11.69%          37.36 ± 4.50%         53.82 ±12.85%
+
+
+
+                                                                                                                   / / 0  , ,               5 R X W H  & R P S O H W L R Q   1 R U P D O                                                                                                    attackers identified by LLM outperforms the Replay scenarios
+                                                                                                                       / / 0  ,
+                                                                                                                                                                                                                                                                                                        or the Kinetic identification. The results prove that enhancing
+   & U D V K  5 D W H   1 R U P D O 
+
+
+
+
+                                                                                                                       5 H S O D \
+                                                                                                                   . L Q H W L F  , ,                                                                            
+                                                                                                                                                                                                                                                                                                        the training dataset by effective safety-critical scenarios can
+                                                                                                                                                                                                                                                                                                 greatly improve the safety and robustness of the ADS policy.
+                                                                                                                                                                                                                  
+                                                                                                                                                                                                                                                                               / / 0  , ,
+                                                                                                                                                                                                                                                                               / / 0  ,
+                                                             
+                                                                                                                                                                                                                                                                            5 H S O D \                                         V. C ONCLUSION
+                                                                                                                                                                                                                                                                               . L Q H W L F  , ,
+
+                                                                                                                                                                                                                                                                             Safety-critical scenarios are rare in real world and adver-
+                                                                                   7 U D L Q L Q J  6 W H S V                       H                                                                                                   7 U D L Q L Q J  6 W H S V                       H 
+                                                                                                                                                                                                                                                                                                        sarial scenario generation methods, which modify the trajec-
+                                                                                                                                                                                                                                                                                                        tories in real-world traffic scenario, can turn normal scenarios
+                                                                                                                                                 5 R X W H  & R P S O H W L R Q   2 Q H  D W W D F N H U 
+
+
+
+
+                                                                                                                   / / 0  , ,
+                                                                                                                                                                                                                                                                                                        into safety-critical ones. This paper presents LLM-attacker: a
+   & U D V K  5 D W H   2 Q H  D W W D F N H U 
+
+
+
+
+                                                                                                                       / / 0  ,
+                                                                                                                   5 H S O D \                                                                                    
+                                                                                                                       . L Q H W L F  , ,                                                                                                                                                              closed-loop adversarial scenario generation framework lever-
+                                                             
+                                                                                                                                                                                                                                                                                                     aging LLMs to address the adversarial vehicle identification
+                                                                                                                                                                                                                                                                                                    and closed-loop training problem. Multiple collaborative LLM
+                                                                                                                                                                                                                      
+                                                             
+                                                                                                                                                                                                                                                                               / / 0  , ,
+                                                                                                                                                                                                                                                                                                        agents are manipulated to realize automatic adversarial vehicle
+                                                                                                                                                                                                                                                                        / / 0  ,
+                                                                                                                                                                                                                                                                               5 H S O D \
+                                                                                                                                                                                                                                                                                                        identification. The generated scenarios are applied to the
+                                                                                                                                                                                                                                                                               . L Q H W L F  , ,
+                                                                                                                                                                                                                                                                                                    testing and training of ADS. It turns out that the attack success
+                                                                                                                                                                                                                                                                       
+                                                                                   7 U D L Q L Q J  6 W H S V                       H                                                                                                   7 U D L Q L Q J  6 W H S V                       H        rate of the LLM-attacker outperforms other methods, and two
+                                                                                                                                                                                                                                                                                                        attackers achieve the balance between attack effectiveness and
+                                                                                                                                                 5 R X W H  & R P S O H W L R Q   7 Z R  D W W D F N H U V 
+
+
+
+
+                                                                                                                       / / 0  , ,
+                                                                                                                                                                                                                                                                                                        computational efficiency in the testing process. Furthermore,
+   & U D V K  5 D W H   7 Z R  D W W D F N H U V 
+
+
+
+
+                                                                                                                   / / 0  ,
+                                                                                                                       5 H S O D \
+                                                                                                                                                                                                                                                                                                     the safety performance of the ADS trained by LLM-attacker
+                                                                                                                   . L Q H W L F  , ,
+                                                                                                                                                                                                                      
+                                                                                                                                                                                                                                                                                                        is significantly better than that trained by normal scenarios.
+                                                             
+                                                                                                                                                                                                                                                                                                           There are several potential directions to be explored in
+                                                                                                                                                                                                                                                                                                 the future. First, newly released LLMs can be compared to
+                                                                                                                                                                                                                                                                           / / 0  , ,              assess their ability in adversarial scenario generation, including
+                                                                                                                                                                                                                                                                            / / 0  ,
+                                                                                                                                                                                                                                                                           5 H S O D \
+                                                                                                                                                                                                                                                                                                        reasoning efficiency and adversarial effectiveness. Second,
+                                                                                                                                                                                                                                                                               . L Q H W L F  , ,
+
+                                                                                                                                                                                                                                                                          incorporating traffic rule constraints into attacker identification
+                                                                                   7 U D L Q L Q J  6 W H S V                       H                                                                                                   7 U D L Q L Q J  6 W H S V                       H 
+                                                                                                                                                                                                                                                                                                        and trajectory generation may generate more diverse and edge-
+                                                                                                                                                                                                                                                                                                        case scenarios.
+Fig. 6. Adversarial training curves of the ADS policy. The X-axis represents
+the training steps and the Y-axis represents the testing metrics. Four types of
+training dataset (LLM-II, LLM-I, Replay and Kinetic-II) are compared, which
+are displayed in color blue, orange, green and red, respectively. The crash
+                                                                                                                                                                                                                                                                                                                                     R EFERENCES
+rate and route completion of the ADS policy are tested in real-world normal                                                                                                                                                                                                                              [1] J. M. Scanlon, K. D. Kusano, T. Daniel, C. Alderson, A. Ogle, and
+scenario, safety-critical scenario with one attacker, and safety-critical scenario                                                                                                                                                                                                                           T. Victor, “Waymo simulated driving behavior in reconstructed fatal
+with two attackers. The same set of scenarios was used across all tests, and                                                                                                                                                                                                                                 crashes within an autonomous vehicle operating domain,” Accident
+the attackers, identified by the LLM, remained consistent throughout.                                                                                                                                                                                                                                        Analysis & Prevention, vol. 163, p. 106454, 2021.
+                                                                                                                                                                                                                                                                                                         [2] D. Zhao, H. Lam, H. Peng, S. Bao, D. J. LeBlanc, K. Nobukawa,
+                                                                                                                                                                                                                                                                                                             and C. S. Pan, “Accelerated evaluation of automated vehicles safety in
+                                                                                                                                                                                                                                                                                                             lane-change scenarios based on importance sampling techniques,” IEEE
+  The adversarial training results are shown in Fig. 6 and                                                                                                                                                                                                                                                   transactions on intelligent transportation systems, vol. 18, no. 3, pp.
+TABLE III. For the crash rate, the policy trained with the                                                                                                                                                                                                                                                   595–607, 2016.
+LLM-II achieves the lowest collision rate, which reduces                                                                                                                                                                                                                                                 [3] Z. Huang, H. Lam, D. J. LeBlanc, and D. Zhao, “Accelerated eval-
+                                                                                                                                                                                                                                                                                                             uation of automated vehicles using piecewise mixture models,” IEEE
+collisions by approximately half compared to Replay training                                                                                                                                                                                                                                                 Transactions on Intelligent Transportation Systems, vol. 19, no. 9, pp.
+in both normal and safety-critical scenarios. For the route                                                                                                                                                                                                                                                  2845–2855, 2017.
+completion, the policy trained with LLM-I performs the best                                                                                                                                                                                                                                              [4] J. Yang, H. Sun, H. He, Y. Zhang, H. X. Liu, and S. Feng, “Adaptive
+                                                                                                                                                                                                                                                                                                             safety evaluation for connected and automated vehicles with sparse con-
+while the policy trained with LLM-II ranks second. This may                                                                                                                                                                                                                                                  trol variates,” IEEE Transactions on Intelligent Transportation Systems,
+be attributed to the stronger adversarial pressure introduced                                                                                                                                                                                                                                                2023.
+by LLM-II with two attackers, which encourages the policy                                                                                                                                                                                                                                                [5] J. Sun, H. Zhou, H. Xi, H. Zhang, and Y. Tian, “Adaptive design
+                                                                                                                                                                                                                                                                                                             of experiments for safety evaluation of automated vehicles,” IEEE
+to adopt more conservative behaviors. In general, it can be                                                                                                                                                                                                                                                  Transactions on Intelligent Transportation Systems, vol. 23, no. 9, pp.
+demonstrated that the safety-critical scenario with one or two                                                                                                                                                                                                                                               14 497–14 508, 2022.
+                                                                                                                                                                9
+
+
+
+ [6] H. Zhang, J. Sun, and Y. Tian, “Accelerated risk assessment for                    thought reasoning in language models,” 2023. [Online]. Available:
+     highly automated vehicles: Surrogate-based monte carlo method,” IEEE               https://arxiv.org/abs/2203.11171
+     Transactions on Intelligent Transportation Systems, 2023.                     [26] J. Gu, C. Sun, and H. Zhao, “Densetnt: End-to-end trajectory prediction
+ [7] Y. Mei, T. Nie, J. Sun, and Y. Tian, “Bayesian fault injection safety test-        from dense goal sets,” in Proceedings of the IEEE/CVF International
+     ing for highly automated vehicles with uncertainty,” IEEE Transactions             Conference on Computer Vision (ICCV), October 2021, pp. 15 303–
+     on Intelligent Vehicles, pp. 1–15, 2024.                                           15 312.
+ [8] J. Wang, A. Pun, J. Tu, S. Manivasagam, A. Sadat, S. Casas, M. Ren,           [27] S. Ettinger, S. Cheng, B. Caine, C. Liu, H. Zhao, S. Pradhan, Y. Chai,
+     and R. Urtasun, “Advsim: Generating safety-critical scenarios for self-            B. Sapp, C. R. Qi, Y. Zhou, Z. Yang, A. Chouard, P. Sun, J. Ngiam,
+     driving vehicles,” in Proceedings of the IEEE/CVF Conference on                    V. Vasudevan, A. McCauley, J. Shlens, and D. Anguelov, “Large scale
+     Computer Vision and Pattern Recognition, 2021, pp. 9909–9918.                      interactive motion forecasting for autonomous driving: The waymo
+ [9] D. Rempe, J. Philion, L. J. Guibas, S. Fidler, and O. Litany, “Generating          open motion dataset,” in Proceedings of the IEEE/CVF International
+     useful accident-prone driving scenarios via a learned traffic prior,” in           Conference on Computer Vision (ICCV), October 2021, pp. 9710–9719.
+     Proceedings of the IEEE/CVF Conference on Computer Vision and                 [28] Q. Li, Z. Peng, L. Feng, Q. Zhang, Z. Xue, and B. Zhou, “Metadrive:
+     Pattern Recognition, 2022, pp. 17 305–17 315.                                      Composing diverse driving scenarios for generalizable reinforcement
+[10] L. Zhang, Z. Peng, Q. Li, and B. Zhou, “Cat: Closed-loop adversar-                 learning,” IEEE Transactions on Pattern Analysis and Machine Intel-
+     ial training for safe end-to-end driving,” in Proceedings of The 7th               ligence, vol. 45, no. 3, pp. 3461–3475, 2023.
+     Conference on Robot Learning, ser. Proceedings of Machine Learning            [29] S. Fujimoto, H. van Hoof, and D. Meger, “Addressing function
+     Research, J. Tan, M. Toussaint, and K. Darvish, Eds., vol. 229. PMLR,              approximation error in actor-critic methods,” in Proceedings of the
+     06–09 Nov 2023, pp. 2357–2372.                                                     35th International Conference on Machine Learning, ser. Proceedings
+[11] T. Zhang, L. Wang, J. Kang, X. Zhang, S. Liang, Y. Chen, A. Liu,                   of Machine Learning Research, J. Dy and A. Krause, Eds.,
+     and X. Liu, “Module-wise adaptive adversarial training for end-to-end              vol. 80. PMLR, 10–15 Jul 2018, pp. 1587–1596. [Online]. Available:
+     autonomous driving,” arXiv preprint arXiv:2409.07321, 2024.                        https://proceedings.mlr.press/v80/fujimoto18a.html
+[12] C. Liu, T. Nie, Y. Du, J. Cao, D. Wu, and F. Li, “A response-type             [30] J. He, T. Nie, and W. Ma, “Geolocation representation from large
+     road anomaly detection and evaluation method for steady driving of                 language models are generic enhancers for spatio-temporal learning,”
+     automated vehicles,” IEEE Transactions on Intelligent Transportation               arXiv preprint arXiv:2408.12116, 2024.
+     Systems, vol. 23, no. 11, pp. 21 984–21 995, 2022.                            [31] J. Wang, J. Wu, and Y. Li, “The driving safety field based on driver–
+[13] C. Xu, D. Zhao, A. Sangiovanni-Vincentelli, and B. Li, “Diffscene:                 vehicle–road interactions,” IEEE Transactions on Intelligent Transporta-
+     Diffusion-based safety-critical scenario generation for autonomous vehi-           tion Systems, vol. 16, no. 4, pp. 2203–2214, 2015.
+     cles,” in The Second Workshop on New Frontiers in Adversarial Machine
+     Learning, 2023.                                                                                        Yuewen Mei received the B.S. degree in trans-
+[14] H. Touvron, T. Lavril, G. Izacard, X. Martinet, M.-A. Lachaux,                                         portation engineering from Central South Univer-
+     T. Lacroix, B. Rozière, N. Goyal, E. Hambro, F. Azhar, A. Rodriguez,                                  sity, Changsha, Hunan, China. Now she is currently
+     A. Joulin, E. Grave, and G. Lample, “Llama: Open and efficient                                         pursuing the Ph.D. degree with the Department of
+     foundation language models,” 2023. [Online]. Available: https:                                         Traffic Engineering in Tongji University, Shanghai,
+     //arxiv.org/abs/2302.13971                                                                             China. Her research interests include fault injection
+[15] J. Yu, Y. Wang, and W. Ma, “Large language model-enhanced                                              safety testing and safety-critical scenario generation
+     reinforcement learning for generic bus holding control strategies,” 2024.                              for highly automated vehicles.
+     [Online]. Available: https://arxiv.org/abs/2410.10212
+[16] Z. Yang, X. Jia, H. Li, and J. Yan, “Llm4drive: A survey of large
+     language models for autonomous driving,” 2024. [Online]. Available:
+     https://arxiv.org/abs/2311.01043
+[17] A.-M. Marcu, L. Chen, J. Hünermann, A. Karnsund, B. Hanotte,                                          Tong Nie received the B.S. degree from Tongji
+     P. Chidananda, S. Nair, V. Badrinarayanan, A. Kendall, J. Shotton                                      University, Shanghai, China. He is currently pur-
+     et al., “Lingoqa: Visual question answering for autonomous driving,” in                                suing dual Ph.D. degrees with Tongji University
+     European Conference on Computer Vision. Springer, 2024, pp. 252–                                       and The Hong Kong Polytechnic University. He
+     269.                                                                                                   has published several papers in top-tier journals
+[18] W. Ding, C. Xu, M. Arief, H. Lin, B. Li, and D. Zhao, “A survey on                                     and conferences in AI and transportation, such as
+     safety-critical driving scenario generation—a methodological perspec-                                  KDD, AAAI, IEEE TITS, and TR-Part C/E. His
+     tive,” IEEE Transactions on Intelligent Transportation Systems, vol. 24,                               research interests include large language models and
+     no. 7, pp. 6971–6988, 2023.                                                                            autonomous driving. His research was supported by
+[19] W. Ding, B. Chen, M. Xu, and D. Zhao, “Learning to collide:                                            a national grant.
+     An adaptive safety-critical scenarios generating method,” in 2020
+     IEEE/RSJ International Conference on Intelligent Robots and Systems
+     (IROS). IEEE Press, 2020, p. 2243–2250. [Online]. Available:                                           Jian Sun , received the Ph.D. degree in transporta-
+     https://doi.org/10.1109/IROS45743.2020.9340696                                                         tion engineering from Tongji University, Shanghai,
+[20] L. Yang, S. Liu, S. Feng, H. Wang, X. Zhao, G. Qu, and S. Fang,                                        China. He is currently a Professor of transportation
+     “Generation of critical pedestrian scenarios for autonomous vehicle                                    engineering with Tongji University. His research
+     testing,” Accident Analysis & Prevention, vol. 214, p. 107962, 2025.                                   interests include intelligent transportation systems,
+     [Online]. Available: https://www.sciencedirect.com/science/article/pii/                                traffic flow theory, AI in transportation, and traffic
+     S000145752500048X                                                                                      simulation.
+[21] Y. Mei, T. Nie, J. Sun, and Y. Tian, “High-dimensional fault tolerance
+     testing of highly automated vehicles based on low-rank models,” arXiv
+     preprint arXiv:2407.21069, 2024.
+[22] J. Zhang, C. Xu, and B. Li, “Chatscene: Knowledge-enabled safety-
+     critical scenario generation for autonomous vehicles,” in Proceedings of                               Ye Tian (Senior Member, IEEE) he received the
+     the IEEE/CVF Conference on Computer Vision and Pattern Recognition                                     Ph.D. degree in transportation engineering from The
+     (CVPR), June 2024, pp. 15 459–15 469.                                                                  University of Arizona, Tucson, AZ, USA, in 2015.
+[23] T. Hanlin, K. Reddy, Y. Feng, M. Quddus, Y. Demiris, and                                               He is currently a Professor of transportation engi-
+     P. Angeloudis, “Enhancing autonomous vehicle training with language                                    neering with Tongji University, Shanghai, China. He
+     model integration and critical scenario generation,” 2024. [Online].                                   serves as an Associate Editor of IEEE Transactions
+     Available: https://arxiv.org/abs/2404.08570                                                            of Intelligent Transportation Systems. His research
+[24] J. Wei, X. Wang, D. Schuurmans, M. Bosma, F. Xia, E. Chi, Q. V. Le,                                    interests include active demand management, dy-
+     D. Zhou et al., “Chain-of-thought prompting elicits reasoning in large                                 namic traffic assignment, mesoscopic traffic simu-
+     language models,” Advances in neural information processing systems,                                   lation, and safety assurance of automated vehicles.
+     vol. 35, pp. 24 824–24 837, 2022.
+[25] X. Wang, J. Wei, D. Schuurmans, Q. Le, E. Chi, S. Narang,
+     A. Chowdhery, and D. Zhou, “Self-consistency improves chain of
+

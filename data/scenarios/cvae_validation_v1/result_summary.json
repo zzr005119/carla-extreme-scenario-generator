@@ -1,0 +1,11 @@
+{
+  "manifest": "D:\\Xx\\竞赛\\大创实施ing\\data\\scenarios\\cvae_validation_v1\\manifest.json",
+  "total": 4,
+  "completed": 4,
+  "failed": 0,
+  "missing": 0,
+  "target_level_matches": 2,
+  "target_level_match_rate": 0.5,
+  "observed_records": "D:\\Xx\\竞赛\\大创实施ing\\data\\scenarios\\cvae_validation_v1\\observed_records.jsonl",
+  "result_csv": "D:\\Xx\\竞赛\\大创实施ing\\data\\scenarios\\cvae_validation_v1\\result_summary.csv"
+}

@@ -26,6 +26,10 @@ from core.risk_metrics import (  # noqa: E402
     vehicle_speed_kmh,
     write_telemetry_csv,
 )
+from core.route_follower import (  # noqa: E402
+    DeterministicRouteFollower,
+    apply_brake_override,
+)
 from core.sensor_pipeline import SensorWritePipeline  # noqa: E402
 
 
@@ -136,6 +140,52 @@ def validate_config(config):
     ignore_lights = float(config["traffic"]["ignore_lights_percentage"])
     if not 0 <= ignore_lights <= 100:
         raise ValueError("traffic.ignore_lights_percentage 必须位于 0 到 100")
+    route_lock_enabled = bool(config["traffic"].get("route_lock_enabled", False))
+    if route_lock_enabled:
+        route_control_mode = config["traffic"].get(
+            "route_control_mode",
+            "waypoint_follower",
+        )
+        if route_control_mode not in {"waypoint_follower", "traffic_manager_path"}:
+            raise ValueError(
+                "traffic.route_control_mode 必须是 waypoint_follower "
+                "或 traffic_manager_path"
+            )
+        route_length_m = float(config["traffic"].get("route_length_m", 300.0))
+        route_step_m = float(config["traffic"].get("route_step_m", 2.0))
+        route_tolerance_m = float(
+            config["traffic"].get("route_deviation_tolerance_m", 3.0)
+        )
+        if route_length_m <= 0:
+            raise ValueError("traffic.route_length_m 必须大于 0")
+        if route_step_m <= 0:
+            raise ValueError("traffic.route_step_m 必须大于 0")
+        if route_tolerance_m <= 0:
+            raise ValueError("traffic.route_deviation_tolerance_m 必须大于 0")
+        controller = route_controller_settings(config["traffic"])
+        positive_fields = (
+            "target_speed_kmh",
+            "lookahead_m",
+            "steering_gain",
+            "maximum_steer",
+            "maximum_steer_delta",
+            "speed_kp",
+            "maximum_throttle",
+            "maximum_brake",
+            "ego_lead_brake_ttc_seconds",
+            "ego_lead_brake_gap_m",
+            "ego_pedestrian_brake_distance_m",
+            "ego_pedestrian_brake_lateral_m",
+        )
+        for field in positive_fields:
+            if float(controller[field]) <= 0:
+                raise ValueError(f"traffic.route_controller.{field} 必须大于 0")
+        for field in ("maximum_steer", "maximum_throttle", "maximum_brake"):
+            if float(controller[field]) > 1:
+                raise ValueError(f"traffic.route_controller.{field} 不能大于 1")
+        for field in ("speed_ki", "speed_kd"):
+            if float(controller[field]) < 0:
+                raise ValueError(f"traffic.route_controller.{field} 不能小于 0")
 
     camera_names = ("rgb", "depth", "semantic")
     if not any(config["sensors"][name]["enabled"] for name in camera_names):
@@ -267,6 +317,210 @@ def find_driving_waypoint_ahead(world_map, start_transform, distance):
     )
 
 
+def select_deterministic_next_waypoint(current_waypoint, distance):
+    candidates = current_waypoint.next(float(distance))
+    if not candidates:
+        return None
+    current_yaw = current_waypoint.transform.rotation.yaw
+    return min(
+        candidates,
+        key=lambda waypoint: (
+            angle_difference_degrees(
+                waypoint.transform.rotation.yaw,
+                current_yaw,
+            ),
+            waypoint.road_id,
+            waypoint.section_id,
+            waypoint.lane_id,
+            waypoint.s,
+        ),
+    )
+
+
+def build_deterministic_route(world_map, start_transform, length_m, step_m):
+    current_waypoint = world_map.get_waypoint(
+        start_transform.location,
+        project_to_road=True,
+        lane_type=carla.LaneType.Driving,
+    )
+    if current_waypoint is None:
+        raise RuntimeError("无法定位确定性路线起点")
+
+    route_waypoints = [current_waypoint]
+    travelled = 0.0
+    while travelled < float(length_m):
+        next_waypoint = select_deterministic_next_waypoint(
+            current_waypoint,
+            step_m,
+        )
+        if next_waypoint is None:
+            break
+        segment_length = current_waypoint.transform.location.distance(
+            next_waypoint.transform.location
+        )
+        if segment_length <= 1e-6:
+            break
+        route_waypoints.append(next_waypoint)
+        travelled += segment_length
+        current_waypoint = next_waypoint
+
+    if len(route_waypoints) < 2:
+        raise RuntimeError("确定性路线长度不足")
+    return route_waypoints, travelled
+
+
+def route_controller_settings(traffic_config):
+    settings = {
+        "target_speed_kmh": 29.0,
+        "lookahead_m": 6.0,
+        "steering_gain": 1.35,
+        "maximum_steer": 0.8,
+        "maximum_steer_delta": 0.1,
+        "speed_kp": 0.45,
+        "speed_ki": 0.05,
+        "speed_kd": 0.02,
+        "maximum_throttle": 0.75,
+        "maximum_brake": 1.0,
+        "ego_lead_brake_ttc_seconds": 2.0,
+        "ego_lead_brake_gap_m": 5.0,
+        "ego_pedestrian_brake_distance_m": 8.0,
+        "ego_pedestrian_brake_lateral_m": 4.0,
+    }
+    settings.update(traffic_config.get("route_controller") or {})
+    return {key: float(value) for key, value in settings.items()}
+
+
+def route_waypoint_at_distance(route_waypoints, distance_m):
+    travelled = 0.0
+    previous_location = route_waypoints[0].transform.location
+    for index, waypoint in enumerate(route_waypoints[1:], 1):
+        current_location = waypoint.transform.location
+        travelled += previous_location.distance(current_location)
+        if travelled >= float(distance_m):
+            return index, waypoint, travelled
+        previous_location = current_location
+    return None
+
+
+def route_locations(route_waypoints, start_index=0):
+    return [
+        waypoint.transform.location
+        for waypoint in route_waypoints[max(0, int(start_index)) :]
+    ]
+
+
+def route_state(world_map, location, route_waypoints, tolerance_m):
+    waypoint = world_map.get_waypoint(
+        location,
+        project_to_road=True,
+        lane_type=carla.LaneType.Driving,
+    )
+    nearest_index = None
+    nearest_waypoint = None
+    deviation_m = None
+    if route_waypoints:
+        nearest_index, nearest_waypoint = min(
+            enumerate(route_waypoints),
+            key=lambda item: location.distance(item[1].transform.location),
+        )
+        deviation_m = location.distance(nearest_waypoint.transform.location)
+    return {
+        "road_id": waypoint.road_id if waypoint is not None else None,
+        "lane_id": waypoint.lane_id if waypoint is not None else None,
+        "planned_road_id": (
+            nearest_waypoint.road_id if nearest_waypoint is not None else None
+        ),
+        "planned_lane_id": (
+            nearest_waypoint.lane_id if nearest_waypoint is not None else None
+        ),
+        "route_index": nearest_index,
+        "route_deviation_m": deviation_m,
+        "topology_match": (
+            waypoint is not None
+            and nearest_waypoint is not None
+            and waypoint.road_id == nearest_waypoint.road_id
+            and waypoint.lane_id == nearest_waypoint.lane_id
+        ),
+        "on_planned_route": (
+            deviation_m is not None
+            and deviation_m <= float(tolerance_m)
+        ),
+    }
+
+
+def actor_relative_offsets(vehicle_transform, target_location):
+    forward = vehicle_transform.get_forward_vector()
+    delta_x = target_location.x - vehicle_transform.location.x
+    delta_y = target_location.y - vehicle_transform.location.y
+    longitudinal_m = forward.x * delta_x + forward.y * delta_y
+    lateral_m = abs(forward.x * delta_y - forward.y * delta_x)
+    return longitudinal_m, lateral_m
+
+
+def deterministic_ego_brake(
+    ego_transform,
+    lead_gap_distance_m,
+    ttc_seconds,
+    walker_location,
+    pedestrian_active,
+    controller_settings,
+):
+    brake = 0.0
+    reasons = []
+    if lead_gap_distance_m <= controller_settings["ego_lead_brake_gap_m"]:
+        brake = 1.0
+        reasons.append("lead_gap")
+    if (
+        ttc_seconds is not None
+        and math.isfinite(ttc_seconds)
+        and ttc_seconds <= controller_settings["ego_lead_brake_ttc_seconds"]
+    ):
+        brake = 1.0
+        reasons.append("ttc")
+    if pedestrian_active and walker_location is not None:
+        longitudinal_m, lateral_m = actor_relative_offsets(
+            ego_transform,
+            walker_location,
+        )
+        if (
+            0.0 <= longitudinal_m
+            <= controller_settings["ego_pedestrian_brake_distance_m"]
+            and lateral_m
+            <= controller_settings["ego_pedestrian_brake_lateral_m"]
+        ):
+            brake = 1.0
+            reasons.append("pedestrian")
+    return brake, "+".join(reasons) if reasons else None
+
+
+def create_route_follower(
+    vehicle,
+    route_waypoints,
+    fixed_delta_seconds,
+    controller_settings,
+    start_index=0,
+):
+    follower_fields = (
+        "target_speed_kmh",
+        "lookahead_m",
+        "steering_gain",
+        "maximum_steer",
+        "maximum_steer_delta",
+        "speed_kp",
+        "speed_ki",
+        "speed_kd",
+        "maximum_throttle",
+        "maximum_brake",
+    )
+    return DeterministicRouteFollower(
+        vehicle,
+        route_waypoints,
+        fixed_delta_seconds,
+        start_index=start_index,
+        **{field: controller_settings[field] for field in follower_fields},
+    )
+
+
 def find_adjacent_sidewalk(start_waypoint, side, max_lanes=8):
     waypoint = start_waypoint
     for _ in range(max_lanes):
@@ -282,7 +536,13 @@ def find_adjacent_sidewalk(start_waypoint, side, max_lanes=8):
     return None
 
 
-def spawn_lead_vehicle(world, blueprint_library, ego_transform, config):
+def spawn_lead_vehicle(
+    world,
+    blueprint_library,
+    ego_transform,
+    config,
+    planned_route=None,
+):
     blueprint = blueprint_library.find(config["lead_vehicle"]["blueprint"])
     requested_distance = float(config["lead_vehicle"]["initial_distance_m"])
     world_map = world.get_map()
@@ -296,9 +556,21 @@ def spawn_lead_vehicle(world, blueprint_library, ego_transform, config):
     ):
         if distance <= 8.0:
             continue
-        waypoint = find_driving_waypoint_ahead(world_map, ego_transform, distance)
-        if waypoint is None:
+        route_match = (
+            route_waypoint_at_distance(planned_route, distance)
+            if planned_route
+            else None
+        )
+        if planned_route and route_match is None:
             continue
+        if route_match is not None:
+            route_index, waypoint, actual_distance = route_match
+        else:
+            route_index = None
+            actual_distance = distance
+            waypoint = find_driving_waypoint_ahead(world_map, ego_transform, distance)
+            if waypoint is None:
+                continue
         waypoint_transform = waypoint.transform
         transform = carla.Transform(
             carla.Location(
@@ -310,19 +582,36 @@ def spawn_lead_vehicle(world, blueprint_library, ego_transform, config):
         )
         vehicle = world.try_spawn_actor(blueprint, transform)
         if vehicle:
-            return vehicle, distance
+            return vehicle, actual_distance, route_index
     raise RuntimeError("无法在主车前方道路 waypoint 生成前车")
 
 
-def spawn_pedestrian(world, blueprint_library, ego_transform, config):
+def spawn_pedestrian(
+    world,
+    blueprint_library,
+    ego_transform,
+    config,
+    planned_route=None,
+):
     pedestrian_config = config["pedestrian"]
     blueprint = blueprint_library.find(pedestrian_config["blueprint"])
     forward_distance = float(pedestrian_config["forward_distance_m"])
-    crossing_waypoint = find_driving_waypoint_ahead(
-        world.get_map(),
-        ego_transform,
-        forward_distance,
+    route_match = (
+        route_waypoint_at_distance(planned_route, forward_distance)
+        if planned_route
+        else None
     )
+    if planned_route and route_match is None:
+        raise RuntimeError("确定性路线长度不足，无法定位行人横穿位置")
+    if route_match is not None:
+        crossing_route_index, crossing_waypoint, _ = route_match
+    else:
+        crossing_route_index = None
+        crossing_waypoint = find_driving_waypoint_ahead(
+            world.get_map(),
+            ego_transform,
+            forward_distance,
+        )
     if crossing_waypoint is None:
         raise RuntimeError("无法定位行人横穿位置的道路 waypoint")
 
@@ -391,7 +680,7 @@ def spawn_pedestrian(world, blueprint_library, ego_transform, config):
         z=0.0,
     )
     walker.apply_control(carla.WalkerControl(direction=direction, speed=0.0))
-    return walker, start, direction, crossing_length
+    return walker, start, direction, crossing_length, crossing_waypoint, crossing_route_index
 
 
 def configure_camera_blueprint(blueprint, camera_config):
@@ -419,6 +708,19 @@ def main():
     )
     traffic_manager_seed = int(
         scenario_config.get("traffic_manager_seed", 0)
+    )
+    traffic_config = config["traffic"]
+    route_lock_enabled = bool(traffic_config.get("route_lock_enabled", False))
+    route_control_mode = (
+        traffic_config.get("route_control_mode", "waypoint_follower")
+        if route_lock_enabled
+        else "disabled"
+    )
+    controller_settings = route_controller_settings(traffic_config)
+    route_length_m = float(traffic_config.get("route_length_m", 300.0))
+    route_step_m = float(traffic_config.get("route_step_m", 2.0))
+    route_tolerance_m = float(
+        traffic_config.get("route_deviation_tolerance_m", 3.0)
     )
     sensor_config = config["sensors"]
     camera_config = sensor_config["camera"]
@@ -460,6 +762,24 @@ def main():
             "sensors": {},
         },
         "server_health": {"status": "not_checked"},
+        "route_control": {
+            "enabled": route_lock_enabled,
+            "status": "pending" if route_lock_enabled else "disabled",
+            "mode": route_control_mode,
+            "controller_settings": (
+                controller_settings if route_lock_enabled else None
+            ),
+            "auto_lane_change_enabled": not route_lock_enabled,
+            "route_length_requested_m": route_length_m,
+            "route_step_m": route_step_m,
+            "deviation_tolerance_m": route_tolerance_m,
+            "sample_count": 0,
+            "ego_on_route_samples": 0,
+            "lead_on_route_samples": 0,
+            "both_on_route_samples": 0,
+            "maximum_ego_deviation_m": None,
+            "maximum_lead_deviation_m": None,
+        },
         "result": {
             "status": "starting",
             "collision_count": 0,
@@ -490,6 +810,13 @@ def main():
     simulation_step = 0
     walker = None
     walker_direction = None
+    planned_route = []
+    lead_route_start_index = 0
+    ego_route_follower = None
+    lead_route_follower = None
+    ego_control_state = None
+    lead_control_state = None
+    ego_hazard_brake_reason = None
     callback_condition = threading.Condition()
     active_sensor_callbacks = 0
 
@@ -643,7 +970,6 @@ def main():
         world = client.get_world()
         original_settings = world.get_settings()
         original_weather = world.get_weather()
-        traffic_config = config["traffic"]
         tm_port = int(scenario_config["traffic_manager_port"])
         traffic_manager = client.get_trafficmanager(tm_port)
         traffic_manager.set_global_distance_to_leading_vehicle(
@@ -695,11 +1021,21 @@ def main():
         ego_transform = ego_spawn
         print(f"[EGO] {ego_vehicle.type_id}")
 
-        lead_vehicle, actual_lead_distance = spawn_lead_vehicle(
+        route_length_actual = None
+        if route_lock_enabled:
+            planned_route, route_length_actual = build_deterministic_route(
+                world.get_map(),
+                ego_transform,
+                route_length_m,
+                route_step_m,
+            )
+
+        lead_vehicle, actual_lead_distance, lead_route_start_index = spawn_lead_vehicle(
             world,
             blueprint_library,
             ego_transform,
             config,
+            planned_route=planned_route,
         )
         actors.append(lead_vehicle)
         print(
@@ -707,11 +1043,19 @@ def main():
             f"{actual_lead_distance:.1f} m"
         )
 
-        walker, walker_start, walker_direction, crossing_length = spawn_pedestrian(
+        (
+            walker,
+            walker_start,
+            walker_direction,
+            crossing_length,
+            crossing_waypoint,
+            crossing_route_index,
+        ) = spawn_pedestrian(
             world,
             blueprint_library,
             ego_transform,
             config,
+            planned_route=planned_route,
         )
         actors.append(walker)
         print("[WALKER] 行人已在路边待命")
@@ -876,11 +1220,64 @@ def main():
 
             collision_sensor.listen(guarded_callback(on_collision))
 
-        ego_vehicle.set_autopilot(True, tm_port)
-        lead_vehicle.set_autopilot(True, tm_port)
-        ignore_percentage = float(traffic_config["ignore_lights_percentage"])
-        traffic_manager.ignore_lights_percentage(ego_vehicle, ignore_percentage)
-        traffic_manager.ignore_lights_percentage(lead_vehicle, ignore_percentage)
+        if route_lock_enabled and route_control_mode == "waypoint_follower":
+            ego_vehicle.set_autopilot(False, tm_port)
+            lead_vehicle.set_autopilot(False, tm_port)
+            ego_route_follower = create_route_follower(
+                ego_vehicle,
+                planned_route,
+                fixed_delta_seconds,
+                controller_settings,
+            )
+            lead_route_follower = create_route_follower(
+                lead_vehicle,
+                planned_route,
+                fixed_delta_seconds,
+                controller_settings,
+                start_index=lead_route_start_index,
+            )
+            ego_initial_control, ego_control_state = ego_route_follower.run_step()
+            lead_initial_control, lead_control_state = lead_route_follower.run_step()
+            ego_vehicle.apply_control(ego_initial_control)
+            lead_vehicle.apply_control(lead_initial_control)
+        else:
+            ego_vehicle.set_autopilot(True, tm_port)
+            lead_vehicle.set_autopilot(True, tm_port)
+            ignore_percentage = float(traffic_config["ignore_lights_percentage"])
+            traffic_manager.ignore_lights_percentage(ego_vehicle, ignore_percentage)
+            traffic_manager.ignore_lights_percentage(lead_vehicle, ignore_percentage)
+            if route_lock_enabled:
+                for vehicle in (ego_vehicle, lead_vehicle):
+                    traffic_manager.auto_lane_change(vehicle, False)
+                    traffic_manager.random_left_lanechange_percentage(vehicle, 0.0)
+                    traffic_manager.random_right_lanechange_percentage(vehicle, 0.0)
+                traffic_manager.set_path(
+                    ego_vehicle,
+                    route_locations(planned_route),
+                )
+                traffic_manager.set_path(
+                    lead_vehicle,
+                    route_locations(planned_route, lead_route_start_index),
+                )
+        if route_lock_enabled:
+            metadata["route_control"].update(
+                {
+                    "status": "active",
+                    "route_length_actual_m": round(route_length_actual, 3),
+                    "waypoint_count": len(planned_route),
+                    "lead_route_start_index": lead_route_start_index,
+                    "pedestrian_crossing_route_index": crossing_route_index,
+                    "pedestrian_crossing_road_id": crossing_waypoint.road_id,
+                    "pedestrian_crossing_lane_id": crossing_waypoint.lane_id,
+                    "start_road_id": planned_route[0].road_id,
+                    "start_lane_id": planned_route[0].lane_id,
+                }
+            )
+            print(
+                "[ROUTE] 确定性路径控制已启用 | "
+                f"mode={route_control_mode} | "
+                f"waypoints={len(planned_route)} | length={route_length_actual:.1f}m"
+            )
 
         pedestrian_config = config["pedestrian"]
         lead_config = config["lead_vehicle"]
@@ -974,12 +1371,13 @@ def main():
                     )
 
             if elapsed >= brake_trigger and not brake_started:
-                lead_vehicle.set_autopilot(False, tm_port)
+                if route_control_mode != "waypoint_follower":
+                    lead_vehicle.set_autopilot(False, tm_port)
                 brake_started = True
                 record_event("lead_vehicle_brake", elapsed, intensity=brake_intensity)
                 print(f"[EVENT {elapsed:5.2f}s] 前车开始急刹")
 
-            if brake_started:
+            if brake_started and route_control_mode != "waypoint_follower":
                 lead_vehicle.apply_control(
                     carla.VehicleControl(
                         throttle=0.0,
@@ -992,6 +1390,18 @@ def main():
             lead_location = lead_vehicle.get_location()
             ego_velocity = ego_vehicle.get_velocity()
             lead_velocity = lead_vehicle.get_velocity()
+            ego_route_state = route_state(
+                world.get_map(),
+                ego_location,
+                planned_route,
+                route_tolerance_m,
+            )
+            lead_route_state = route_state(
+                world.get_map(),
+                lead_location,
+                planned_route,
+                route_tolerance_m,
+            )
             lead_distance, lead_gap_distance, closing_speed, ttc_seconds = calculate_ttc(
                 ego_location,
                 ego_velocity,
@@ -1002,6 +1412,40 @@ def main():
             pedestrian_distance = None
             if pedestrian_started:
                 pedestrian_distance = ego_location.distance(walker.get_location())
+
+            if route_control_mode == "waypoint_follower":
+                lead_applied_control, lead_control_state = (
+                    lead_route_follower.run_step()
+                )
+                if brake_started:
+                    lead_route_follower.reset_speed_controller()
+                    apply_brake_override(lead_applied_control, brake_intensity)
+
+                ego_applied_control, ego_control_state = ego_route_follower.run_step()
+                hazard_brake, hazard_reason = deterministic_ego_brake(
+                    ego_vehicle.get_transform(),
+                    lead_gap_distance,
+                    ttc_seconds,
+                    walker.get_location() if pedestrian_started else None,
+                    pedestrian_started and not pedestrian_finished,
+                    controller_settings,
+                )
+                if hazard_brake > 0:
+                    ego_route_follower.reset_speed_controller()
+                    apply_brake_override(ego_applied_control, hazard_brake)
+                    if hazard_reason != ego_hazard_brake_reason:
+                        record_event(
+                            "ego_safety_brake",
+                            elapsed,
+                            reason=hazard_reason,
+                            intensity=hazard_brake,
+                        )
+                ego_hazard_brake_reason = hazard_reason
+                ego_vehicle.apply_control(ego_applied_control)
+                lead_vehicle.apply_control(lead_applied_control)
+            else:
+                ego_applied_control = ego_vehicle.get_control()
+                lead_applied_control = lead_vehicle.get_control()
 
             minimum_lead_distance = min(minimum_lead_distance, lead_distance)
             minimum_lead_gap_m = min(minimum_lead_gap_m, lead_gap_distance)
@@ -1021,6 +1465,32 @@ def main():
 
             with metadata_lock:
                 collision_count = metadata["result"]["collision_count"]
+                if route_lock_enabled:
+                    route_control = metadata["route_control"]
+                    route_control["sample_count"] += 1
+                    route_control["ego_on_route_samples"] += int(
+                        ego_route_state["on_planned_route"]
+                    )
+                    route_control["lead_on_route_samples"] += int(
+                        lead_route_state["on_planned_route"]
+                    )
+                    route_control["both_on_route_samples"] += int(
+                        ego_route_state["on_planned_route"]
+                        and lead_route_state["on_planned_route"]
+                    )
+                    for actor_name, state in (
+                        ("ego", ego_route_state),
+                        ("lead", lead_route_state),
+                    ):
+                        key = f"maximum_{actor_name}_deviation_m"
+                        deviation = state["route_deviation_m"]
+                        if deviation is not None:
+                            previous = route_control[key]
+                            route_control[key] = (
+                                deviation
+                                if previous is None
+                                else max(previous, deviation)
+                            )
             telemetry_rows.append(
                 {
                     "elapsed_seconds": round(elapsed, 3),
@@ -1041,7 +1511,60 @@ def main():
                     ),
                     "pedestrian_active": pedestrian_started and not pedestrian_finished,
                     "lead_braking": brake_started,
+                    "ego_hazard_brake_reason": ego_hazard_brake_reason,
                     "collision_count": collision_count,
+                    "ego_control_throttle": round(ego_applied_control.throttle, 4),
+                    "ego_control_brake": round(ego_applied_control.brake, 4),
+                    "ego_control_steer": round(ego_applied_control.steer, 4),
+                    "lead_control_throttle": round(lead_applied_control.throttle, 4),
+                    "lead_control_brake": round(lead_applied_control.brake, 4),
+                    "lead_control_steer": round(lead_applied_control.steer, 4),
+                    "ego_road_id": ego_route_state["road_id"],
+                    "ego_lane_id": ego_route_state["lane_id"],
+                    "ego_planned_road_id": ego_route_state["planned_road_id"],
+                    "ego_planned_lane_id": ego_route_state["planned_lane_id"],
+                    "ego_route_index": ego_route_state["route_index"],
+                    "ego_route_deviation_m": (
+                        round(ego_route_state["route_deviation_m"], 3)
+                        if ego_route_state["route_deviation_m"] is not None
+                        else None
+                    ),
+                    "ego_route_topology_match": ego_route_state["topology_match"],
+                    "ego_on_planned_route": ego_route_state["on_planned_route"],
+                    "ego_controller_progress_index": (
+                        ego_control_state["progress_index"]
+                        if ego_control_state is not None
+                        else None
+                    ),
+                    "ego_controller_target_index": (
+                        ego_control_state["target_index"]
+                        if ego_control_state is not None
+                        else None
+                    ),
+                    "lead_road_id": lead_route_state["road_id"],
+                    "lead_lane_id": lead_route_state["lane_id"],
+                    "lead_planned_road_id": lead_route_state["planned_road_id"],
+                    "lead_planned_lane_id": lead_route_state["planned_lane_id"],
+                    "lead_route_index": lead_route_state["route_index"],
+                    "lead_route_deviation_m": (
+                        round(lead_route_state["route_deviation_m"], 3)
+                        if lead_route_state["route_deviation_m"] is not None
+                        else None
+                    ),
+                    "lead_route_topology_match": lead_route_state["topology_match"],
+                    "lead_on_planned_route": lead_route_state["on_planned_route"],
+                    "lead_controller_progress_index": (
+                        lead_control_state["progress_index"]
+                        if lead_control_state is not None
+                        else None
+                    ),
+                    "lead_controller_target_index": (
+                        lead_control_state["target_index"]
+                        if lead_control_state is not None
+                        else None
+                    ),
+                    "route_lock_active": route_lock_enabled,
+                    "route_control_mode": route_control_mode,
                 }
             )
 
@@ -1081,6 +1604,54 @@ def main():
             metadata["result"]["minimum_pedestrian_distance_m"] = round(
                 minimum_pedestrian_distance_m,
                 3,
+            )
+        if route_lock_enabled:
+            route_control = metadata["route_control"]
+            if ego_control_state is not None:
+                route_control["ego_final_progress_index"] = ego_control_state[
+                    "progress_index"
+                ]
+                route_control["ego_final_target_index"] = ego_control_state[
+                    "target_index"
+                ]
+            if lead_control_state is not None:
+                route_control["lead_final_progress_index"] = lead_control_state[
+                    "progress_index"
+                ]
+                route_control["lead_final_target_index"] = lead_control_state[
+                    "target_index"
+                ]
+            sample_count = route_control["sample_count"]
+            route_control["ego_on_route_rate"] = (
+                route_control["ego_on_route_samples"] / sample_count
+                if sample_count
+                else None
+            )
+            route_control["lead_on_route_rate"] = (
+                route_control["lead_on_route_samples"] / sample_count
+                if sample_count
+                else None
+            )
+            route_control["both_on_route_rate"] = (
+                route_control["both_on_route_samples"] / sample_count
+                if sample_count
+                else None
+            )
+            route_control["maximum_ego_deviation_m"] = (
+                round(route_control["maximum_ego_deviation_m"], 3)
+                if route_control["maximum_ego_deviation_m"] is not None
+                else None
+            )
+            route_control["maximum_lead_deviation_m"] = (
+                round(route_control["maximum_lead_deviation_m"], 3)
+                if route_control["maximum_lead_deviation_m"] is not None
+                else None
+            )
+            route_control["status"] = (
+                "completed"
+                if sample_count
+                and route_control["both_on_route_samples"] == sample_count
+                else "deviated"
             )
 
     except KeyboardInterrupt:

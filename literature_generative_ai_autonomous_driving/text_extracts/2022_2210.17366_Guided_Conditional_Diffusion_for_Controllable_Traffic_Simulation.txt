@@ -1,0 +1,512 @@
+                                               Guided Conditional Diffusion for Controllable Traffic Simulation
+                                                                           Ziyuan Zhong, Davis Rempe, Danfei Xu, Yuxiao Chen,
+                                                                         Sushant Veer, Tong Che, Baishakhi Ray, and Marco Pavone
+
+
+
+
+                                            Abstract— Controllable and realistic traffic simulation is
+                                         critical for developing and verifying autonomous vehicles.
+                                         Typical heuristic-based traffic models offer flexible control to
+arXiv:2210.17366v1 [cs.RO] 31 Oct 2022
+
+
+
+
+                                         make vehicles follow specific trajectories and traffic rules. On
+                                         the other hand, data-driven approaches generate realistic and
+                                         human-like behaviors, improving transfer from simulated to
+                                         real-world traffic. However, to the best of our knowledge, no
+                                         traffic model offers both controllability and realism. In this
+                                         work, we develop a conditional diffusion model for controllable
+                                         traffic generation (CTG) that allows users to control desired
+                                         properties of trajectories at test time (e.g., reach a goal or
+                                         follow a speed limit) while maintaining realism and physical            Fig. 1: Overview. CTG uses two key stages to enable controllable
+                                         feasibility through enforced dynamics. The key technical idea           simulation. (Left) a conditional diffusion model is trained to gener-
+                                         is to leverage recent advances from diffusion modeling and              ate realistic trajectories. (Right) Guided model sampling uses STL
+                                         differentiable logic to guide generated trajectories to meet rules      rules to meet desired objectives.
+                                         defined using signal temporal logic (STL). We further extend
+                                                                                                                 API [5], [6] or scenario editor UI [7]. However, these meth-
+                                         guidance to multi-agent settings and enable interaction-based
+                                         rules like collision avoidance. CTG is extensively evaluated            ods lack realism as they either cannot react to other traffic
+                                         on the nuScenes dataset for diverse and composite rules,                agents or are not expressive enough to appear human-like. To
+                                         demonstrating improvement over strong baselines in terms of             address these issues, recent works propose to learn generative
+                                         the controllability-realism tradeoff.                                   models of traffic behavior from large-scale driving datasets
+                                                                                                                 [3], [4]. While generated behaviors from these models appear
+                                                                I. I NTRODUCTION                                 reasonable, they merely reflect the distribution of the training
+                                                                                                                 data: they lack any mechanism to control the generated
+                                            Simulation is crucial to comprehensively evaluate modern
+                                                                                                                 traffic flow, making these methods less useful in practice.
+                                         autonomous vehicles (AVs). Due to the difficulty and danger
+                                                                                                                 For example, to test an AV against cut-in from a neighboring
+                                         of running large-scale real-world tests [1], AV developers
+                                                                                                                 lane, a user needs an interface to steer the vehicle to perform
+                                         rely on extensive testing in simulation to produce reliable
+                                                                                                                 the maneuver. Unfortunately, the opaque nature of neural
+                                         systems [2]. To be most useful, simulators must embody both
+                                                                                                                 network models makes this difficult for current approaches.
+                                         realism and controllability, especially for the models of traf-
+                                                                                                                    We look to bridge the gap between realism and controlla-
+                                         fic. Realistic traffic allows developments made in simulation
+                                                                                                                 bility by studying the problem of controllable traffic behavior
+                                         to faithfully transfer to the real world, while controllability
+                                                                                                                 generation. We seek a model that can generate trajectories
+                                         enables constructing fine-grained traffic scenarios to analyze
+                                                                                                                 to meet specific desirable objectives from a user at inference
+                                         specific AV behavior. Yet, developing realistic traffic models
+                                                                                                                 time, which may differ from objectives used in training. This
+                                         is still an open challenge [3], [4], and little attention has been
+                                                                                                                 is different from traffic models that aim to learn maximum-
+                                         devoted to making such models easily controllable.
+                                                                                                                 likelihood behaviors, and therefore are not flexible to new
+                                            Existing driving simulators commonly synthesize agent                objectives. Moreover, controllable generation is an especially
+                                         behaviors by either replaying recorded driving logs or using            challenging for learned approaches, which typically struggle
+                                         heuristic-based controllers [5]–[7]. Such behaviors can often           to produce samples outside of the training distribution.
+                                         be controlled through a user-friendly high-level programming
+                                                                                                                    To enable such flexible generation, we leverage recent
+                                                                                                                 advances in diffusion modeling, which have achieved state-
+                                           Ziyuan Zhong is with Columbia University, this work was carried
+                                         out while at NVIDIA, ziyuan.zhong@columbia.com. Davis                   of-the-art performance in several domains including images
+                                         Rempe is with Stanford University, this work was carried out while at   [8], [9], audio [10]–[12], and pedestrian trajectories [13].
+                                         NVIDIA, drempe@stanford.edu. Danfei Xu is with Georgia                  Importantly, diffusion models allow a notion of control at
+                                         Tech, and with NVIDIA Research, danfei@gatech.edu,
+                                         danfeix@nvidia.com. Yuxiao Chen, Sushant Veer, Tong                     generation time through so-called guidance, which has bene-
+                                         Che     are    with   NVIDIA     Research,    yuxiaoc, sveer,           fited several tasks including conditional image generation [9],
+                                         tongc@nvidia.com. Baishakhi Ray is with Columbia University,            language generation [14], and offline reinforcement learning
+                                         rayb@cs.columbia.edu. Marco Pavone is with Stanford
+                                         University, and with NVIDIA Research, pavone@stanford.edu,              [15]. Inspired by these works, we propose a conditional
+                                         mpavone@nvidia.com                                                      agent-centric diffusion model (Fig. 1) that allows flexible
+traffic behavior generation. Unlike prior diffusion models for        Recent work in adversarial or safety-critical scenario gen-
+trajectories [13], [15], our model is conditioned on a holistic    eration can be seen as one instance of controllable traffic
+context surrounding the vehicle including the local roadmap        simulation, namely generating trajectories that cause an AV
+and neighboring agents. Since traffic has an inherent ground-      to misbehave in some way [24]. STRIVE [25] generates
+truth transition function, we also enforce realistic vehicle       near-collision scenarios by searching in the latent space
+dynamics into the design of the diffusion model state space to     of a trained trajectory prediction model via a test-time
+guarantee that generated trajectories are physically feasible.     optimization. Abeysirigoonawardena et al. [26] and Chen
+   To achieve controllable generation, Diffuser [15] guides        et al. [27] use Bayesian optimization and reinforcement
+each step of the denoising process in a diffusion model            learning, respectively, to generate adversarial trajectories for
+by perturbing network outputs with the gradient of some            vehicles in a specific scenario like intersection crossing or
+differentiable objective to encourage desired properties. For      lane changing. While these works focus specifically on ad-
+traffic simulation, however, deriving and implementing ob-         versarial objectives, our approach is general and can generate
+jectives like collision avoidance, goal reaching, and road         trajectories to meet several different objectives.
+rules is complex due to its spatio-temporal and multi-agent
+nature. We propose to leverage the established syntax of           B. Diffusion Modeling
+Signal Temporal Logic (STL) [16]. As a formal language                Controllable diffusion models have been explored with
+designed for specifying spatio-temporal constraints, STL           classifier [9], classifier-free [28], and reconstruction [29]
+allows one to easily and scalably define driving rules; it also    guidance for image and video generation. Li et al. [14] use a
+incorporates a notion of robustness that measures how well         diffusion model with different pre-trained classifiers to guide
+rules are satisfied. Concretely, we use this measure of rule       language generation on different natural language tasks.
+satisfaction as the objective function for guiding the diffusion   Diffuser [15] uses a diffusion model to plan robot behavior
+model (Fig. 1, right) by leveraging differentiable frameworks      (state-action trajectories). Gu et al. [13] model pedestrian
+[17], [18] to make STL compatible with guidance. Since             trajectories for forecasting. Different from these works that
+our diffusion model generates trajectories independently for       use no or limited context, we adapt conditional diffusion
+each agent in a scene, we further propose a joint guidance         to condition on decision-relevant information such as map
+procedure for rules involving multi-agent interactions (e.g.,      and state of nearby agents. Additionally, we leverage known
+no collisions), which simultaneously denoises all agents in        vehicle dynamics models to ensure physical feasibility of
+the scene to mitigate interaction rule violations.                 the generated trajectories. Diffuser [15] also introduces test-
+   We evaluate Controllable Traffic Generation (CTG), on the       time guidance to generate trajectories that optimize a given
+nuScenes [19] driving dataset, demonstrating the ability to        reward function. We build on this formulation to generate
+meet user constraints while maintaining realistic trajectory       controllable traffic trajectories, but rather than learning re-
+generation. In summary, we contribute (1) the problem for-         ward functions we use analytical loss functions based on STL
+mulation of controllable traffic generation, (2) a conditional     rules that are easy and scalable for driving applications.
+diffusion-based method to generate realistic traffic satisfy-
+ing physical feasibility and user-specified STL rules, and         C. Signal Temporal Logic (STL)
+(3) extensive evaluation comparing CTG to several strong
+                                                                       STL [16] formulas are interpreted over signals, τ =
+baselines, demonstrating its superiority in terms of the trade-
+                                                                   st , ..., st+T , an ordered finite sequence of states si ∈ Rn .
+off between controllability and realism. Demos can be found
+                                                                   A signal represents a sequence of real-valued, discrete-time
+at https://aiasd.github.io/ctg.github.io.
+                                                                   outputs from a system. STL formulas are recursively defined
+                                                                   based on the following context-free grammar:
+         II. R ELATED W ORK AND BACKGROUND
+A. Traffic Simulation                                                        φ ::= > | µc | ¬φ | φ ∧ ψ | φ U[a,b] ψ.           (1)
+
+   Traffic simulation approaches can be categorized into rule-     The grammar defines a list of expressions, each separated
+based and learning-based. Rule-based approaches rely on            by the pipe ( | ), that can be used to construct an STL
+analytical models such as cellular automata and intelligent        formula. In particular, a formula φ is generated by selecting
+driver model [20]. These approaches typically have fixed           expressions recursively. We briefly summarize Eq. (1) here,
+routes for vehicles to follow and separate longitudinal and        but refer readers to Leung et al. [17] (Section 2.2) for
+lateral motions of agents, thus having limited expressiveness      a pedagogical introduction to STL. The core of an STL
+for behavior simulation. Learning-based approaches mimic           formula are predicates µc of the form µ(z) > c, where c ∈ R
+real-world driving behavior based on trajectory datasets [21]–     and µ : Rn → R is a differentiable function. These define
+[23]. For example, TrafficSim [3] uses a trajectory prediction     the desired properties/constraints of a signal. Additionally, >
+model to perform scene-level traffic simulation. BITS [4]          means true, φ and ψ are STL formulas, and [a, b] ⊆ R≥0 is a
+decouples the problem into a high-level latent inference and a     time interval (assumed to be [0, ∞) if omitted). The symbol
+low-level driving behavior imitation. However, none of these       ¬ is negation, while other symbols describe how to combine
+methods allow a user to specify customized properties of the       multiple formulas: ∧ (conjunction/and) and U (until), which
+generated traffic behaviors at inference time.                     is a temporal operator. Other common logical connectives
+(∨ disjunction/or, ⇒ implies), and temporal operators (♦                 operates primarily on a (future) trajectory of states and
+eventually,  always) can be derived from Eq. (1).                       actions [15], but is conditional as it receives the context as
+   Importantly, STL includes a formal notion of robustness,              input at each step of denoising. Starting from Gaussian noise,
+which measures how much a signal satisfies or violates a for-            the diffusion model is applied iteratively to predict a clean,
+mula [16]. We use robustness formulas as guidance functions              denoised trajectory of states and actions.
+for the proposed conditional diffusion model. In contrast                Trajectory representation. In this section, we denote the
+to Leung and Pavone [30] that focus on a single-controller               (future) trajectory that the model operates on as:
+setting and rules fixed at training time, we consider a more                       
+flexible inference-time guidance with multiple agents.                              τ
+                                                                            τ := a , τa := [a0 ... aT −1 ], τs := [s1 ... sT ].
+                                                                                    τs
+        III. C ONTROLLABLE T RAFFIC G ENERATION
+                                                                         Unlike [15] which directly predicts states and actions jointly,
+   Next, we detail our approach CTG. Sec. III-A formulates               our model only predicts actions τa and we leverage the
+the problem of controllable traffic generation. We then de-              known dynamics f to infer states τs via rollout starting at
+scribe the two stages of CTG. The offline stage trains a                 the initial state s0 (included in the past context). In other
+dynamics-enforced conditional diffusion model to capture                 words, in the following formulation, τs always refers to a
+diverse behaviors from real-world driving data (Sec. III-B).             state trajectory resulting from actions, or, more formally:
+Then during online inference, CTG generates rule-compliant               τs = f (s0 , τa ). This ensures physical feasibility of the state
+behaviors by sampling the model using a novel iterative                  trajectory throughout the denoising process.
+joint STL guidance process (Sec. III-C). Taken together, the             Formulation. Let τak be the action trajectory at the kth
+conditional diffusion model and STL-based guidance enable                diffusion step where k = 0 is at the original clean trajectory.
+realistic and controllable generation of traffic trajectories.           The forward diffusion process acting on τa0 is defined as:
+                                                                                                      K
+A. Problem Formulation                                                                               Y
+                                                                                   q(τa1:K |τa0 ) :=     q(τak |τak−1 )
+   For some target vehicle (tgt) that we would like to simu-                                         k=1
+                                                                                                                                       (2)
+late, let the state at a timestep t be stgt         tgt tgt tgt tgt
+                                             t = (xt , yt , vt , θt ),
+                                                                                                             p
+                                                                                   q(τak |τak−1 ) := N (τak ; 1 − βk τak−1 , βk I),
+including 2D location, speed, and yaw. Similarly, let the                where β1 , β2 , · · · βK are a fixed variance schedule that con-
+action (i.e., control) be atgt            tgt tgt
+                                  t = (v̇t , θ̇t ) with acceleration     trols the scale of the injected noise at each diffusion step.
+and yaw rate. We denote c = (I, S) to be decision-                       As noise is gradually added, the signal is corrupted into an
+relevant context for the target agent. This consists of a local          isotropic Gaussian distribution.
+(agent-centric) semantic map I and the H previous states                    For trajectory generation, we seek to reverse this diffusion
+of both the target agent and its M neighbors St−H:t =                    process using a learned conditional denoising model (Fig. 2)
+{stgt       1                M                          m
+   t−H:t , st−H:t , . . . , st−H:t }. To obtain state st+1 for vehi-     that is iteratively applied starting from sampled noise. Given
+cle m at time t + 1, we assume a transition function f that              the context information c, the reverse diffusion process is:
+computes sm                 m m
+              t+1 = f (st , at ) given the previous state st and
+                                                                m
+                                                                                                          K
+           m
+                                                                                                          Y
+control at . We use a unicycle dynamics model for f .                           pθ (τa0:K |c) := p(τaK )     pθ (τak−1 |τ k , c)
+   Our goal is to generate realistic and rule-satisfying traffic                                           k=1
+behavior for the target agent given (1) the decision context                pθ (τak−1 |τ k , c) := N (τak−1 ; µθ (τ k , k, c), Σθ (τ k , k, c)),
+c and (2) a function r : R4T × R2T → R to measure rule                                                                                         (3)
+satisfaction of a state and action trajectory. A model should            where p(τaK ) = N (0, I) and θ denotes the parameters of the
+generate a future trajectory for the target agent stgt     t:t+T over    diffusion model. Note that at each step, the model receives
+the next T time steps. Ideally, this trajectory maximizes                both actions τak and the resulting states τsk = f (s0 , τak ) as
+satisfaction r(stgt           tgt
+                  t:t+T , at:t+T ) to avoid violating the given          input. Following [8], [13], the variance term of the Gaussian
+rule. However, in many cases there is an inherent tradeoff               transition is fixed as Σk = Σθ (τ k , k, c) = σk2 I = βk I.
+between rule satisfaction and trajectory realism: e.g., if a user        Training. At each training iteration, the context c and
+seeks a simulated vehicle with a speed much slower/faster                ground truth clean trajectory τ 0 are sampled from a real-
+than the speed limit, this is naturally “unrealistic” in the             world driving dataset and the denoising step k is uniformly
+context of city streets. Therefore we must strike a balance              sampled from {1, . . . , K}. We compute the noisy input τ k
+between meeting user-specified constraints while still main-             from τ 0 by                                                         k
+                                                                         √              √ first corrupting the action trajectory     Qk τa =
+taining realistic behavior. As described next, our method does                    0
+                                                                            ᾱk τa + 1 − ᾱk ,  ∼ N (0, I) with ᾱk = l=0 1 −
+this by first training a rule-agnostic traffic generation model          βl , and then computing the corresponding state τsk =
+on real-world data to capture realism, which is then guided              f (s0 , τak ). The diffusion model indirectly parameterizes µθ
+for rule-specific compliance only during inference.                      in Eq. (3) by instead predicting the uncorrupted trajectory
+                                                                         τ̂ 0 = [τ̂a0 ; f (s0 , τ̂a0 )] where τ̂a0 = τ̂a0 (τ k , k, c) is the
+B. Conditional Diffusion for Traffic Modeling
+                                                                         direct network output (see [14], [15], [32]). Finally, we use
+   Diffusion models [8], [31] pose data generation as an                 a simplified loss function to train the model:
+iterative denoising process by learning to reverse a forward
+                                                                                           L(θ) = E,k,τ 0 ,c ||τ 0 − τ̂ 0 ||2 .
+                                                                                                                              
+diffusion process. As shown in Fig. 2, our diffusion model                                                                                     (4)
+                                                                     Algorithm 1 Guided Sampling
+                                                                     1: Require encoder Fθ , conditional diffusion model µθ , transition function f , guide
+                                                                        J , scale α, covariances Σk , diffusion steps K, inner gradient descent steps M ,
+                                                                        number of actions to take before re-planning l.
+                                                                     2: while not done do
+                                                                     3:     Observe state s0 and context c
+                                                                     4:     Initialize trajectory τaK ∼ N (0, I); τsK = f (s0 , τaK ); τ K = [τaK ; τsK ]
+
+                                                                      5:   for k = K, . . . , 1 do
+                                                                      6:       µ = µθ (τ k , k, Fθ (c))
+                                                                      7:       µ(0) = µ
+                                                                      8:       for j = 1, . . . , M do
+                                                                      9:           µ(j) = µ(j−1) + α∇J (µ(j−1) )
+                                                                     10:           ∆µ = |µ(j) − µ(0) |; ∆µ ← clip(∆µ, −βk , βk )
+                                                                     11:           µ(j) ← µ(0) + ∆µ
+                                                                     12:        τak−1 ∼ N (µ(M ) , Σk ); τsk−1 = f (s0 , τak−1 );
+                                                                               τ k−1 = [τak−1 ; τsk−1 ]
+                                                                     13:    Execute first l actions of trajectory τa0
+
+
+                                                                     summarized in Alg. 1. Different from Diffuser [15], an
+                                                                     iterative inner gradient descent with clipping using the Adam
+Fig. 2: Single test-time denoising step. Given current noisy         optimizer is incorporated rather than using a single-step
+actions and states along with encoded context, the diffusion model   gradient update. This gives flexibility to trade off rule com-
+predicts the mean of the next-step distribution which is then        pliance and realism by adjusting learning rate and the number
+perturbed according to the desired guidance function.
+                                                                     of optimization steps. When generating a future trajectory in
+Note that both the action and state trajectories are supervised      practice, we guide several samples from the diffusion model
+by this loss since we found that the additional state trajectory     and choose the one with the best rule satisfaction according
+information improves generation quality.                             to J at the end of denoising. We refer to this as filtration.
+Implementation details. The input context c containing               STL as guidance. Instead of training a classifier or reward
+agent-centric map information and past trajectories is repre-        function for J as in prior works [14], [15], our guidance
+sented in a rasterized format. This context is processed by a        functions are implemented analytically based on STL. For
+ResNet [33] encoder Fθ before being passed to the diffusion          each rule we wish to apply through guidance, the grammar
+model. Similar to Diffuser [15], we use a diffusion model            in Eq. (1) is used to generate a corresponding STL formula
+architecture like U-Net containing several blocks of temporal        describing how the trajectory should be constrained. Exam-
+1D convolutions over the input trajectory. We incorporate            ples of various STL rules used are shown in Tab. I; note the
+conditioning information by first concatenating with the dif-        formulas are relatively simple despite the complex behavior
+fusion step input k and then adding this conditioning feature        they describe. By construction, every STL formula admits a
+to the convolutional features at each block of the U-Net. The        robustness formula measuring the degree of rule satisfaction,
+diffusion process uses a cosine variance schedule [15], [32]         which is used as the guide J . Since it is necessary to
+and K = 100 diffusion steps for all experiments.                     compute a gradient through this function, STL formulas are
+                                                                     implemented using differentiable frameworks [17], [18].
+C. Guided Generation with Signal Temporal Logic (STL)                Multi-agent guidance. A particular challenge is applying
+   To enforce desired rules on realistic samples from the            scene-level rules that involve multiple agents (e.g., no col-
+trained diffusion model, we introduce an iterative guidance          lisions). For this purpose, guided sampling is performed
+algorithm with rules specified as STL formulas.                      in a batched fashion over all agents in the same scene
+Conditional guidance formulation. Diffuser [15] introduces           simultaneously. This way guidance can be computed across
+the notion of guidance to sample trajectories from an uncon-         all trajectories, and the corresponding gradients are collected
+ditional diffusion model to meet some pre-defined objective.         and propagated back to agents as needed.
+We can do the same for our conditional diffusion model               Simulating traffic. To perform closed-loop traffic simulation
+by defining a binary random variable O that indicates if a           of a scene with many agents, the same model is used for
+trajectory is optimal, with p(O = 1) = exp(r(τs , τa )) based        each agent in a standard control loop: for each agent at each
+on the rule satisfaction “reward” r. To approximately sample         step of simulation, a guided sample is generated from the
+from the distribution of optimal trajectories, the steps of the      model and the first few actions are taken before re-planning
+denoising process can be modified to [15], [31]:                     at a prescribed frequency. In all experiments (Sec. IV), each
+       pθ (τak−1 | τ k , c, O) ≈ N (τak−1 ; µ + Σg, Σ),       (5)    scene is rolled out for 20 seconds starting from a ground
+                                                                     truth driving log, and the re-plan rate is 2 Hz as in [4].
+where µ = µθ , Σ = Σθ as in Eq. (3), and the added
+gradient is computed from a guide J based on satisfaction:                                       IV. E XPERIMENTS
+                                                                       We conduct experiments to validate that: (1) CTG can
+             g = ∇J (µ) = ∇µ r(f (s0 , µ), µ).                (6)
+                                                                     generate controllable traffic behaviors that satisfy user-
+   The process of perturbing the predicted means from the            specified rules, and (2) compared to strong baselines, CTG
+diffusion model using gradients of a specified objective is          achieves better rule satisfaction while maintaining realism.
+        TABLE I: Definition of rules. For each rule, the STL formula and corresponding metric used for evaluation are shown.
+    Rule                              STL Formula                                                                   Evaluation Metric
+                                                     V
+    speed limit                       φspeedlimit := Vi (vi,t − vlimiti ) <                                       hspeedlimit := Σi Σt max(0, vi,t − vlimiti )
+    target speed                      φtargetspeed := i,t |vi,t − vtargeti,t | <                                   htargetspeed := Σi Σt |vi,t − vtargeti,t |
+                                                       V
+    no collision                      φcollision :=  i6=j ||(xi,t , yi,t ) − (xj,t , yj,t )|| >                   hcollision := Σi6=j 1[||(xi,t , yi,t ) − (xj,t , yj,t )|| ≤ ]
+                                                    V
+    no off-road                       φoffroad := i,w ||(xi,t , yi,t ) − (xoff-roadw , yoff-roadw )|| >           hoffroad := Σi 1[minw ||(xi,t , yi,t ) − (xoff-roadw , yoff-roadw )|| ≤ ]
+                                                     V
+    goal waypoint                     φwaypoint := V i ♦||(xi,t , yi,t ) − (xgoali , ygoali )|| <                  hwaypoint := Σi mint ||(xi,t , yi,t ) − (xgoali , ygoali )||
+    stop sign                         φstopsign := i (φi in stop region ⇒ ♦[0,m] (φi in stop region ∧ φstop ))    hstopsign := Σi mini in stop region |vi,t |
+    stop sign + no off-road           φstopsign ∧ φoffroad                                                          hstopsign , hoffroad
+    goal waypoint + target speed      φwaypoint ∧ φtargetspeed                                                      hwaypoint , htargetspeed
+
+
+                      TABLE II: Quantitative results (Single Rule). The top two methods for each metric are highlighted.
+                                   speed limit                     target speed                      no collision                    no off-road                       goal waypoint
+                           rule        real    fail         rule       real     fail          rule       real     fail        rule       real    fail           rule        real     fail
+     SimNet               0.739      0.898      0.353      1.989       0.898       0.353     0.137      0.898      0.353     0.453       0.900      0.353      7.543       0.900     0.353
+     SimNet+opt           0.038      0.770      0.470      0.630       1.234       0.593     0.045      1.149      0.398     0.427       1.242      0.416      1.947       1.162     0.467
+     TrafficSim           0.737      1.362      0.443      1.922       1.346       0.440     0.140      1.542      0.416     0.485       1.564      0.401      7.733       1.574     0.458
+     TrafficSim+opt       0.042      1.444      0.325      0.610       1.634       0.404     0.075      1.063      0.265     0.423       1.836      0.413      2.414       1.766     0.532
+     BITS                 0.188      1.068      0.256      1.054       0.968       0.246     0.038      1.220      0.314     0.432       1.131      0.296      4.493       1.152     0.332
+     BITS+opt             0.033      1.190      0.487      0.681       1.434       0.542     0.028      1.617      0.354     0.435       1.261      0.343      1.533       1.280     0.442
+     CTG (w/o f+g)        1.380      0.396      0.301      2.662       0.396       0.301     0.172      0.396      0.301     0.369       0.396      0.301      7.052       0.396     0.301
+     CTG                  0.019      0.359      0.165      0.150       0.855       0.179     0.040      0.569      0.271     0.341       0.501      0.455      1.943       0.564     0.387
+
+
+        TABLE III: Quantitative results (Multiple Rules).                                            acceleration magnitude, latitudinal acceleration magnitude,
+                       stop sign + no off-road            goal waypoint + target speed               and jerk. We further provide failure rate (fail) to evaluate
+                  rule1     rule2    real      fail     rule1    rule2     real     fail
+                                                                                                     the stability of generated trajectories. This is measured as
+ SimNet           2.282    0.454     0.898    0.353     3.803      1.610   0.898     0.353
+ SimNet+opt       1.527    0.480     0.796    0.443     3.238      0.980   1.189     0.659           the average fraction of agents experiencing a critical failure,
+ TrafficSim       2.670    0.484     1.605    0.409     1.583      4.544   1.369     0.450           i.e. collision or road departure, in a scene.
+ TrafficSim+opt   0.849    0.405     1.577    0.281     2.817      0.995   1.398     0.529
+ BITS             2.023    0.434     1.032    0.254     2.677      1.077   0.919     0.286           Baselines. Since there are no comparable works on rule-
+ BITS+opt         1.299    0.471     1.083    0.399     3.171      1.019   1.455     0.601
+ CTG (w/o f+g)    2.573    0.369     0.396    0.301     3.868      2.202   0.396     0.301           compliant traffic generation, we augment state-of-the-art
+ CTG              0.528    0.338     0.288    0.326     1.205      0.231   0.738     0.329
+                                                                                                     traffic simulation models by adding a test-time optimization
+                                                                                                     to meet specified rules. For a fair comparison, this optimiza-
+As discussed in Sec. III-A, there is often a trade-off between                                       tion uses the same loss function as used for guidance in
+realism and rule compliance; ideally a method will strike a                                          CTG. SimNet [34] is a deterministic behavior-cloning model.
+reasonable balance and achieve good performance for both.                                            We apply an optimization on its output action trajectory
+After describing the experimental design (Sec. IV-A), we                                             (SimNet+opt). TrafficSim [3] is a CVAE-based trajectory
+compare to baselines in single-rule (Sec. IV-B) and multi-                                           generation method. We consider a variant with filtration
+rule (Sec. IV-C) settings both quantitatively and qualitatively,                                     (TrafficSim) using our loss function, and another with both
+and finally conduct an ablation study (Sec. IV-D).                                                   filtration and latent space optimization (TrafficSim+opt).
+                                                                                                     BITS [4] is a bi-level imitation learning model and we
+A. Experimental Setup                                                                                adapt its sampling ranking function to use our loss function
+Datasets. nuScenes [19] is a large-scale real-world driving                                          (BITS). We also use a variant that employs optimization on
+dataset, which consists of 5.5 hours of accurate trajectories                                        the output action trajectory (BITS+opt). Finally, we compare
+across two cities with diverse scenarios and dense traffic. We                                       to CTG without filtration and guidance (CTG w/o f+g), i.e.
+train all models on scenes from the train split and evaluate                                         random samples from the diffusion model.
+on 100 scenes randomly sampled from the validation split.
+In the current work, we focus only on vehicle simulation and                                         B. Single Rule Evaluation
+defer other types (e.g., pedestrians, cyclists) to future works.                                        We first evaluate how well methods satisfy a single spec-
+Metrics. Our evaluation focuses on controllability, realism,                                         ified rule, which is crucial for applications such as traffic
+and stability (i.e., avoiding collisions and off-road driving).                                      scene editing. We apply five STL rules formulated in Tab. I:
+We consider rule-specific violation metrics (rule), detailed                                         speed limit, target speed, goal waypoint, no collision, and
+in Tab. I, to evaluate controllability. Metrics are computed                                         no off-road. For rules that require specific parameters to be
+for each scene (i denotes each vehicle in the scene), then                                           set (e.g., the goal waypoint location), we select reasonable
+averaged across all testing scenes. To evaluate realism, we                                          values based on the ground truth log in the dataset to avoid
+follow [4] and compare data statistics between generated                                             setting out-of-distribution values (e.g. off-road waypoints).
+traffic simulations and ground truth trajectories in the dataset.                                    Speed Limit. Vehicles should not exceed a speed limit
+This comparison is computed via the Wasserstein distance                                             threshold. Since the speed limit of each road is not available
+between the normalized histograms of the driving profiles                                            in the dataset, we set the limit per scene to be the speed at
+for the simulated and recorded trajectories. We define an                                            the 75% quantile of all moving vehicles in that scene.
+aggregated metric – realism deviation (real) – as the mean                                           Target Speed. Vehicles should follow a specified speed at
+of the realism for three properties from [4]: longitudinal                                           each time step. For each vehicle, the speed is set to 50% of
+                                                                       TABLE IV: Ablation study of CTG features: dyn (dynamics
+                                                                       enforced), f (filtration), g (guidance), a (action trajectory post-
+                                                                       optimization), and op (number of inner optimization steps).
+
+                                                                                   Features              Loss                Metrics
+                                                                         dyn   f       g    a   op   action only?    rule     real      fail
+                                                                          √    √      √
+                                                                                                1                   0.0189   0.3588    0.1647
+                                                                         √
+                                                                         √            √         1                   1.3802   0.3964    0.3011
+                                                                         √     √                1                   0.0387   0.4336    0.2227
+     (a) BC+opt(1.3)    (b) TrafficSim+opt(1.1)   (c) CTG(0.3)                                  1                   1.3268   0.3869    0.2942
+                                                                         √            √    √
+                                                                         √     √      √    √    1                   0.019    0.447     0.1879
+                                                                         √     √           √    1                   0.0132   0.4431    0.1845
+                                                                         √                 √    1                   0.0329   0.4591    0.1881
+                                                                                                1                   0.0819   0.4339    0.2117
+                                                                         √     √      √
+                                                                         √     √      √         3                   0.0158   0.4591    0.2017
+                                                                                                5                   0.0156    0.456    0.1966
+                                                                         √     √      √                  √
+                                                                               √      √         1                   0.018    0.2057    0.2824
+                                                                                                1                   0.0525   3.4204     0.612
+                                                                                                1                   1.2797   3.3251    0.7523
+     (d) BC+opt(2.15)    (e) BITS+opt(6.28)       (f) CTG(3.17)
+
+Fig. 3: Target speed (a)-(c) and goal waypoint (d)-(f) rule results.   variants achieve the top two lowest rule violation and realism
+Rule violations are in parentheses (m/s and m, respectively).          deviation, with only slightly higher failure rates.
+                                                                       D. Ablation Study.
+its speed in the ground truth scene, similar to a traffic jam.
+                                                                          To analyze design choices, we conduct an ablation study
+Goal Waypoint. Vehicles should reach a specified waypoint
+                                                                       under the speed limit rule setting. Results are shown in
+at any time in the future. We set waypoints to be the position
+                                                                       Table IV where the top row is our proposed version of
+at 15s along the ground truth data trajectory for each vehicle.
+                                                                       CTG. The first section compares different combinations of
+Hitting a waypoint from ground truth data is not trivial since
+                                                                       guidance (g) and fitration (f). Without guidance, rule viola-
+sampled trajectories often greatly deviate from the dataset.
+                                                                       tion increases greatly. Filtration is more effective paired with
+No Collision. Vehicles should not collide with each other.
+                                                                       guidance than by itself, as it can choose the best from several
+No Off-road. Vehicles should not leave the drivable area.
+                                                                       already-guided samples that may satisfy rules to differing
+   Quanitative results are shown in Table II. In general, CTG
+                                                                       degrees. In the next part of the table, variants using an addi-
+achieves lower values for rule violation, realism deviation,
+                                                                       tional output action optimization (a) are evaluated. Replacing
+and failure rate than the baselines. Among all five settings,
+                                                                       guidance with optimization is worse on all metrics, while
+CTG has the lowest rule violation in three and is competitive
+                                                                       combining guidance with optimization reduces rule violation
+in the others. For realism deviation and failure rate, CTG is
+                                                                       at the cost of higher realism deviation and failure rate. Next,
+usually top two. Fig. 3 shows qualitative results for target
+                                                                       more inner optimization steps (op) are used in guidance,
+speed and waypoint rules. Compared to TrafficSim+opt and
+                                                                       improving rule violation but giving worse realism and failure
+BC+opt, the strongest baselines for target speed, CTG has
+                                                                       rate. Finally, in the bottom section, we evaluate a variant
+the lowest rule violation using more realistic trajectories. For
+                                                                       that only supervises the action trajectory, and variants where
+the waypoint example, although BC+opt provides better rule
+                                                                       unicycle dynamics (dyn) are not enforced. Supervising only
+satisfaction than CTG, both BC+opt and BITS+opt predict
+                                                                       actions (instead of states and actions) gives more faithful
+curvy, unrealistic trajectories resulting in multiple collisions.
+                                                                       accelerations resulting in lower realism deviation, but failure
+C. Multiple Rules Evaluation                                           is more frequent without state supervision to regularize.
+                                                                       Additionally, we find that enforcing dynamics using the
+Stop Sign and No Off-road. Vehicles should stop if they                unicycle model is key: all metrics degrade without this.
+enter a stop sign region and not go off-road. The expression
+for this rule (Tab. I) is relatively involved using “Implies”                                   V. C ONCLUSION
+and “Eventually” operators, making it a good test for our                 We proposed CTG, a conditional diffusion model for the
+STL-based approach. Stop regions are 20 × 20 m boxes with              task of controllable traffic simulation, which opens several
+centers set to be 5s along the ground truth data trajectories.         exciting future research directions. Currently, we have only
+Goal Waypoint and Target Speed. Vehicles should reach                  used CTG to model vehicles, but cyclists and pedestrians
+their goal following the specified target speeds. Waypoints            are also important agents to simulate for AV interactions.
+are set 10s along the ground truth trajectories, and the target        Additionally, using collision and off-road guidance to enable
+speeds at each time step are the same as the ground truth              very long-term, robust traffic simulation is an important
+scene. This setting is similar to a “reactive replay” use case         application. Outside of AV, the proposed guidance framework
+in AV testing, where a user reconstructs a driving log using           may benefit many tasks where learned models in-the-loop
+the traffic model, which allows agents to realistically react          must be reactive and follow novel objectives online.
+to any subsequent changes to AV behavior or environment.               Acknowledgments. The authors thank Or Litany, Sanja Fi-
+   Results are shown in Table III. For both settings, CTG              dler, and Karen Leung for valuable discussions and feedback.
+                             R EFERENCES                                        [17] K. Leung, N. Aréchiga, and M. Pavone, “Backpropagation through
+                                                                                     signal temporal logic specifications: Infusing logical structure into
+ [1] N. Kalra and S. M. Paddock, Driving to Safety: How Many                         gradient-based methods,” The International Journal of Robotics Re-
+     Miles of Driving Would It Take to Demonstrate Autonomous                        search.
+     Vehicle Reliability? RAND Corporation, 2016. [Online]. Available:
+                                                                                [18] A. Paszke et. al, “Pytorch: An imperative style, high-performance
+     http://www.jstor.org/stable/10.7249/j.ctt1btc0xw
+                                                                                     deep learning library,” in Advances in Neural Information Processing
+ [2] Waymo, “Waymo safety report,” https://storage.googleapis.com/waymo-
+                                                                                     Systems 32, 2019, pp. 8024–8035.
+     uploads/files/documents/safety/2021-03-waymo-safety-report.pdf,
+     February 2021.                                                             [19] H. Caesar, V. Bankiti, A. H. Lang, S. Vora, V. E. Liong, Q. Xu,
+ [3] S. Suo, S. Regalado, S. Casas, and R. Urtasun, “Trafficsim: Learning            A. Krishnan, Y. Pan, G. Baldan, and O. Beijbom, “nuscenes: A
+     to simulate realistic multi-agent behaviors,” in Proceedings of the             multimodal dataset for autonomous driving,” in CVPR, 2020.
+     IEEE/CVF Conference on Computer Vision and Pattern Recognition             [20] E. Brockfeld, R. D. Kühne, A. Skabardonis, and P. Wagner, “Toward
+     (CVPR), June 2021, pp. 10 400–10 409.                                           benchmarking of microscopic traffic flow models,” Transportation
+ [4] D. Xu, Y. Chen, B. Ivanovic, and M. Pavone, “Bits: Bi-level imitation           Research Record, vol. 1852, no. 1, pp. 124–129, 2003.
+     for traffic simulation,” 2022.                                             [22] Y. Chen, B. Ivanovic, and M. Pavone, “Scept: Scene-consistent, policy-
+ [5] P. A. Lopez, M. Behrisch, L. Bieker-Walz, J. Erdmann, Y.-P. Flötteröd,        based trajectory predictions for planning,” in Proceedings of the
+     R. Hilbrich, L. Lücken, J. Rummel, P. Wagner, and E. Wiessner, “Mi-            IEEE/CVF Conference on Computer Vision and Pattern Recognition
+     croscopic traffic simulation using sumo,” in 2018 21st International            (CVPR), June 2022, pp. 17 103–17 112.
+     Conference on Intelligent Transportation Systems (ITSC), 2018, pp.         [23] T. Salzmann, B. Ivanovic, P. Chakravarty, and M. Pavone, “Tra-
+     2575–2582.                                                                      jectron++: Dynamically-feasible trajectory forecasting with heteroge-
+ [6] A. Dosovitskiy, G. Ros, F. Codevilla, A. Lopez, and V. Koltun,                  neous data,” in Computer Vision–ECCV 2020: 16th European Confer-
+     “CARLA: An open urban driving simulator,” ser. Proceedings                      ence, Glasgow, UK, August 23–28, 2020, Proceedings, Part XVIII 16.
+     of Machine Learning Research, S. Levine, V. Vanhoucke, and                      Springer, 2020, pp. 683–700.
+     K. Goldberg, Eds., vol. 78, 13–15 Nov 2017, pp. 1–16. [Online].            [24] J. Wang, A. Pun, J. Tu, S. Manivasagam, A. Sadat, S. Casas, M. Ren,
+     Available: http://proceedings.mlr.press/v78/dosovitskiy17a.html                 and R. Urtasun, “Advsim: Generating safety-critical scenarios for self-
+ [7] LG Electronics, “SVL Simulator: An Autonomous Vehicle Simula-                   driving vehicles,” in Proceedings of the IEEE/CVF Conference on
+     tor, A ROS/ROS2 Multi-robot Simulator for Autonomous Vehicles,”                 Computer Vision and Pattern Recognition, 2021, pp. 9909–9918.
+     https://github.com/lgsvl/simulator, 2021.                                  [25] D. Rempe, J. Philion, L. J. Guibas, S. Fidler, and O. Litany, “Generat-
+ [8] J. Ho, A. Jain, and P. Abbeel, “Denoising diffusion probabilistic               ing useful accident-prone driving scenarios via a learned traffic prior,”
+     models,” in Advances in Neural Information Processing Systems,                  in Conference on Computer Vision and Pattern Recognition (CVPR),
+     H. Larochelle, M. Ranzato, R. Hadsell, M. Balcan, and H. Lin, Eds.,             2022.
+     vol. 33. Curran Associates, Inc., 2020, pp. 6840–6851.
+                                                                                [26] Y. Abeysirigoonawardena, F. Shkurti, and G. Dudek, “Generating
+ [9] P. Dhariwal and A. Nichol, “Diffusion models beat gans on image syn-
+                                                                                     adversarial driving scenarios in high-fidelity simulators,” in 2019
+     thesis,” Advances in Neural Information Processing Systems, vol. 34,
+                                                                                     International Conference on Robotics and Automation (ICRA), 2019,
+     pp. 8780–8794, 2021.
+                                                                                     pp. 8271–8277.
+[10] N. Chen, Y. Zhang, H. Zen, R. J. Weiss, M. Norouzi, and W. Chan,
+     “Wavegrad: Estimating gradients for waveform generation,” in Inter-        [27] B. Chen, X. Chen, Q. Wu, and L. Li, “Adversarial evaluation of
+     national Conference on Learning Representations, 2021.                          autonomous vehicles in lane-change scenarios,” IEEE Transactions on
+[11] Z. Kong, W. Ping, J. Huang, K. Zhao, and B. Catanzaro, “Diffwave:               Intelligent Transportation Systems, pp. 1–10, 2021.
+     A versatile diffusion model for audio synthesis,” in International         [28] J. Ho and T. Salimans, “Classifier-free diffusion guidance,” arXiv
+     Conference on Learning Representations, 2021.                                   preprint arXiv:2207.12598, 2022.
+[12] V. Popov, I. Vovk, V. Gogoryan, T. Sadekova, and M. Kudinov, “Grad-        [29] J. Ho, T. Salimans, A. Gritsenko, W. Chan, M. Norouzi, and D. J. Fleet,
+     tts: A diffusion probabilistic model for text-to-speech,” in Proceedings        “Video diffusion models,” arXiv preprint arXiv:2204.03458, 2022.
+     of the 38th International Conference on Machine Learning, ser.             [30] K. Leung and M. Pavone, “Semi-supervised trajectory-feedback con-
+     Proceedings of Machine Learning Research, vol. 139. PMLR, 18–24                 troller synthesis for signal temporal logic specifications,” 2022.
+     Jul 2021, pp. 8599–8608.                                                   [31] J. Sohl-Dickstein, E. Weiss, N. Maheswaranathan, and S. Ganguli,
+[13] T. Gu, G. Chen, J. Li, C. Lin, Y. Rao, J. Zhou, and J. Lu, “Stochastic          “Deep unsupervised learning using nonequilibrium thermodynamics,”
+     trajectory prediction via motion indeterminacy diffusion,” in Proceed-          in Proceedings of the 32nd International Conference on Machine
+     ings of the IEEE/CVF Conference on Computer Vision and Pattern                  Learning, ser. Proceedings of Machine Learning Research, F. Bach
+     Recognition (CVPR), June 2022, pp. 17 113–17 122.                               and D. Blei, Eds., vol. 37. Lille, France: PMLR, 07–09 Jul 2015,
+[14] X. L. Li, J. Thickstun, I. Gulrajani, P. Liang, and T. B. Hashimoto,            pp. 2256–2265.
+     “Diffusion-lm improves controllable text generation,” 2022.
+                                                                                [32] A. Q. Nichol and P. Dhariwal, “Improved denoising diffusion prob-
+[15] M. Janner, Y. Du, J. B. Tenenbaum, and S. Levine, “Planning with
+                                                                                     abilistic models,” in International Conference on Machine Learning.
+     diffusion for flexible behavior synthesis,” in International Conference
+                                                                                     PMLR, 2021, pp. 8162–8171.
+     on Machine Learning, 2022.
+[16] O. Maler and D. Nickovic, “Monitoring temporal properties of contin-       [33] K. He, X. Zhang, S. Ren, and J. Sun, “Deep residual learning for image
+     uous signals,” in Formal Techniques, Modelling and Analysis of Timed            recognition,” in Proceedings of the IEEE conference on computer
+     and Fault-Tolerant Systems, Y. Lakhnech and S. Yovine, Eds. Berlin,             vision and pattern recognition, 2016, pp. 770–778.
+     Heidelberg: Springer Berlin Heidelberg, 2004, pp. 152–166.                 [34] L. Bergamini, Y. Ye, O. Scheel, L. Chen, C. Hu, L. Del Pero,
+[21] Y. Chai, B. Sapp, M. Bansal, and D. Anguelov, “Multipath: Multiple              B. Osiński, H. Grimmet, and P. Ondruska, “Simnet: Learning reactive
+     probabilistic anchor trajectory hypotheses for behavior prediction,” in         self-driving simulations from real-world observations,” in 2021 IEEE
+     Conference on Robot Learning (CoRL). PMLR, 2020, pp. 86–99.                     International Conference on Robotics and Automation (ICRA), 2021.
+

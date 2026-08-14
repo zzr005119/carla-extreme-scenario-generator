@@ -1,0 +1,75 @@
+{
+  "expected_run_count": 1,
+  "total_manifest_runs": 1,
+  "completed_runs": 1,
+  "accepted_runs": 1,
+  "acceptance_failed_runs": 0,
+  "failed_runs": 0,
+  "missing_runs": 0,
+  "sensor_completed_runs": 1,
+  "server_healthy_runs": 1,
+  "route_lock_required": true,
+  "route_verified_runs": 1,
+  "route_verified_rate": 1.0,
+  "route_ego_on_route_rate_mean": 1.0,
+  "route_lead_on_route_rate_mean": 1.0,
+  "route_both_on_route_rate_mean": 1.0,
+  "route_maximum_ego_deviation_m": 0.996,
+  "route_maximum_lead_deviation_m": 0.996,
+  "target_levels": [
+    "medium"
+  ],
+  "collision_runs": 0,
+  "collision_events": 0,
+  "collision_sample_ids": [],
+  "target_matched_runs": 1,
+  "target_match_rate": 1.0,
+  "target_score_ordinal_correlation": null,
+  "scenario_count": 1,
+  "complete_scenario_count": 1,
+  "all_level_equal_scenario_count": 1,
+  "all_level_equal_scenario_rate": 1.0,
+  "mean_within_scenario_score_std": null,
+  "median_within_scenario_score_std": null,
+  "maximum_within_scenario_score_std": null,
+  "mean_within_scenario_score_range": 0.0,
+  "seed_mean_score_range": 0.0,
+  "most_variable_scenario": {
+    "sample_id": "cvae_medium_20260813_0103",
+    "score_std": null,
+    "score_range": 0.0
+  },
+  "mean_scores_strictly_increasing": true,
+  "per_target_level": {
+    "low": {
+      "completed_runs": 0,
+      "score_mean": null,
+      "score_std": null,
+      "target_match_rate": null,
+      "observed_distribution": {}
+    },
+    "medium": {
+      "completed_runs": 1,
+      "score_mean": 27.744,
+      "score_std": null,
+      "target_match_rate": 1.0,
+      "observed_distribution": {
+        "medium": 1
+      }
+    },
+    "high": {
+      "completed_runs": 0,
+      "score_mean": null,
+      "score_std": null,
+      "target_match_rate": null,
+      "observed_distribution": {}
+    },
+    "critical": {
+      "completed_runs": 0,
+      "score_mean": null,
+      "score_std": null,
+      "target_match_rate": null,
+      "observed_distribution": {}
+    }
+  }
+}

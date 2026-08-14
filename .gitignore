@@ -13,6 +13,13 @@ output/
 frame_*.png
 *.npy
 
+# 本地论文 PDF（索引和阅读说明可入库）
+literature_generative_ai_autonomous_driving/pdf/
+literature_generative_ai_autonomous_driving/*.part
+
+# 模型训练产物（代码和汇总模板入库，权重不入库）
+artifacts/
+
 # IDE
 .vscode/
 .idea/

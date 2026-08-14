@@ -1,0 +1,551 @@
+                                           TrafficGen: Learning to Generate Diverse and Realistic Traffic Scenarios
+                                                               Lan Feng§* , Quanyi Li†* , Zhenghao Peng♠* , Shuhan Tan‡ , Bolei Zhou♠
+                                                                             § ETH Zurich, † The University of Edinburgh,
+                                                             ♠ University of California, Los Angeles, ‡ The University of Texas at Austin
+
+
+
+
+                                           Abstract— Diverse and realistic traffic scenarios are crucial           of time due to the fact that they are collected by a data
+                                        for evaluating the AI safety of autonomous driving systems in              collection vehicle in moving, which is often occluded by
+                                        simulation. This work introduces a data-driven method called               other traffic participants. For instance, only 30% of the
+                                        TrafficGen for traffic scenario generation. It learns from the
+                                                                                                                   trajectories collected in Waymo Motion Dataset [20] last
+arXiv:2210.06609v2 [cs.RO] 5 Mar 2023
+
+
+
+
+                                        fragmented human driving data collected in the real world and
+                                        then generates realistic traffic scenarios. TrafficGen is an au-           more than 10 seconds, and only 12% cover the whole
+                                        toregressive neural generative model with an encoder-decoder               scenario. Thus, the replayed traffic scenarios are incomplete
+                                        architecture. In each autoregressive iteration, it first encodes the       and insufficient for a thorough evaluation of AD systems.
+                                        current traffic context with the attention mechanism and then                 One solution for covering more traffic scenes is to design
+                                        decodes a vehicle’s initial state followed by generating its long
+                                        trajectory. We evaluate the trained model in terms of vehicle              test cases manually [10] or use heuristic methods like proce-
+                                        placement and trajectories, and the experimental result shows              dural generation (PG) [8, 16] to create a huge number of test
+                                        our method has substantial improvements over baselines for                 cases. However, the generated scenarios cannot well reflect
+                                        generating traffic scenarios. After training, TrafficGen can also          the complexity of real-world traffic and road structure. In
+                                        augment existing traffic scenarios, by adding new vehicles and             addition, it requires a substantial amount of human effort
+                                        extending the fragmented trajectories. We further demonstrate
+                                        that importing the generated scenarios into a simulator as an              and domain knowledge to design rules for placing vehicles,
+                                        interactive training environment improves the performance and              determining their initial states, and setting trigger conditions
+                                        safety of a driving agent learned from reinforcement learning.             for assuring the interaction between the ego vehicle and other
+                                        Model and data are available at https://metadriverse.                      traffic participants [7].
+                                        github.io/trafficgen.                                                         Our goal is to enable the automatic generation of realistic,
+                                                                I. I NTRODUCTION                                   complete, and diverse traffic scenarios that learn from real-
+                                                                                                                   world data. We develop a data-driven traffic scenario gen-
+                                           Autonomous driving (AD) is transforming our daily life
+                                                                                                                   erator TrafficGen that can synthesize both the initial states
+                                        with promised benefits like safe transportation and efficient
+                                                                                                                   of traffic vehicles and their long and complete trajectories.
+                                        mobility. One of the biggest hurdles for deploying AD
+                                                                                                                   TrafficGen learns from the fragmented and noisy trajectories
+                                        in the real world is to ensure the vehicles controlled by
+                                                                                                                   collected in the real-world driving dataset such as Waymo
+                                        algorithms operate safely and reliably in all kinds of traffic
+                                                                                                                   Open Dataset [20]. TrafficGen follows an encoder-decoder
+                                        scenarios. Before the real-world deployment of AD, the
+                                                                                                                   neural architecture. The encoder transforms the HD map and
+                                        simulation environment becomes an ideal testbed to evaluate
+                                                                                                                   states of vehicles into a scenario representation. The decoder
+                                        the reliability and safety of AD systems. However, most of
+                                                                                                                   generates initial state distributions for placing vehicles and
+                                        the existing simulators like CARLA [5] and SMARTS [32]
+                                                                                                                   long-term multi-modal probabilistic trajectories for realistic
+                                        have hand-crafted traffic-generating rules and maps, while
+                                                                                                                   simulation.
+                                        the traffic scenarios available for testing are also far from
+                                        enough to emulate the complexity of the real world. As a                      TrafficGen can generate diverse and realistic traffic scenar-
+                                        result, it is difficult to evaluate how the AD systems make                ios given HD maps after training, which greatly enlarges the
+                                        safe-critical decisions and react to other traffic participants in         set of traffic scenarios available for AD testing. As shown
+                                        complex traffic scenarios. Thus, creating diverse and realistic            in Fig.1, TrafficGen can also be used to edit and augment
+                                        traffic scenarios in simulation becomes crucial for thoroughly             the existing scenarios, by (1) generating new traffic on the
+                                        evaluating the AI safety of AD systems.                                    same HD map. (2) adding new vehicles and trajectories,
+                                           Existing methods tackle the challenge by replaying vehicle              (3) inpainting a trajectory segment into a longer one. The
+                                        trajectories collected from the real world [15, 16, 30].                   generated scenarios are further imported into the simulator
+                                        Though the trajectories replayed from real data preserve                   to improve the driving agent trained from reinforcement
+                                        the fidelity of the real world, there are two issues. First, it            learning (RL). The experimental results show that the safety
+                                        requires a time-consuming data collection process, particu-                of driving agents can be substantially improved when being
+                                        larly on a large scale. Second, the trajectories of vehicles               trained on the generated scenarios with higher complexity
+                                        in the commonly used driving datasets such as Waymo                        and traffic density.
+                                        Open Dataset [20] and Argoverse [2] are fragmented and                                         II. R ELATED W ORK
+                                        incomplete. Most of the trajectories only span a short period
+                                                                                                                     The majority of the traffic scenarios in the existing driving
+                                          Lan Feng, Quanyi Li and Zhenghao Peng contribute equally to this work.   simulators are either pre-recorded in the real world [1, 15]
+Fig. 1: Different applications of TrafficGen. The colored vehicles and blue trajectories are generated by TrafficGen. The
+black vehicles and yellow trajectories are from the real data replay.
+
+
+or synthesized by hand-crafted rules [4, 6, 12, 21], which        TrafficGen can edit the traffic scenario and generate the long
+lack sufficient diversity and realism.                            trajectories of vehicles simultaneously.
+   To generate realistic driving scenarios, researchers attempt      Thus compared to the previous works, our method is an
+to apply data-driven methods to learn from a large-scale          integrated framework for generating both traffic snapshots
+real-world dataset. Liang et al. [19] learn a probabilistic       and long vehicle trajectories, making it possible to produce
+distribution over traffic flows from where new scenes can         countless new traffic scenarios as well as augment existing
+be sampled. Tan et al. [27] propose a neural autoregressive       ones.
+model SceneGen, which inserts actors (vehicles) of various
+classes into the scene and synthesizes their sizes, orienta-                               III. M ETHOD
+tions, and velocities. These methods model high-dimensional       Problem Formulation. A traffic scenario is denoted as τ =
+features of scenarios, improving the fidelity and scalability.    (m, s1:T ), which lasts T time steps and contains the High-
+However, they either require predefined heuristics and priors,    Definition (HD) road map m and the state series of traffic
+e.g., scene grammars that encapsulate assumptions about           vehicles s1:T = [s1 , ..., sT ]. Each element st = {s1t , ...sN
+                                                                                                                                t }
+the traffic rules [19] or rely heavily on post-processing         is a set of states of N traffic vehicles at time step t. Given
+to guarantee the validity of the generated scene [27]. For        an existing scenario τ = (m, s1:T ), the goal of TrafficGen
+example, SceneGen needs to filter out improperly placed           is to learn to generate new traffic scenarios τ 0 = (m, s0 1:T 0 )
+vehicles beyond road boundaries and can only generate traffic     that have similar distribution with τ and different states s0
+snapshots from an empty map. Compare to SceneGen, our             and longer time steps T 0 . After training, TrafficGen takes
+method does not need post-processing and can augment              m as input and generates τ 0 as a totally different scenario.
+existing traffic scenarios. Moreover, all these methods can       Furthermore, with additional traffic fragment [s1 , ...st ] as
+only generate snapshots of scenarios, which are static and        input, it can augment or inpaint the existing scenario. The
+can not be used for interactive simulation, while our approach    neural architecture of TrafficGen is illustrated in Fig. 2,
+allows dynamic traffic flows via trajectory generation.           where a novel encoder-decoder architecture is designed to
+   Apart from generating static traffic snapshots, another        generate traffic scenarios. We introduce each component in
+line of works focuses on simulating realistic driving behav-      detail as follows.
+iors [11, 22, 25] and trajectories, such as TrafficSim [26]
+and SimNet [1]. TrafficSim only generates trajectories on         A. Encoder for Traffic Context
+real-world traffic scenarios. SimNet first generates traffic      Vector-based Traffic Representation.
+snapshots by generating bird-eye-view images of the map              We develop a new representation to encode the map and
+and then generates vehicle trajectories. Their method lacks       the information about all vehicles on the map. In driv-
+the ability to edit the scenario. Differently, the proposed       ing datasets like Waymo Open dataset [20] and Argoverse
+          Vector and Information
+             of Each Region              Encoding traf c contexts
+                                                                             Traf c                 Vehicle
+                                                                         Representation           Placement
+
+                                                                                                     MLP
+
+                                                                              v′ = {v′i}
+                                    vi       MLP      ⊙       v′i                                Trajectory
+                                                                                                 Generation
+                                                                                 c′
+                                     c       MLP                                                    Motion
+                                                                                                  Forecasting
+                                                                                                    Model
+
+
+
+                   Input                      Encoder                                             Decoder
+
+         Fig. 2: The neural architecture of TrafficGen. We first split the each HD map into I regions by chunking each lane. All
+         regions {vi } for each map are processed by the encoder for information fusion. The output traffic representation is then
+         decoded to generate initial state distributions where the vehicle will be placed and the multi-modal probabilistic long-term
+         trajectory for each vehicle. For simplicity, we only plot one stack of encoder while we use 5 stacked blocks for encoding.
+￼
+    fi
+                                                                                region bounded by psi , pei at a time step is computed as:
+
+                                                                                           vi = (psi , pei , ti , ui ) ⊕ (mi , qiv , hi , veli , bboxi ),   (1)
+
+                                                                                where ti represents the lane’s type, and ui represents traffic
+                                                                                light control state and ⊕ is concatenation. As for the state
+                                                                                of the vehicle in this region, mi is a Boolean indicating
+                                                                                the presence of cars in this region, qiv ∈ R2 represents the
+                                                                                vehicle’s position in the local coordinate, hi ∈ [− π2 , π2 ] is
+                                                                                the difference between vehicle’s heading and the longitudinal
+                                                                                direction of the local coordinate, veli ∈ R is the vehicle’s
+                                                                                speed and bboxi ∈ R2 is the vehicle’s length and width. Note
+                                                                                that if m = 0 all the other states are also set to zero. With
+                                                                                the vector-based representation, we can represent a traffic
+                 Fig. 3: Vector-based       Fig. 4: Long trajectory             snapshot τ at time step t as τt = v = {vi }Ii=1 , where I is
+                    representation          generation                          the number of vectors and vi is the information in one small
+                                                                                region.
+                                                                                Context Representation. Each element in v contains the
+         dataset [2, 31], the map consists of a set of lanes, where             properties of one specific region on the map. We can apply
+         each lane is described by a set of splines, consisting of an           cross attention mechanism [29] on the unordered set v to fuse
+         arbitrary number of 2D points connecting the center of lane            the information from different regions. However, the size I
+         lines.                                                                 can reach up to 1000 in complex maps, which causes a huge
+            In TrafficGen, we vectorize each lane into a set of vectors,        training complexity. We use multi-context gating (MCG) [28]
+         each vector representing a small region in the map. Therefore          to lower the training complexity because of the large number
+         the whole map can be described by a set of small regions.              of vectors. MCG can be viewed as an approximation to cross-
+         For each lane, similar to the encoding in VectorNet [9], we            attention. Instead of having each of the n elements attend to
+         connect two adjacent points in its center line to form a set           all m elements of the other set, MCG condenses the other
+         of vectors. Each vector vi containing start point psi ∈ R2 and         set into a single context vector, denoted as c.
+         end point pei ∈ R2 . As illustrated in Fig. 3, we establish a             Each MCG block takes v = {vi }I and a context vector
+         vector-based coordinate system for each small region whose             c as input and outputs v0 and c0 for the next MCG block,
+         origin is psi and y-axis directs to pei −psi . Each vector forms a     where v0 = {vi0 }I is the set of embeddings of each region
+         rectangle region with the center as the midpoint of the vector         after fusing context information and c0 is computed by max-
+         and a side length of 5m, so that the vehicle in this region            pooling on v0 . For the first MCG block, c is an all-one vector.
+         will be characterized under the local coordinates bounded by           The output features v0 , which has the same cardinality as v,
+         this rectangle. Adding with the information of the vehicles            and context vector c0 of the last MCG block serves as the
+         in this region, the complete vector representation vi at the           global scene representation.
+B. Decoder for Traffic Scenario Generation                        mixture models is used as the loss. Thus, the total loss can
+                                        0
+   Taking the fused feature set v from the encoder and            be written as:
+the global feature c as input, the decoder of TrafficGen
+                                                                   loss =BCE(wi , mi ) − log GMMpos,i (qi )
+synthesizes a complete traffic scenario in an autoregressive
+way. The first step is to place vehicles on the given map and              − log GMMheading,i (hi ) − log GMMspeed,i (veli ) (7)
+the second step is to generate their long-term trajectories.               − log GMMsize,i (bboxi ).
+Vehicle Placement. To determine which region we should
+place a vehicle in, we generate a set of weights for all             The random mask design helps the model capture traffic
+regions, which is later used to parameterize a categorical        context information, enabling TrafficGen to edit existing
+distribution for whether we should place a vehicle in that        traffic scenarios.
+region:                                                           Trajectory Generation. We use a motion forecasting model
+                                                                  similar to [28] as the multi-mode trajectory generator. How-
+           wj = MLPplace (vj0 ) ∀j = 1, ..., I,             (2)
+                                                                  ever, motion forecasting models usually take agent past
+                                                |
+              i ∼ Categorical([w1 , ..., wI ] ),            (3)   trajectories as input, and cannot be directly used for long
+where i is the selected region. After selecting the region, we    trajectory generation, since they are brittle to distributional
+retrieve the regional feature vi0 from the fused feature set v0   shift. To address these issues, we replace the past trajectory
+and feed it to a set of networks to model the distributions of    input with the global feature c0 and design a real-time
+the properties of a tentative vehicle. The distribution of its    trajectory sampling method.
+local position is modeled by a mixture of K bivariate normal         As shown on the output of architecture in Fig. 2, at each
+distributions:                                                    time step for each vehicle, K possible L-step trajectories for
+                                                                  the ego vehicle and K corresponding likelihoods of them are
+            [πpos , µpos , Σpos ] = MLPpos (vi0 ),          (4)   directly generated by the decoder as
+                      k ∼ Categorical(πpos ),               (5)
+                qi ∼ Normal(µpos, k , σpos, k ).            (6)              Decoder(c0 ) = {post:t+L
+                                                                                                k     , probk }K
+                                                                                                               k=1 .          (8)
+
+Here µpos, k , Σpos, k represents the mean and covariant ma-      We sample one possible future trajectory based on K proba-
+trix for K normal distributions, and πpos represents the          bilities for each vehicle. To mitigate the long-term cumulative
+categorical weights of the K distributions. We abbreviate         error, only the first l steps of the trajectory are used,
+the resulting mixture distribution as GMMpos,i . The log-         where l ≤ L is a hyper-parameter that controls the update
+likelihood of a local position qi under this distribution can     frequency. The long trajectories of a vehicle are generated by
+be computed as GMMpos,i (qi ). During inference, we can           several rollouts of the decoder. As an illustrative example, in
+easily sample from this distribution with qi ∼ GMMpos,i .         Fig. 4, we show a long trajectory with 3l timesteps generated
+We represent the heading, speed, and size of the vehicle          by rolling out the decoder for all the vehicles for 3 times.
+in the same way. In the same way, we can build K−way              This decoder is trained by minimizing the MSE loss of the
+mixture distributions GMMheading,i (hi ), GMMspeed,i (vi ) and    predicted trajectory which is the closest to the ground truth
+GMMsize,i (bboxi ) for modeling heading, speed, and size of       trajectory.
+the car, respectively.
+   As shown in Fig. 5, we use autoregressive sampling to
+create a traffic snapshot. We sample one vehicle with the                              IV. E XPERIMENTS
+spatial probability distribution over all the regions at a time   A. Experiment setting.
+following Eq. 3 and then add the sampled vehicle into that
+region. The attributes of the added vehicle are sampled from         We train TrafficGen with real-world traffic scenarios im-
+the attribute distributions. After that, a new traffic context    ported from Waymo Open Dataset [20]. Specifically, this
+is encoded and the next vehicle is generated in the next          dataset contains about 70,000 scenarios, each with 20s trajec-
+iteration. When the vehicle number reaches a predefined           tories. We filter out the scenarios with less than 8 agents and
+value, the sampling process stops.                                crop a rectangular area with a side length of 120m centered
+Training with Random Mask. Inspired by seq2seq [17]               on the ego vehicle. The rest cases are further split into a
+approaches in natural language processing, we design a            training dataset (50,000 cases) and a non-overlapping test
+scenario completion task for training the decoder. Similar        dataset (1,000 cases). The trained models are benchmarked
+to the training of BERT [3], given a ground-truth traffic         on the test set to produce quantitative and qualitative results.
+snapshot from the dataset, we randomly mask a number              To train TrafficGen’s vehicle placement decoder, we split
+of regions containing traffic vehicles and let the model          each of the 20s scenarios into 10 traffic snapshots with 2s
+reconstruct the masked region. The decoder is trained to          intervals and thus get 50, 000 × 10 traffic snapshots as the
+minimize the binary cross entropy (BCE) loss between the          training data. For TrafficGen’s trajectory generator, the first
+distribution in Eq. 3 and the ground truth Boolean indicator      9s of ego trajectories from each of the 50,000 scenarios are
+mi . For the prediction of speed, heading, position, and size,    used as training data. The feature size for the model is set
+the negative log-likelihood of ground truth in the predicted      to 1024. The size of the Gaussian mixture K is set to 10.
+Fig. 5: The autoregressive sampling process for vehicle placement. At each iteration, a vehicle is placed by sampling
+the spatial probability distribution over all the regions in the scene. We visualize current spatial distribution through the
+iteration-varying heatmap. At the end of sampling, a set of N vehicles are placed at the map and forms a traffic snapshot.
+
+
+B. Quantitative Results of TrafficGen                                  TABLE I: Maximum mean discrepancy (MMD) results.
+Vehicle placement. We conduct a quantitative experiment to             Method                      Pos      Heading     Speed           Size
+show that TrafficGen does better work on vehicle placement             SceneGen with VectorRep   0.1362     0.1307      0.1772         0.1190
+than a competitive autoregressive method SceneGen [27]. We             SceneGen                  0.1452     0.1387      0.1860         0.1286
+implement SceneGen by replacing image input with vector-               TrafficGen                0.1192     0.1189      0.1602         0.0932
+based input so the inputs to both models remain the same. In
+this way, we can ensure the performance differences result
+                                                                     TABLE II: Quality measurements of trajectories generated
+from model design instead of the input representation.
+                                                                     by TrafficGen.
+   For each scenario in the test dataset, we remove all the
+vehicles on the map and insert new vehicles via vehicle                      Sampling Interval   Mean ADE     Mean FDE       SCR
+placement methods to compose a new snapshot to measure                              (s)             (m)         (m)          (%)
+the difference between the vehicle attribute distributions                          9              1.55          4.62            7.5
+compared to the real distribution in the dataset. Given                             3              1.54          4.59            6.4
+                                                                                    1              1.56          4.64            4.9
+two distributions p and q, the maximum mean discrepancy
+(MMD) measures the distribution distance between them as
+
+   MMD2 (p, q) =Ex,x0 ∼p [k(x, x0 )] + Ey,y0 ∼q [k(y, y 0 )]           ated vehicle’s behaviors. This is computed as the average
+                                                               (9)     percentage of vehicles that collides with others in each
+                    − 2Ex∼p,y∼q [k(x, y)]                              scenario. Two vehicles are considered as colliding if their
+for kernel k. We use a Gaussian kernel with the total                  bounding boxes have overlapping above a predefined IOU
+variation distance. For a pair of synthesized and original             threshold.
+scenarios, we collect scene statistics including Pos, Heading,       • Scenario Reconstruction (ADE, FDE): For each scenario
+and Speed, and compute the MMD score between them, so                  sample, we use average distance error (ADE) and final
+the difference of attribute distributions between original and         distance error (FDE) at the last timestamp to measure the
+generated scenes can be measured. Specifically, the scene              similarity between the generated scenario and the ground
+statistics are obtained by collecting attribute values from all        truth.
+vehicles. From these collections individual attribute values,           We report the average metric values across all these
+x are sampled and used in Eq. 9. We then average the MMD             scenarios.
+score for each attribute across all scenarios in the test dataset       The quantitative result is in Table II. We test the effect of
+to obtain the final scores presented in Table I. Compared with       sampling intervals on model performance. When the sam-
+SceneGen, vehicle placement results generated by TrafficGen          pling interval is 9s, the model degenerates into a traditional
+have a smaller distance to the real scenes in the dataset,           motion forecasting model. Our experiments show that higher
+indicating our method is able to generate more realistic             sampling frequency significantly reduces the collision rate,
+vehicle placements.                                                  which indicates that the real-time sampling technique can
+Trajectory generation. To measure the fidelity of the tra-           be successfully applied to a motion forecasting model to
+jectories generated by TrafficGen, we use the learned model          generate more interaction-aware trajectories.
+to generate 9s trajectory for ego vehicle in all scenarios and
+use the following metrics proposed in TrafficSim [26]:               C. Ablation study
+• Interaction Reasoning (SCR): We use the scenario col-                As shown in Table III, we present the MMD results
+   lision rate (SCR) to measure the consistency of the gener-        of different ablated versions of TrafficGen. We first mask
+TABLE III: MMD of different variants of TrafficGen (TG).              TABLE IV: The test performance and the safety violation of
+                                                                      agents trained on different datasets.
+ Method                           Pos     Heading   Speed     Size
+ A) TG w/ vehicle masked         0.1420   0.1375    0.2329   0.0987            Training Set     Success Rate ↑   Safety Violation ↓
+ B) TG w/ traffic light masked   0.1318   0.1286    0.1835   0.1161             Real Data         0.60 ±0.11         3.65 ±0.71
+ C) TG w/o VectorRep             0.1480   0.1888    0.2233   0.0945
+                                                                              Heuristic Data       0.31±0.04         2.82±0.71
+ TrafficGen                      0.1192   0.1189    0.1602   0.0932
+                                                                             Generated Data       0.62 ±0.06         3.01 ±0.26
+                                                                             Augmented Data       0.61 ±0.04         2.14 ±0.32
+
+out traffic context information to verify that TrafficGen is
+traffic context-aware. We mask existing vehicles (A) and
+                                                                      random seeds. The process of importing scenarios, PPO
+traffic lights (B) separately during the sampling process.
+                                                                      algorithm hyperparameters, and task configuration including
+The experiment results show that both of these context
+                                                                      the observation, reward function, and termination condition
+information contribute to the final performance.
+                                                                      follow [16] and are discussed in Appendix. We evaluate each
+   We also test the proposed vector-based traffic representa-
+                                                                      trained agent in the test set, one episode per scenario. The
+tion in Sec. III-A. Aligning with Table I, the vector-based
+                                                                      ratio of the episodes where the agent reaches the destination
+traffic representation improves the performance of scenario
+                                                                      is the success rate. The higher the better. The safety violation
+generation methods SceneGen and TrafficGen. Thus, the
+                                                                      is the average episodic collision over 100 test environments.
+vector-based traffic representation provides a good prior
+                                                                      The lower the better.
+since it allows the decoder to produce a relative posi-
+                                                                      Results. As shown in Table IV, agents trained in the gen-
+tion/heading to the reference region.
+                                                                      erated scenarios show lower safety violations and thus are
+D. Application for Improving RL Safety                                safer in test environments, since these scenarios have higher
+                                                                      difficulty and complexity than original Waymo cases. Agents
+   We demonstrate that a safer driving agent can be obtained
+                                                                      trained with generated data from TrafficGen and original
+through reinforcement learning by training with the scenarios
+                                                                      Waymo dataset show better success rates than agents trained
+generated by TrafficGen than training with procedurally
+                                                                      in heuristic scenarios. Therefore, our proposed scenario
+generated scenarios and original Waymo scenarios.
+                                                                      generation model TrafficGen shows promise in bridging the
+Datasets. We summarize the data splits used in the experi-
+                                                                      sim-to-real gap for training safe driving agents.
+ment:
+• Real Data: the initial state and motion trajectories of traffic                              V. C ONCLUSION
+  vehicles are collected in the real world (Waymo Open                   We present a data-driven traffic scenario generation
+  Dataset).                                                           method called TrafficGen, which learns to synthesize traffic
+• Generated Data: the initial state and motion trajectories of        scenarios from the fragmented and noisy trajectories col-
+  traffic vehicles are generated by TrafficGen.                       lected from the real-world driving dataset. Based on an
+• Augmented Data: more vehicles are included in each                  encoder-decoder architecture, TrafficGen first encodes the
+  scenario by setting a larger vehicle generation number N            scene snapshot with its novel vector-based context represen-
+  in TrafficGen, leading to higher complexity and difficulty.         tation, and then adds vehicles to the map in an autoregressive
+• Heuristic Data: scenarios are generated through procedural          way and generates their long trajectories. TrafficGen is
+  generation (PG) and domain randomization. Traffic vehi-             flexible in terms of input. It can take empty maps or maps
+  cles are spawned and destinations are assigned according            with existing partial traffic as input. The former allows it
+  to hand-crafted rules. They will be actuated by an IDM              to produce diverse and novel traffic scenarios, while the
+  agent for speed control with a lane-changing agent for              latter allows augmenting existing ones via adding/removing
+  lateral control.                                                    vehicles and inpainting/extending fragmented trajectories.
+• Test Set: the cases collected in the real world while the           Experiments show that TrafficGen outperforms baselines in
+  data is not overlapped with the original Waymo training             terms of vehicle placement and long trajectory generation.
+  set.                                                                We further demonstrate importing the synthesized scenarios
+   Each training set contains 1,000 different traffic scenarios,      into the driving simulator greatly improves the performance
+while the test set contains 100 real-world scenarios where            and the safety of the driving agent learned from reinforce-
+the maps and traffic data are not used in any training                ment learning.
+environments.                                                         Acknowledgement: The project is partially supported by
+RL Environment Setting. The scenarios from the Waymo                  Samsung Global Collaboration Award and Cisco Faculty
+Motion dataset [20] or from TrafficGen contain information            Award.
+on road structure and vehicle trajectories. They are converted
+to interactive environments in MetaDrive simulator [16].
+We train the RL controller of the ego vehicle through
+PPO [24] on the above three training sets and evaluate them
+on the same test set. Experiments are conducted across 5
+                          R EFERENCES                                   [17]   Z. Li, J. Cai, S. He, and H. Zhao, “Seq2seq dependency pars-
+ [1]   L. Bergamini, Y. Ye, O. Scheel, L. Chen, C. Hu, L. Del                  ing,” in Proceedings of the 27th International Conference on
+       Pero, B. Osinski, H. Grimmett, and P. Ondruska, “Simnet:                Computational Linguistics, 2018, pp. 3203–3214.
+       Learning reactive self-driving simulations from real-world       [18]   E. Liang, R. Liaw, R. Nishihara, P. Moritz, R. Fox, K. Gold-
+       observations,” arXiv preprint arXiv:2105.12332, 2021.                   berg, J. Gonzalez, M. Jordan, and I. Stoica, “Rllib: Abstrac-
+ [2]   M.-F. Chang, J. Lambert, P. Sangkloy, J. Singh, S. Bak, A.              tions for distributed reinforcement learning,” in International
+       Hartnett, D. Wang, P. Carr, S. Lucey, D. Ramanan, et al.,               Conference on Machine Learning, 2018, pp. 3053–3062.
+       “Argoverse: 3d tracking and forecasting with rich maps,”         [19]   M. Liang, B. Yang, R. Hu, Y. Chen, R. Liao, S. Feng, and
+       in Proceedings of the IEEE/CVF Conference on Computer                   R. Urtasun, “Learning lane graph representations for motion
+       Vision and Pattern Recognition, 2019, pp. 8748–8757.                    forecasting,” in European Conference on Computer Vision,
+ [3]   J. Devlin, M.-W. Chang, K. Lee, and K. Toutanova, “Bert:                Springer, 2020, pp. 541–556.
+       Pre-training of deep bidirectional transformers for language     [20]   W. LLC, Waymo open dataset: An autonomous driving
+       understanding,” arXiv preprint arXiv:1810.04805, 2018.                  dataset, 2019.
+ [4]   W. Ding, H. Lin, B. Li, and D. Zhao, “Causalaf: Causal           [21]   P. A. Lopez, M. Behrisch, L. Bieker-Walz, J. Erdmann, Y.-P.
+       autoregressive flow for goal-directed safety-critical scenes            Flötteröd, R. Hilbrich, L. Lücken, J. Rummel, P. Wagner, and
+       generation,” arXiv preprint arXiv:2110.13939, 2021.                     E. Wießner, “Microscopic traffic simulation using sumo,”
+ [5]   A. Dosovitskiy, G. Ros, F. Codevilla, A. Lopez, and V.                  in The 21st IEEE International Conference on Intelligent
+       Koltun, “CARLA: An open urban driving simulator,” in Pro-               Transportation Systems, IEEE, 2018.
+       ceedings of the 1st Annual Conference on Robot Learning,         [22]   Z. Peng, K. M. Hui, C. Liu, B. Zhou, et al., “Learning to
+       2017, pp. 1–16.                                                         simulate self-driven particles system with coordinated policy
+ [6]   ——, “Carla: An open urban driving simulator,” in Confer-                optimization,” Advances in Neural Information Processing
+       ence on robot learning, PMLR, 2017, pp. 1–16.                           Systems, vol. 34, 2021.
+ [7]   D. J. Fremont, T. Dreossi, S. Ghosh, X. Yue, A. L.               [23]   J. Schulman, P. Moritz, S. Levine, M. Jordan, and P. Abbeel,
+       Sangiovanni-Vincentelli, and S. A. Seshia, “Scenic: A lan-              High-dimensional continuous control using generalized ad-
+       guage for scenario specification and scene generation,” in              vantage estimation, 2018. arXiv: 1506.02438 [cs.LG].
+       Proceedings of the 40th ACM SIGPLAN Conference on                [24]   J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O.
+       Programming Language Design and Implementation, 2019,                   Klimov, “Proximal policy optimization algorithms,” arXiv
+       pp. 63–78.                                                              preprint arXiv:1707.06347, 2017.
+ [8]   A. Gambi, M. Mueller, and G. Fraser, “Automatically test-        [25]   J. Sun, H. Sun, T. Han, and B. Zhou, “Neuro-symbolic
+       ing self-driving cars with search-based procedural content              program search for autonomous driving decision module
+       generation,” in Proceedings of the 28th ACM SIGSOFT                     design,” in Conference on Robot Learning, PMLR, 2021,
+       International Symposium on Software Testing and Analysis,               pp. 21–30.
+       2019, pp. 318–328.                                               [26]   S. Suo, S. Regalado, S. Casas, and R. Urtasun, “Trafficsim:
+ [9]   J. Gao, C. Sun, H. Zhao, Y. Shen, D. Anguelov, C. Li,                   Learning to simulate realistic multi-agent behaviors,” 2021
+       and C. Schmid, “Vectornet: Encoding hd maps and agent                   IEEE/CVF Conference on Computer Vision and Pattern
+       dynamics from vectorized representation,” in Proceedings of             Recognition (CVPR), pp. 10 395–10 404, 2021.
+       the IEEE/CVF Conference on Computer Vision and Pattern           [27]   S. Tan, K. Wong, S. Wang, S. Manivasagam, M. Ren, and
+       Recognition, 2020, pp. 11 525–11 533.                                   R. Urtasun, “Scenegen: Learning to generate realistic traffic
+[10]   F. Hauer, T. Schmidt, B. Holzmüller, and A. Pretschner, “Did           scenes,” in Proceedings of the IEEE/CVF Conference on
+       we test all scenarios for automated and autonomous driving              Computer Vision and Pattern Recognition, 2021, pp. 892–
+       systems?” In 2019 IEEE Intelligent Transportation Systems               901.
+       Conference (ITSC), IEEE, 2019, pp. 2950–2955.                    [28]   B. Varadarajan, A. Hefny, A. Srivastava, K. S. Refaat, N.
+[11]   J. Huang, S. Xie, J. Sun, Q. Ma, C. Liu, D. Lin, and B. Zhou,           Nayakanti, A. Cornman, K. Chen, B. Douillard, C. P. Lam,
+       “Learning a decision module by imitating driver’s control               D. Anguelov, et al., “Multipath++: Efficient information
+       behaviors,” in Conference on Robot Learning, PMLR, 2021,                fusion and trajectory aggregation for behavior prediction,”
+       pp. 1–10.                                                               arXiv preprint arXiv:2111.14973, 2021.
+[12]   A. Kar, A. Prakash, M.-Y. Liu, E. Cameracci, J. Yuan,            [29]   A. Vaswani, N. Shazeer, N. Parmar, J. Uszkoreit, L. Jones,
+       M. Rusiniak, D. Acuna, A. Torralba, and S. Fidler, “Meta-               A. N. Gomez, Ł. Kaiser, and I. Polosukhin, “Attention is
+       sim: Learning to generate synthetic datasets,” in Proceedings           all you need,” in Advances in neural information processing
+       of the IEEE International Conference on Computer Vision,                systems, 2017, pp. 5998–6008.
+       2019, pp. 4551–4560.                                             [30]   E. Vinitsky, N. Lichtlé, X. Yang, B. Amos, and J. Foerster,
+[13]   A. Kesting, M. Treiber, and D. Helbing, “General lane-                  “Nocturne: A scalable driving benchmark for bringing multi-
+       changing model mobil for car-following models,” Trans-                  agent learning one step closer to the real world,” arXiv
+       portation Research Record, vol. 1999, no. 1, pp. 86–94,                 preprint arXiv:2206.09889, 2022.
+       2007.                                                            [31]   B. Wilson, W. Qi, T. Agarwal, J. Lambert, J. Singh, S.
+[14]   ——, “Enhanced intelligent driver model to access the im-                Khandelwal, B. Pan, R. Kumar, A. Hartnett, J. K. Pontes, et
+       pact of driving strategies on traffic capacity,” Philosophical          al., “Argoverse 2: Next generation datasets for self-driving
+       Transactions of the Royal Society A: Mathematical, Physical             perception and forecasting,” in Thirty-fifth Conference on
+       and Engineering Sciences, vol. 368, no. 1928, pp. 4585–                 Neural Information Processing Systems Datasets and Bench-
+       4605, 2010.                                                             marks Track (Round 2), 2021.
+[15]   P. Kothari, C. Perone, L. Bergamini, A. Alahi, and P. On-        [32]   M. Zhou, J. Luo, J. Villella, Y. Yang, D. Rusu, J. Miao,
+       druska, “Drivergym: Democratising reinforcement learning                W. Zhang, M. Alban, I. Fadakar, Z. Chen, A. C. Huang,
+       for autonomous driving,” arXiv preprint arXiv:2111.06889,               Y. Wen, K. Hassanzadeh, D. Graves, D. Chen, Z. Zhu, N.
+       2021.                                                                   Nguyen, M. Elsayed, K. Shao, S. Ahilan, B. Zhang, J. Wu,
+[16]   Q. Li, Z. Peng, Z. Xue, Q. Zhang, and B. Zhou, “Metadrive:              Z. Fu, K. Rezaee, P. Yadmellat, M. Rohani, N. P. Nieves,
+       Composing diverse driving scenarios for generalizable rein-             Y. Ni, S. Banijamali, A. C. Rivers, Z. Tian, D. Palenicek,
+       forcement learning,” arXiv preprint arXiv:2109.12674, 2021.             H. bou Ammar, H. Zhang, W. Liu, J. Hao, and J. Wang,
+                                                                               Smarts: Scalable multi-agent reinforcement learning training
+school for autonomous driving, 2020. arXiv: 2010.09776
+[cs.MA].
+                          A PPENDIX                                to generate the same road structures but in different shapes.
+      VI. B UILDING R EACTIVE T RAFFIC S CENARIO                   Therefore, all generated maps will be unique, given a unique
+                                                                   random seed. To generate traffic flow on these procedu-
+   In this section, we introduce the scenario importing            rally generated maps, several hand-crafted rules are first
+pipeline built upon a recent lightweight driving simula-           executed for approximating the real-world traffic distribution
+tor [16]. The simulator MetaDrive supports accurate physics        and spawning traffic vehicles in the simulated world. After
+simulation, multiple sensory inputs, and a flexible interface      initialization, these vehicles are actuated by IDM policy too
+to customize maps and run the simulation efficiently. All          and will navigate to the randomly assigned destinations.
+of this makes MetaDrive an ideal platform for TrafficGen’s         Experiment result. The agents trained in PG scenarios
+scenario-importing pipeline.                                       are benchmarked on the real-world test set. The awful test
+Importing Road Network. As discussed in Sec. 3 , we                success rate implies that in spite of meticulous hand-crafted
+define a traffic scenario as a tuple of HD map and traffic flow.   traffic scenarios, the driving skills learned in these synthetic
+The first step to instantiate a reactive driving environment is    scenes can not be generalized to real-world scenarios. This,
+to import the road map into the simulator so that the vehicle      in turn, points out that methods building traffic scenarios
+can navigate to a specific point.                                  from real-world data, such as TrafficGen, is promising for
+   The basic road structure is represented by 3D polylines         bridging the sim-to-real gap.
+and polygons. Since the lane centers and lane lines are
+represented by a list of points in Waymo Open Dataset [20],                       VIII. E NVIRONMENT D ETAILS
+we can approximate the lane by building a set of lane                 In the driving task, the objective of RL agents is to steer
+fragments and adding a rigid body and visual appearance            the target vehicles with low-level continuous control actions,
+for them. Therefore, each lane has its Frenet-coordinates. The     namely acceleration, brake, and steering.
+local coordinates can be used to localize vehicles, computing      Observation. The observation of RL agents is as follows:
+their distance to the left and right boundaries and determining
+                                                                      • A 240-dimensional vector denoting the Lidar-like point
+whether a given object is on the lane. The lane line such as
+yellow solid line and broken white line can also be rebuilt             clouds with 50m maximum detecting distance centering
+in the virtual world in a similar way. Therefore contacts               at the target vehicle. Each entry is in [0, 1] with Gaussian
+between vehicle and lane line can be detected to trigger some           noise and represents the relative distance of the nearest
+events like yielding cost or terminating the training if driving        obstacle in the specified direction.
+                                                                      • A vector containing the data that summarizes the target
+on yellow solid line.
+   For global routing, we build a road graph based on the               vehicle’s state such as the steering, heading, velocity,
+connectivity information provided by Waymo dataset [20]                 and relative distance to the left and right boundaries.
+                                                                      • The navigation information that guides the target vehicle
+to support route searching algorithms like BFS. With the
+routing and localization information, vehicles can follow the           toward the destination. We sparsely spread a set of
+searched reference route to the destination and freely drive            checkpoints, 50m apart on average, in the route and
+in the drivable region.                                                 use the relative positions toward future checkpoints as
+                                                                        additional observation of the target vehicle.
+Importing Traffic Flow. The outputs of our model are state
+sequences of generated vehicles. Instead of synchronizing          Reward and Cost Scheme. The reward function is com-
+vehicles’ positions and headings recorded in data frame-by-        posed of four parts as follows:
+frame, we additionally apply a rule-based IDM policy [14]
+                                                                                R = c1 Rdisp + c2 Rspeed + Rterm .             (10)
+to actuate a vehicle following the generated path to its
+destination, enabling interactive behavior like deceleration,      The displacement reward Rdisp = dt − dt−1 , wherein the
+yielding, and emergency stop. These IDM vehicles utilize           dt and dt−1 denotes the longitudinal movement of the target
+lidar to detect surrounding vehicles. If there are vehicles on     vehicle in Frenet coordinates of the current lane between
+the future trajectory of the target vehicle, the target vehicle    two consecutive time steps, provides a dense reward to
+will automatically determine the speed according to IDM.           encourage the agent to move forward. The speed reward
+Therefore, these vehicles can react to the RL agent.               Rspeed = vt /vmax incentives agent to drive fast. vt and
+                                                                   vmax denote the current velocity and the maximum velocity
+       VII. P ROCEDURAL G ENERATION BASELINE                       (80 km/h), respectively. We also define a sparse terminal
+Procedural Generation. MetaDrive is able to generate               reward Rterm , which is non-zero only at the last time step.
+numerous maps through Procedural Generation (PG). Con-             At that step, we set Rdisp = Rspeed = 0 and assign Rterm
+cretely, there are several basic road structures such as in-       according to the terminal state. Rterm is set to +10 if the
+tersections and roundabouts, which serve as building blocks        vehicle reaches the destination, −5 for crashing others or
+for the search-based PG algorithm. Given different random          violating the traffic rule. We set c1 = 1 and c2 = 0.1.
+seed, the PG algorithm then randomly combine these blocks          For measuring safety, collision with vehicles, obstacles, and
+and compose different maps. Also, each building block              sidewalk raises a cost of +1 at each time step. The sum of
+has unique randomizable parameters such as curvature of            cost generated in one episode is episode cost, a metric like
+Curve block, so that domain randomization can be applied           an episode reward, but reflecting safety instead.
+Termination Conditions and Evaluation Metrics. Since we           RLLib [18] and host 16 concurrent trials on 8 x Nvidia
+attempt to benchmark the safety of trained agents, collisions     A100 GPU. Each trial consumes 6 CPUs with 10 parallel
+with vehicles and the sidewalk will not terminate the episode.    rollout workers. The total memory consumption for each trial
+The episode will be terminated only when: 1) the agent drives     is approximately 100 G.
+out of the drivable area, such as driving outside of the yellow      For the TrafficGen model, we set the feature dimension of
+solid line, 2) the agent arrives at the destination and 3) the    v0 to be 1024, and use 3-layer MLPs with hidden dimensions
+episode length exceeds the pre-defined horizon (1000 steps).      of [2048, 1024, 256] for attribute modeling. During training,
+For each trained agent, we evaluate it in 100 held-out test       we train both networks with a learning rate of 3e − 4 for 30
+environments and define the ratio of episodes where the agent     epochs.
+arrives at the destination as the success rate. The Episodic         Note that we make two assumptions about vehicles that
+Cost, also referred to as Safety Violation is the average         are driving on the road. First, the distance between a vehicle
+episode cost on 100 test environments. Since each agent are       and its nearest road center lane should be limited. We
+trained across 5 random seeds, this evaluation process will be    set the range limit to 5 meters in experiments. Second,
+executed for 5 agent which has the same training setting but      the angle between a vehicle’s heading and the road center
+different random seeds. We report the average and std on the      lane’s direction should be limited. We set the angle limit to
+2 metrics mentioned above for measuring the performance           ±90◦ in experiments. These assumptions help to filter out
+and the safety of trained agents.                                 invalid vehicles in the dataset. Besides, they give good prior
+Importing Scenarios. Unlike the RL agent that can select          information for the model, ensuring that invalid vehicles such
+new routes in the drivable area to the destination, Traffic ve-   as the out-of-road and retrograde ones will not be generated.
+hicles follow the logged trajectories, while IDM is used [13,
+14] for control speed so that they can react to RL agent which
+may behave differently from the logged ego car, performing
+behaviors like yielding and emergency stop.
+Statistical Results Processing. Since each agent is trained
+with 5 random seeds, the evaluation process will be executed
+for 5 agents which have the same training setting but
+different random seeds. We report the mean and std of the 2
+aforementioned metrics to measure the performance and the
+safety of trained agents.
+             IX. I MPLEMENTATION D ETAILS
+
+                   TABLE V: TrafficGen
+               Hyper-parameter              Value
+               Feature Size                 1024
+               Training epochs              30
+               Data Usage for Initializer   50,000
+               Data Usage for Actuator      150,000
+               Learning Rate                3e−4
+               Activation Function          “relu”
+               MLP Layers                   3
+
+
+
+                       TABLE VI: PPO
+                Hyper-parameter             Value
+                KL Coefficient              0.2
+                λ for GAE [23]              0.95
+                Discounted Factor γ         0.99
+                Number of SGD epochs        20
+                Train Batch Size            30,000
+                SGD mini-batch size         256
+                Learning Rate               3e−4
+                Clip Parameter             0.2
+                Activation Function         “tanh”
+                MLP Hidden Units            256
+                MLP Layers                  2
+
+
+  The training is executed on servers with 8 x Nivdia 1080ti
+and 256 G memory. When training PPO agents, we use
+

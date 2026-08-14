@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "sample_id": "seed_v1_high_0165",
+  "family": "multi_hazard_parameter_v1",
+  "conditions": {
+    "target_risk_level": "high",
+    "weather_tags": [
+      "heavy_rain",
+      "fog",
+      "night",
+      "wet_road",
+      "strong_wind"
+    ],
+    "hazard_tags": [
+      "lead_vehicle_braking",
+      "pedestrian_crossing"
+    ],
+    "condition_text_zh": "暴雨、雾天、夜间、湿滑路面、强风条件下，前车急刹与行人横穿叠加的高风险场景"
+  },
+  "scenario": {
+    "duration_seconds": 20.0,
+    "traffic_manager_seed": 20260977
+  },
+  "weather": {
+    "cloudiness": 98.326,
+    "precipitation": 87.835,
+    "precipitation_deposits": 92.243,
+    "wind_intensity": 80.521,
+    "fog_density": 73.634,
+    "fog_distance": 12.316,
+    "sun_altitude_angle": -20.934,
+    "wetness": 96.16
+  },
+  "lead_vehicle": {
+    "initial_distance_m": 19.116,
+    "brake_trigger_seconds": 4.654,
+    "brake_intensity": 0.852
+  },
+  "pedestrian": {
+    "forward_distance_m": 22.49,
+    "roadside_offset_m": 7.178,
+    "spawn_z_offset_m": 0.5,
+    "trigger_seconds": 3.722,
+    "speed_mps": 4.475
+  },
+  "observed_risk": {
+    "status": "not_simulated",
+    "method": null,
+    "score": null,
+    "level": null,
+    "run_dir": null
+  },
+  "provenance": {
+    "source_kind": "synthetic_parameter_design",
+    "generator": "balanced_latin_hypercube_v1",
+    "generator_seed": 20260812,
+    "split": "train",
+    "created_at": "2026-08-12T13:01:18+08:00"
+  }
+}

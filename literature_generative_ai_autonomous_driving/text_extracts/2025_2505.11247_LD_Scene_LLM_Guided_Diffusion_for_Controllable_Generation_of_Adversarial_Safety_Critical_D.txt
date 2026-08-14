@@ -1,0 +1,1095 @@
+                                         LD-Scene: LLM-Guided Diffusion for Controllable Generation of
+                                         Adversarial Safety-Critical Driving Scenarios
+                                         Mingxing Penga , Yuting Xieb , Xusen Guoa , Ruoyu Yaoa , Hai Yanga,c and Jun Maa,c,∗
+                                         a The Hong Kong University of Science and Technology (Guangzhou), Guangzhou 511453, China
+                                         b School of Computer Science and Engineering, Sun Yat-sen University, Guangzhou 510275, China
+                                         c The Hong Kong University of Science and Technology, Hong Kong SAR, China
+
+
+
+                                         ARTICLE INFO                                    ABSTRACT
+                                         Keywords:                                       Ensuring the safety and robustness of autonomous driving systems necessitates a comprehensive
+arXiv:2505.11247v2 [cs.AI] 17 Aug 2025
+
+
+
+
+                                         Large Language Models                           evaluation in safety-critical scenarios. However, these safety-critical scenarios are rare and
+                                         Diffusion models                                difficult to collect from real-world driving data, posing significant challenges to effectively
+                                         Traffic simulation                              assessing the performance of autonomous vehicles. Typical existing methods often suffer from
+                                         Generative AI                                   limited controllability and lack user-friendliness, as extensive expert knowledge is essentially
+                                         Intelligent Transportation System               required. To address these challenges, we propose LD-Scene, a novel framework that integrates
+                                                                                         Large Language Models (LLMs) with Latent Diffusion Models (LDMs) for user-controllable
+                                                                                         adversarial scenario generation through natural language. Our approach comprises an LDM
+                                                                                         that captures realistic driving trajectory distributions and an LLM-based guidance module that
+                                                                                         translates user queries into adversarial guidance functions, facilitating the generation of scenarios
+                                                                                         aligned with user queries. The guidance module integrates an LLM-based Chain-of-Thought
+                                                                                         (CoT) code generator and an LLM-based code debugger, enhancing the controllability and
+                                                                                         robustness in generating guidance functions. Extensive experiments conducted on the nuScenes
+                                                                                         dataset demonstrate that LD-Scene achieves state-of-the-art performance in generating realistic
+                                                                                         and effective adversarial scenarios. Furthermore, our framework provides fine-grained control
+                                                                                         over adversarial behaviors, thereby facilitating more effective testing tailored to specific driving
+                                                                                         scenarios.
+
+
+
+
+                                         1. Introduction
+                                             With the continuous advancement of autonomous vehicle (AV) technologies, reliable testing is essential to
+                                         verify the safety and robustness of self-driving systems (Jiang et al., 2024c; Argui et al., 2024; Kang et al., 2019).
+                                         However, real-world testing is not only expensive but also poses significant challenges in collecting safety-critical
+                                         driving scenarios, which are crucial for assessing the performance of AVs. Specifically, safety-critical scenarios are
+                                         characterized by high-risk interactions where AVs are exposed to unexpected maneuvers by other road users, which
+                                         potentially lead to collisions (Ding et al., 2023; Wang et al., 2025; Zheng et al., 2025). As a more practical and efficient
+                                         solution, the generation of safety-critical scenarios in simulation has become a widely adopted approach for driving
+                                         performance evaluation.
+                                             Existing approaches often employ simulators such as CARLA (Dosovitskiy et al., 2017) and SUMO (Lopez et al.,
+                                         2018) to manually design safety-critical driving scenarios. However, these methods typically demand substantial
+                                         domain expertise and often produce scenarios that lack realism. Recent studies have sought to address these limitations
+                                         by leveraging large-scale driving datasets to learn realistic traffic models, subsequently generating safety-critical
+                                         scenarios at test time through optimization-based techniques (Rempe et al., 2022; Wang et al., 2021; Zhang et al.,
+                                         2022b). While these approaches improve realism to some extent, they remain limited in terms of generation efficiency
+                                         and fine-grained behavioral control. More recently, diffusion models have demonstrated strong capabilities in modeling
+                                         complex trajectory distributions through iterative denoising steps (Mao et al., 2023; Peng et al., 2024a). Moreover,
+                                         diffusion models have also been widely adopted in controllable generation tasks, such as text generation (Li et al.,
+                                         2022b) and image synthesis (Zheng et al., 2023), attracting considerable interest for their potential to generate realistic
+                                         and controllable driving trajectories. Existing diffusion-based approaches employ various guidance mechanisms, such
+                                             ∗ Corresponding author
+
+                                                 mpeng060@connect.hkust-gz.edu.cn (M. Peng); xieyt8@mail2.sysu.edu.cn (Y. Xie); xguo796@connect.hkust-gz.edu.cn
+                                         (X. Guo); ryao092@connect.hkust-gz.edu.cn (R. Yao); cehyang@ust.hk (H. Yang); jun.ma@ust.hk (J. Ma)
+                                              ORCID (s):
+
+
+
+                                         M. PENG: Preprint submitted to Elsevier                                                                                             Page 1 of 18
+      LD-Scene: LLM-Guided Diffusion for Controllable Generation of Adversarial Safety-Critical Driving Scenarios
+
+as reinforcement learning (RL)-based classifiers (Xie et al., 2024) and predefined objective functions (Xu et al., 2023;
+Chang et al., 2024), to generate adversarial safety-critical scenarios. However, these approaches require retraining
+classifiers or redesigning objective functions with expert knowledge for different adversarial strategies, and these
+limit their flexibility and user-friendliness. With the above discussions, the key challenges in generating safety-critical
+scenarios lie in ensuring realism, achieving controllability over adversarial behaviors, and providing a user-friendly
+interface for scenario generation.
+    Recent advancements in generative AI provide new solutions to deal with these challenges. In particular, Large
+Language Models (LLMs) have demonstrated remarkable capabilities in natural language understanding (Achiam et al.,
+2023; Bubeck et al., 2023) and code generation (Guo et al., 2024), making them particularly suitable for developing
+interfaces that allow users to customize scenarios in natural language. For example, CTG++ (Zhong et al., 2023a)
+leverages language-based guidance to enable controllable generation of multi-agent traffic simulations. However, it
+lacks closed-loop evaluation of an ego planner and does not support reactive, adversarial safety-critical scenarios where
+an attacking agent challenges the planner’s decisions. In addition, the inherent instability of LLMs leads to frequent
+failures in generating valid guidance code, undermining the reliability of CTG++. Meanwhile, Latent Diffusion
+Models (LDMs) (Rombach et al., 2022) have gained attention for their ability to learn compact representations of
+complex driving scenarios, which facilitate more realistic and computationally efficient trajectory modeling. These
+advancements enhance both the expressiveness and efficiency of scenario generation. Inspired by these developments,
+integrating multi-agent LLM with LDMs presents a promising approach for generating realistic and controllable
+adversarial safety-critical driving scenarios while enabling intuitive and accessible user interaction.
+    In this paper, we propose LD-Scene, a novel approach that integrates LLM-enhanced guidance with LDMs to enable
+user-controllable generation of adversarial safety-critical driving scenarios through natural language. As illustrated in
+Fig. 1, our LD-Scene framework consists of two main components: an LDM, which learns realistic driving trajectories,
+and an LLM-based guidance generation module, which translates user queries into a guidance loss function that
+perturbs the denoising process to generate adversarial driving scenarios. Specifically, both past information and future
+information are encoded into latent representations by a graph neural network (GNN)-based encoder, which captures
+vehicle interactions. The past latent serves as conditions for the denoising network to reconstruct a realistic future
+latent, ensuring the model learns plausible driving behaviors. The guidance generation module consists of a code
+generator and a code debugger. The Chain-of-Thought (CoT) reasoning process within the code generator enhances
+the controllability of adversarial scenario generation, allowing not only the specification of adversarial behaviors but
+also the adjustment of adversarial intensity. Meanwhile, the code debugger mitigates the instability inherent in LLM-
+based generation, thereby improving the robustness and effectiveness of the proposed approach. We conduct extensive
+closed-loop simulation experiments with an ego vehicle controlled by a rule-based planner to evaluate the effectiveness
+and realism of the generated scenarios. In addition, ablation studies validate the contribution of the debugger module
+to the stability of LD-Scene.
+    In summary, the main contributions of this paper include:
+   • We propose LD-Scene, a novel framework that seamlessly integrates the multi-agent LLM with an LDM to
+     facilitate the generation of adversarial, safety-critical driving scenarios that are effortlessly controllable through
+     natural language.
+
+   • We introduce an LLM-based guidance generation module that features a CoT reasoning code generator and a
+     code debugger, and this enhances the controllability, robustness, and stability of adversarial scenario generation
+     for autonomous driving.
+   • Extensive experiments on the nuScenes dataset are conducted, and the results demonstrate that LD-Scene
+     outperforms baseline models in terms of adversariality, realism, and stability, while also providing improved
+     controllability over both the adversarial level and specific adversarial behaviors.
+
+
+2. Related Work
+    This section introduces related works in three areas: safety-critical scenario generation, diffusion models for
+trajectory generation, and LLM-based traffic simulation.
+
+
+
+
+M. PENG: Preprint submitted to Elsevier                                                                       Page 2 of 18
+      LD-Scene: LLM-Guided Diffusion for Controllable Generation of Adversarial Safety-Critical Driving Scenarios
+
+2.1. Safety-Critical Driving Scenario Generation
+    Simulating safety-critical scenarios is essential for comprehensive risk assessment of autonomous driving systems,
+especially since current AVs have been shown to perform well in typical driving conditions but remain under-
+tested in rare and hazardous cases (Ding et al., 2023). Manual design of safety-critical scenarios, relying on
+expert knowledge and altering factors like actor locations and velocities, faces scalability issues and may yield
+implausible situations (Scanlon et al., 2021; Li et al., 2022a; Zhang et al., 2022a). Recent studies delve into some
+specific parameterization spaces within original scenarios to pinpoint adversarial parameters using optimization-based
+methods (Wang et al., 2021; Zhang et al., 2022b; Abeysirigoonawardena et al., 2019; Ding et al., b; Hanselmann et al.,
+2022; Ding et al., a, 2021). Most works like AdvSim (Wang et al., 2021) directly perturb the standard trajectory space
+to produce adversarial trajectories, while adhering to constraints to maintain physical feasibility. Alternatively, some
+other works (Ding et al., b; Suo et al., 2023; Rempe et al., 2022) perform parameter optimization within a condensed
+latent space. Strive (Rempe et al., 2022) further incorporates GNNs (Scarselli et al., 2008) to generate traffic prior, while
+Mixsim (Suo et al., 2023) utilizes routes as priors both to enhance the plausibility of vehicle interactions. Nevertheless,
+these testing-time optimization methods encounter practical constraints that necessitate the iterative re-planning of a
+surrogate planner within the search loop, resulting in significant efficiency issues.
+    Other studies adopt adversarial policy models to address the sequential control of BVs in step-wise interactions.
+Building upon Proximal Policy Optimization (PPO) (Schulman et al., 2017), NADE (Feng et al., 2021) trains
+background vehicles to execute adversarial maneuvers through simulation with a surrogate target model, offering
+flexibility and efficiency in scenario generation. However, this approach introduces complexity due to the curse of
+dimensionality and rarity. To alleviate this issue, D2RL (Feng et al., 2023) proposes a strategy to enhance information
+density by training neural networks with safety-critical data. They also selectively choose a critical state attacker to
+further reduce variance, sacrificing multi-vehicle trajectory rationality. The commendable efforts notwithstanding,
+adversarial policy training still necessitates a substantial number of interactions with the environment due to the
+inherent model complexity.
+
+2.2. Diffusion Models for Controllable Trajectory Generation
+     Diffusion models (Ho et al., 2020; Rombach et al., 2022; Dhariwal and Nichol, 2021) have emerged as a powerful
+class of generative models, attracting significant attention for their ability to generate realistic and controllable driving
+trajectories. Their capacity to effectively capture the complexity of real-world traffic patterns makes them well-suited
+for traffic simulation tasks (Peng et al., 2024a). Furthermore, guidance-based diffusion models improve controllability
+at test time while maintaining realism (Jiang et al., 2024b). For example, Diffuser (Janner et al., 2022) and AdvDiffuser
+(Xie et al., 2024) leverage RL to train a reward function, which acts as a classifier to guide trajectory sampling.
+CTG (Zhong et al., 2023b) employs Signal Temporal Logic (STL) formulas as guidance for diffusion models to
+ensure compliance with specific rules, such as collision avoidance or goal-reaching. CTG++ (Zhong et al., 2023a)
+further incorporates language-based guidance, enabling more flexible rule enforcement. MotionDiffuser (Jiang et al.,
+2023) proposes several differentiable cost functions as guidance, enabling the enforcement of both rules and physical
+constraints in the generated trajectories. In contrast, DiffScene (Xu et al., 2023) and Safe-Sim (Chang et al., 2024)
+focus on generating safety-critical traffic simulations by introducing safety-based guidance objectives. Furthermore,
+Safe-Sim (Chang et al., 2024) demonstrates the ability to generate controllable behaviors, such as specific collision
+types.
+     Despite the successes achieved in the controllable generation of realistic driving trajectories, these prior works still
+face certain limitations in terms of user convenience and controllable generation efficiency. For example, RL-based
+guidance, such as AdvDiffuser (Xie et al., 2024), requires the training of different classifiers for various adversarial
+strategies. On the other hand, the controllability achieved through pre-designed objective-based guidance, such as
+Safe-Sim (Chang et al., 2024), often demands significant domain expertise, making it rather difficult for users without
+specialized knowledge in the field.
+
+2.3. Large Language Models for Traffic Simulation
+    Recently, LLMs have represented a significant advancement in the field of autonomous driving (Yang et al., 2023;
+Peng et al., 2024b; Wen et al., 2023), showcasing their potential in traffic simulation for generating realistic and
+controllable scenarios. This progress is largely driven by their capabilities in extensive knowledge storage, logical
+reasoning, and code generation (Bubeck et al., 2023; Guo et al., 2024). CTG++ (Zhong et al., 2023a) and Guo et al.
+(2025) demonstrate LLM’s powerful code generation capabilities that can generate corresponding functions according
+
+M. PENG: Preprint submitted to Elsevier                                                                        Page 3 of 18
+      LD-Scene: LLM-Guided Diffusion for Controllable Generation of Adversarial Safety-Critical Driving Scenarios
+
+                                                                                  𝒩𝒩(0, σ²𝐼𝐼)
+         Posterior Scene Input                VAE Encoder                                𝒛𝒛𝑘𝑘                                                                   Latent Denoising U-Net ϵ𝜃𝜃                                                                                                                                                                     Generation Output
+
+
+
+
+                                                                                                                                                                                                                                                                                          ResTemporalBlock
+
+                                                                                                                                                                                                                                                                                                             ResTemporalBlock
+                                                                                                       ResTemporalBlock
+
+                                                                                                                          ResTemporalBlock
+                                                                                                                                                                                                                                                                                                                                                      𝜇𝜇
+
+
+
+
+                                                                                                                                                                                                                                                                                                                                Linear Attention
+                                                                                                                                             Linear Attention
+
+
+
+
+                                                                                                                                                                                                                                                ResTemporalBlock
+                                                                                                                                                                                       ResTemporalBlock
+
+
+
+
+                                                                                                                                                                                                                             ResTemporalBlock
+                                                                                                                                                                    ResTemporalBlock
+
+
+
+
+                                                                                                                                                                                                                                                                   Linear Attention
+                                                                                                                                                                                                          Linear Attention
+     Past & Future Traj.      Map   Context Encoder          Interaction Net       Noisy Latent                                                                                                                                                                                                                                                                            Future Traj.
+                                                                                                                                                                …                                                                                                                     …
+                                                                                    Variable
+
+                                                                                                                                                                                                                                                                                                                                                                  VAE Decoder
+            Prior Scene Input                 VAE Encoder
+                                                                                          𝒄𝒄
+                                                                                                                                                                                                                                                                                                                                                                                    𝑓𝑓
+
+                                                                                                                                                                                                                                                                                                                                                                                Kinematic
+        Past Traj.            Map   Context Encoder          Interaction Net                                                                                                                                                                                                                                                                                  Interaction Net     Model
+                                                                               Conditioning Variable
+
+
+
+                                                                                                Training
+
+
+          Prompt Input                         Code Generator                                   Code Debugger                                                                                                                                                                                                                                      Guidance Function
+
+                                                                                      Source Code                                       Error Message                                                                                                                                     Response
+              User Query                                                          Source code:                            Traceback error
+                                            Reasoning Process                                                                                                                                                                                                                         class AdversarialCollisionLoss:
+         The adversarial vehicle                                                  class ...                               message:
+         overtakes and colides                                                                                            Error during                                                                                                                                                    …
+                                                                                  Please review the
+         with the ego vehicle.                                                    source code, then                       function execution:                                                                                                                                             adv_ego_pens = -adv_coll_pens[:, adv_idx,
+                                         Step 1: Detect adversarial level                                                 ...
+                                                                                  use the error                                                                                                                                                                                                        ego_idx]
+                                                                                  message to debug                        Full traceback:
+                                                                                                                                                                                                                                                                                          dist_scale = nn.functional.softmin(
+            System Prompt                                                         and improve source                      Error occurred at
+                                                                                                                          line 68: ...
+                                                                                                                                                                                                                                                                                                     adv_ego_pens, dim=0)
+                                         Step 2: Generate loss weight             code.
+       • Task                                                                                                                                                                                                                                                                             adversarial_collision_loss =
+       • Inputs                                                                                                                                                                                                                                                                                      torch.mean(adv_ego_pens *
+       • Objective
+       • Important Instructions
+                                                                                                                                                                                                                                                                                                     dist_scale)
+                                             Step 3: Generate code
+       • Output                                                                                     Unit Testing                                                                                                                                                                          …
+
+
+
+
+                                                                               Guidance in Inference
+
+
+Figure 1: Overall framework of LD-Scene. During the training stage, an LDM learns the distribution of realistic driving
+trajectories conditioned on the latent representation of historical scene input. During the inference stage, given a user query,
+an LLM-based code generator produces an adversarial loss function. This loss function is then validated by an LLM-based
+debugger through a closed-loop unit testing process and subsequently used to guide the diffusion model in generating
+safety-critical driving scenarios.
+
+
+
+to user requirements. Meanwhile, Scenediffuser (Jiang et al., 2024a) employs LLMs through few-shot prompting to
+convert scene constraints into structured Protobuf (Proto) representations, facilitating controllable scenario generation.
+LCTGen (Tan et al., 2023) employs LLMs as interpreters to transform textual queries into structured representations,
+which are subsequently combined with a transformer-based decoder to generate realistic traffic scenes. Building upon
+LCTGen, an enhanced method is introduced in Xia et al. (2024), where the structured representations produced by
+LLMs incorporate interaction modeling, ultimately enhancing the generation of interactive traffic trajectories. On the
+other hand, ChatScene (Zhang et al., 2024) utilizes an LLM-based agent to describe traffic scenes in natural language,
+subsequently converting these descriptions into executable Scenic code for scenario simulation within CARLA.
+Although these works have demonstrated a certain degree of controllability in traffic simulation, few studies have
+specifically focused on adversarial safety-critical scenario generation. In this context, it leaves an open and interesting
+problem to integrate LDMs with LLMs to achieve both realism and user-friendly controllability in the generation of
+safety-critical traffic scenarios.
+
+
+3. Methodology
+     In this section, we introduce LD-Scene, a framework that integrates LDMs with LLM-enhanced guidance to
+generate plausible safety-critical driving scenarios with user-friendly controllability. The overall framework of our
+LD-Scene is depicted in Fig. 1. The following subsections provide a formal problem formulation, describe the LDM
+for scenario generation, detail the process of generating LLM-enhanced guidance, and explain how this guidance is
+utilized to generate safety-critical driving scenarios.
+
+
+
+M. PENG: Preprint submitted to Elsevier                                                                                                                                                                                                                                                                                                                                         Page 4 of 18
+       LD-Scene: LLM-Guided Diffusion for Controllable Generation of Adversarial Safety-Critical Driving Scenarios
+
+3.1. Problem Formulation
+     Our work focuses on generating safety-critical driving scenarios for a given autonomous driving planner to facilitate
+a more effective and efficient evaluation of autonomous driving systems. Each scenario consists of 𝑁 agents, including
+an ego vehicle controlled by the planner 𝜋, while the future trajectories of the remaining 𝑁 − 1 vehicles are generated
+by our model. Among the 𝑁 − 1 vehicles, one is designated as the adversarial vehicle. The objective of our model is to
+encourage the adversarial vehicle to induce a collision with the ego vehicle while ensuring that the trajectories of the
+remaining non-adversarial vehicles remain realistic. Furthermore, our model incorporates LLMs to enable scenario
+customization based on user queries in natural language. This allows users to conveniently specify the adversarial
+vehicle, as well as control the collision type and adversarial collision severity.
+     Similar to prior work (Rempe et al., 2022; Xie et al., 2024), a driving scenario 𝑆 consists of 𝑁 vehicle states and
+a map m that includes semantic layers for drivable areas and lanes. At any timestep 𝑡, the states of the 𝑁 agents are
+represented as 𝑠𝑡 = [𝑠0𝑡 , 𝑠1𝑡 , ..., 𝑠𝑁−1
+                                         𝑡  ], where each agent state 𝑠𝑖𝑡 = (𝑥𝑖𝑡 , 𝑦𝑖𝑡 , 𝜃𝑡𝑖 , 𝑣𝑖𝑡 ) includes the 2D position, heading, and
+speed. The corresponding actions of the 𝑁 agents are represents as 𝑎𝑡 = [𝑎0𝑡 , 𝑎1𝑡 , ..., 𝑎𝑁−1              𝑡    ], where each agent action
+𝑎𝑖𝑡 = (𝑣̇ 𝑡𝑖 , 𝜃̇ 𝑖𝑡 ) representing the acceleration and yaw rate. The past trajectories, denoted as x, represent the historical
+states of all agents over the past 𝑇ℎ𝑖𝑠𝑡 timesteps and are expressed as x = {𝑠𝑡−𝑇ℎ𝑖𝑠𝑡 , 𝑠𝑡−𝑇ℎ𝑖𝑠𝑡 +1 , ..., 𝑠𝑡 }. The planner 𝜋
+determines the future trajectory of the ego vehicle over a time horizon from 𝑡 to 𝑡 + 𝑇 . The planned future trajectory
+is denoted as 𝑠0𝑡∶𝑡+𝑇 = 𝜋(m, x), where 𝜋 processes historical state sequences and map feature to predict a sequence of
+future states.
+     Our proposed LDM 𝑔, parameterized by 𝜃, is designed to generate multi-agent future trajectories in a driving
+scenario. The model consists of a pretrained encoder  and decoder . Given historical trajectory data and
+corresponding map information, the encoder  maps these inputs into a compact latent representation. A denoising
+diffusion process is then applied within this latent space, gradually refining the representation. Finally, the decoder 
+transforms the denoised latent representation into future trajectories of non-ego vehicles, denoted as 𝝉 = {𝑠𝑖𝑡∶𝑡+𝑇 }𝑁−1              𝑖=1
+                                                                                                                                          .
+In the training stage, the model is trained on real-world driving data to learn realistic traffic behaviors. In the inference
+stage, we incorporate LLM-enhanced guidance to steer the denoising sampling process toward the generation of safety-
+critical scenarios, thereby ensuring both realism and controllability.
+
+3.2. Latent Diffusion Models for Scenario Generation
+     Diffusion models (Ho et al., 2020) comprise two Markov chains: a forward (diffusion) process that progressively
+adds Gaussian noise to the data, leading to pure noise over multiple steps, and a reverse (denoising) process, where
+a learnable neural network iteratively removes noise to generate samples. In this work, we train a diffusion model to
+synthesize realistic and controllable adversarial safety-critical driving scenarios through an iterative denoising process.
+     Unlike conventional diffusion-based trajectory generation methods that operate directly in the trajectory space
+(Zhong et al., 2023b,a; Chang et al., 2024), our approach applies the diffusion model within a latent space. This design
+choice reduces computational complexity while enhancing the expressiveness of the generative process (Rombach
+et al., 2022; Rempe et al., 2022; Xie et al., 2024). Specifically, we integrate the diffusion model with a pretrained graph-
+based variational autoencoder (VAE) model following Strive (Rempe et al., 2022). The graph-based VAE consists of
+an encoder that learns a latent representation of agent interactions and a decoder that autoregressively generates future
+trajectories using a kinematic bicycle model, ensuring both realism and plausibility in traffic scenario generation.
+     Architecture. As depicted in the upper section of Fig. 1, our LDM consists of three key components: two
+encoders with frozen parameters, a learnable denoising network, and an autoregressive trajectory decoder with frozen
+parameters. The encoders and decoder are directly adopted from a pretrained VAE model, which all these modules
+employ GNNs. Specifically, the prior scene input encoder 𝜃 is identical to the prior network in Strive (Rempe
+et al., 2022), modeling agent interactions via a fully connected scene graph. Each node encodes contextual features
+derived from an agent’s past trajectory and local rasterized map. Through message passing, the encoder generates
+latent representations for all agents, which serve as conditioning inputs for our diffusion model, formulated as
+c = 𝜃 (x, m). Similarly, the posterior scene input encoder 𝜃 corresponds to the posterior network in Strive (Rempe
+et al., 2022), which operates jointly on past and future information. The resulting latent vectors serve as the latent
+input 𝐳 for our diffusion model, expressed as 𝐳 = 𝜃 (𝝉, x, m). The diffusion process begins with a clean future latent
+𝐳0 ∼ 𝑞(𝐳0 ) sampled from the data distribution. The forward process produces a sequence of progressively noisier latent
+
+
+
+
+M. PENG: Preprint submitted to Elsevier                                                                                     Page 5 of 18
+      LD-Scene: LLM-Guided Diffusion for Controllable Generation of Adversarial Safety-Critical Driving Scenarios
+
+
+                                           System Prompt                                                           Code Generation Prompt
+              <Task> Implement a Python class to generate a guidance loss for a                Below is the template code for generating a guidance loss class for a
+              diffusion model, …                                                               diffusion model. Complete the TODO parts.
+                                                                                               class AdversarialCollisionLoss:
+              <Inputs> x is a tensor representing the current trajectories of all
+                                                                                                 note: {some code generation tips}
+              agents, …                                                                          …
+                                                                                                 def guidance_loss(x, state):
+              <Objective> The loss class should guide the diffusion model to
+                                                                                                   …
+              generate driving scenarios that encourage collisions between the                     # AgentCollisionLoss: Agents should not collide with each other
+              adversarial vehicle and the ego, …                                               except for the adversarial vehicle and ego vehicle.
+
+              <Important Instructions>                                                             {code example}
+                - You can use the class EnvCollLoss, which penalizes overlap with
+                                                                                                   # MapCollisionLoss: Agents should not go offroad.
+              non-drivable area, and you can use the class VehCollLoss, which
+              penalizes collision between vehicles with circle approximation.                      {code example}
+                …
+                                                                                                   ##### Your code here (TODO) #####
+              <Output>                                                                             # AdversarialCollisionLoss: {user query}
+                - The adversarial level based on the user query.
+                                                                                                   # Get the loss weights from the answer of Step 2
+                - The weights for each loss.
+                - The guidance loss funtion class.                                                 ############################
+
+                                                                                                   return total_loss
+
+
+                                                    (a)                                                                           (b)
+
+
+                                        Reasoning Prompt                                                                Debugger Prompt
+              You need to output the answers to the following questions step by step.          You are an expert in Python code refinement with strong skills in
+                                                                                               debugging and optimization. Review the given source code, identify
+              - Step 1: Determine the adversarial level based on the user query.               any errors, and improve it based on the error messages.
+              - Answer: xxx level (Weak, Medium, Strong)
+                                                                                               Source code:
+              - Step 2: Generate the weights for each loss. Note that all weights must
+              be between [0, 1] for the "Weak" level, between                                  {code_snippet}
+               [1, 10] for the "Medium" level, and between [10, 100] for the "Strong" level.
+              - Answer:                                                                        Traceback error message for this code:
+                  - bv_coll_loss_weight =
+                                                                                               {Error_message}
+                 …
+              - Step 3: Generate the guidance loss function class. The class should be
+              wrapped in ```python ... ``` in the final code snippet.                          Please review the source code, then use the error message to debug
+              - Answer: based on the {template code}                                           and improve source code.
+
+
+                                                    (c)                                                                           (d)
+
+Figure 2: Prompts in the guidance generation module. (a) System Prompt: it specifies the task, inputs, objectives, and
+important instructions for generating the guidance loss function. (b) Code Generation Prompt: it provides a structured
+template for generating a guidance loss, incorporating predefined loss functions and some code generation tips. (c)
+Reasoning Prompt: it outlines a step-by-step reasoning process to determine the adversarial level, assign appropriate
+loss weights, and generate the guidance loss function. (d) Debugger Prompt: it instructs the model to analyze generated
+source code and error messages and iteratively refine the implementation to improve correctness and reliability.
+
+
+
+(𝐳0 , 𝐳1 , ..., 𝐳𝐾 ), where each step 𝑘 follows a Gaussian noise injection process (Ho et al., 2020):
+
+                                   ∏
+                                   𝐾
+      𝑞(𝐳1∶𝐾 ∣ 𝐳0 ) ∶=                    𝑞(𝐳𝑘 ∣ 𝐳𝑘−1 )
+                                   𝑘=1                                                                                                                                     (1)
+                                    √    (             )
+          𝑘         𝑘−1
+      𝑞(𝐳 ∣ 𝐳             ) ∶=  𝐳 ; 1 − 𝛽𝑘 𝐳𝑘−1 , 𝛽𝑘 𝐈
+                                             𝑘
+
+
+where 𝛽𝑘 is the predefined variance schedule that controls the noise level at each step. For sufficiently large 𝐾, the final
+latent variable 𝐳𝐾 approaches an isotropic Gaussian distribution, i.e.,  (𝟎, 𝐈).
+    To accelerate the inference process, we employ the Denoising Diffusion Implicit Models (DDIM) sampling strategy
+(Song et al., 2020), which facilitates a non-Markovian formulation of the reverse diffusion process. Unlike conventional
+sampling schemes, DDIM enables efficient generation by skipping intermediate denoising steps, thus significantly
+reducing the number of sampling iterations without necessitating model retraining. The reverse process at step 𝑘 is
+defined as:
+               √             √
+       𝐳𝑘−1 = 𝛼𝑘−1 ⋅ 𝐳̃ 0 + 1 − 𝛼𝑘−1 ⋅ 𝜖𝜃 (𝐳𝑘 , 𝑘, 𝐜)                                                                    (2)
+
+M. PENG: Preprint submitted to Elsevier                                                                                                                           Page 6 of 18
+      LD-Scene: LLM-Guided Diffusion for Controllable Generation of Adversarial Safety-Critical Driving Scenarios
+
+where 𝜖𝜃 (𝐳𝑘 , 𝑘, c) denotes the denoising network that predicts the noise conditioned on the step 𝑘 and conditioning
+                                ∏
+latent c. The coefficient 𝛼𝑘 = 𝑘𝑖=1 (1 − 𝛽𝑖 ) represents the cumulative product of the noise schedule. The estimate of
+the clean latent representation 𝐳̃ 0 at step 𝑘 is given by:
+            (        √                       )
+               𝐳𝑘 − 1 − 𝛼𝑘 ⋅ 𝜖𝜃 (𝐳𝑘 , 𝑘, 𝐜)
+         0
+       𝐳̃ =                √                                                                                       (3)
+                             𝛼𝑘
+
+By iteratively applying this reverse denoising operation starting from the noisy latent 𝐳𝐾 , we obtain the final denoised
+sample 𝐳̂ 0 .
+    As illustrated in Fig. 1, the denoising network adopts a U-Net architecture similar to Janner et al. (2022), composed
+of one-dimensional temporal convolutional blocks with stacked residual blocks and linear attention. The conditioning
+input c is incorporated into the intermediate input latent within each convolutional block.
+    Finally, the trajectory decoder , following the architecture in Strive (Rempe et al., 2022), also employs a GNN-
+based interaction net to ensure realistic vehicle interactions. Specifically, the decoder 𝜃 (̂𝐳0 , x, m) operates on the scene
+graph with both the denoised latent and past information embedding. The decoding process is autoregressive, where
+the model predicts all agents’ actions 𝑎𝑡 at timestep 𝑡, which are then propagated through a kinematic bicycle model 𝑓
+to compute the next state 𝑠𝑡+1 . The updated state is incorporated into the embedding before proceeding to the next time
+step. This autoregressive formulation ensures the physical plausibility of the generated trajectories while maintaining
+realistic multi-agent interactions.
+    Training. Since the VAE is pretrained, we focus on training the LDM. The objective is to train a denoising network
+that minimizes the variational bound on the negative log-likelihood, which can be simplified to a mean squared error
+loss between the predicted noise and the actual noise:
+                             [                      ]
+        = 𝔼𝐳𝑘 ,𝜖∼ (0,𝐼),𝑘,c ‖𝜖 − 𝜖𝜃 (𝐳𝑘 , 𝑘, c)‖2                                                                         (4)
+
+where 𝜖 ∼  (0, 𝐼) is the Gaussian noise, and 𝐳𝑘 is the noisy latent input obtained from the encoder  with the forward
+diffusion process. 𝜖𝜃 (𝐳𝑘 , 𝑘, c) is the noise prediction model, which is conditioned on the past context latent c.
+
+3.3. Guidance Generation with LLMs
+    In this work, we propose a novel approach that leverages LLMs for the controllable generation of adversarial driving
+scenarios. Our framework takes a user query as input and utilizes LLMs to generate the code for a loss function, which
+subsequently serves as guidance for the sampling process, ensuring that the generated scenarios adhere to user-defined
+adversarial objectives. The key components of our guidance generation framework are illustrated in Fig. 1 and consist
+of the inputs, an LLM-based code generator, and an LLM-based code debugger.
+
+3.3.1. User Query and System Prompt
+    The natural language user query specifies an adversarial driving event. For instance, the query may describe a
+scenario in which an adversarial vehicle overtakes and collides with the ego vehicle. The structured system prompt
+defines the task, introduces input parameters, specifies objectives, provides essential code generation instructions, and
+outlines the expected outputs. Fig. 2(a) presents a detailed illustration of the system prompt.
+
+3.3.2. Code Generator
+    CoT reasoning has been shown to be highly effective in problem decomposition and in carrying out more intricate
+reasoning tasks (Wei et al., 2022; Kojima et al., 2022). Therefore, our code generator adopts CoT prompting to enhance
+effectiveness and provide greater controllability in adversarial scenario generation. The code generator prompts in
+our framework consist of two primary modules: the reasoning prompt and the code generation prompt. As shown in
+Fig. 2(b), the code generation prompt provides a template that ensures the correct implementation of the guidance
+loss function, while Fig. 2(c) presents the reasoning prompt, which instructs the model to generate the loss function
+step-by-step.
+    The Reasoning Module is divided into three steps. First, it interprets the user query to determine the adversarial level
+(Weak, Medium, or Strong). The LLM follows some instructions to classify the level: if the query contains terms with
+ambiguous intensity, it is categorized as Medium. Queries that include strong descriptors (e.g., aggressive, forceful,
+high-speed) are classified as Strong, whereas those with mild descriptors (e.g., gentle, cautious, slight) are categorized
+
+M. PENG: Preprint submitted to Elsevier                                                                          Page 7 of 18
+      LD-Scene: LLM-Guided Diffusion for Controllable Generation of Adversarial Safety-Critical Driving Scenarios
+
+as Weak. Second, the module determines the appropriate loss weights based on predefined ranges, which are essential
+for controlling the adversarial level of the generated driving scenario. Third, the system generates the corresponding
+code by completing a predefined template, incorporating the determined adversarial level and loss weights to ensure
+effectiveness in adversarial scenario generation.
+    Code generation prompt. Unlike the few-shot learning approach used in CTG++ (Zhong et al., 2023a), our method
+employs a zero-shot learning strategy for code generation. The Code Generation Prompt provides a structured template
+that directly incorporates examples of some loss functions, including the agent collision loss function and the map
+collision loss function, as shown in Fig. 2(b). Based on these examples, the LLM learns how to utilize the input
+trajectory and apply helper classes such as EnvCollLoss and VehCollLoss. Finally, the code generator generates the
+adversarial collision loss based on the user query. Depending on different user queries, such as cut-in, overtaking, or
+emergency braking, the corresponding adversarial collision loss function is generated, ensuring controllable adversarial
+behavior.
+
+3.3.3. Code Debugger
+    As noted in CTG++ (Zhong et al., 2023a), code generation can sometimes produce incorrect implementations.
+To address this limitation, we introduce a code debugger module that reviews and refines the generated code. The
+debugger operates by running a closed-loop unit test to evaluate the generated guidance loss function. If an error is
+detected, the corresponding source code and error message are provided to the code debugger, which iteratively refines
+the implementation until a predefined maximum number of iterations is reached.
+    Fig. 2(d) illustrates the debugging prompt, which instructs the model to analyze the generated source code, diagnose
+errors based on the traceback message, and improve the implementation. This iterative refinement process enhances
+code reliability, ensuring seamless integration of the guidance loss function into the diffusion model while minimizing
+the need for manual debugging. By incorporating a code debugger, our framework significantly improves the robustness
+and correctness of the generated loss functions, thereby enhancing the effectiveness of adversarial scenario generation.
+
+3.4. Generation of Safety-Critical Scenarios
+    To enable the controllable generation of safety-critical driving scenarios, we introduce an objective function  (𝝉),
+which guides the denoising process. Adversarial driving scenarios are generated by perturbing the predicted mean at
+each denoising step. Since the denoising process operates in the latent space, each guided iteration step first decodes the
+latent vector 𝐳 into the corresponding trajectory 𝝉 using a decoder , formulated as 𝝉 = 𝜃 (𝐳, x, m). At each reverse
+diffusion step 𝑘, we modify the denoising process by adding the gradient of  as guidance (Janner et al., 2022):
+
+      𝑝𝜃 (𝐳𝑘−1 ∣ 𝐳𝑘 , c) ≈  (𝐳𝑘−1 ; 𝜇 + Σ𝑔, Σ)                                                                          (5)
+
+where 𝜇 = 𝜇𝜃 as defined in (2), and 𝑔 = ∇ (𝜃 (𝐳, x, m)).
+    To further enhance the robustness of the guidance mechanism, we adopt the reconstruction guidance (clean
+guidance) strategy (Rempe et al., 2023), which perturbs the clean latent vector 𝐳̂ 0 predicted by the network. This
+approach mitigates numerical instabilities, ensuring a more stable and controllable denoising process.
+    In detail, the objective function  (𝝉) comprises three components: (i) 𝑏𝑣_𝑟𝑒𝑎𝑙 , which ensures that non-adversarial
+vehicles behave realistically by preventing collisions with each other and avoiding off-road deviations; (ii) 𝑎𝑑𝑣_𝑟𝑒𝑎𝑙 ,
+which maintains the plausibility of the adversarial vehicle’s behavior by preventing it from colliding with non-
+adversarial vehicles or leaving the roadway; and (iii) 𝑎𝑑𝑣 , which is generated by the LLM mentioned in the previous
+section and formulated to control the adversarial vehicle’s behavior to induce a collision with the ego vehicle based on
+a user query. By integrating these objectives, the proposed framework effectively balances realism while enabling the
+controllable generation of adversarial driving scenarios.
+    The collision penalty between each vehicle is defined as:
+                              {   𝑑 (𝑡)
+                               1 − 𝑝𝑖𝑗 , if 𝑑𝑖𝑗 (𝑡) ≤ 𝑝𝑖𝑗
+      veh_coll_pens𝑖𝑗 (𝑡) =           𝑖𝑗                                                                                 (6)
+                                0,          otherwise
+
+where 𝑑𝑖𝑗 (𝑡) = ‖𝐱𝑖 (𝑡)−𝐱𝑗 (𝑡)‖ denotes the Euclidean distance between vehicles 𝑖 and 𝑗 at time 𝑡, and 𝑝𝑖𝑗 = 𝑟𝑖 +𝑟𝑗 +𝑑buffer
+represents the collision threshold based on the vehicle radii and a safety buffer.
+
+
+
+M. PENG: Preprint submitted to Elsevier                                                                        Page 8 of 18
+      LD-Scene: LLM-Guided Diffusion for Controllable Generation of Adversarial Safety-Critical Driving Scenarios
+
+   Similarly, the map collision penalty for vehicles is given by:
+                           {      𝑑 (𝑡)
+                              1 − 𝑝𝑖 , if 𝑑𝑖 (𝑡) ≤ 𝑝𝑖
+     env_coll_pens𝑖 (𝑡) =           𝑖                                                                                   (7)
+                              0,         otherwise
+
+where 𝑑𝑖 (𝑡) = ‖𝐱𝑖 (𝑡) − 𝐜𝑖 (𝑡)‖ is the distance from the vehicle center to the nearest non-drivable point at time 𝑡, and 𝑝𝑖
+denotes the maximum allowable displacement before a collision.
+    In practice, 𝑏𝑣_𝑟𝑒𝑎𝑙 and 𝑎𝑑𝑣_𝑟𝑒𝑎𝑙 compute the cumulative loss for their respective vehicle types using the
+aforementioned penalty functions. The loss function is computed separately for non-adversarial and adversarial
+vehicles, with corresponding latent values updated independently. Specifically, the gradient update of 𝑏𝑣_𝑟𝑒𝑎𝑙 affects
+the latent representations of non-adversarial vehicles, while the gradient update of the sum of 𝑎𝑑𝑣_𝑟𝑒𝑎𝑙 and 𝑎𝑑𝑣 is
+applied to the latent variables corresponding to the adversarial vehicle, ensuring targeted control over its behavior.
+
+
+4. Experimental Results
+    This section outlines the evaluations of our proposed LD-Scene model. We first describe the dataset, evaluation
+metrics, and experimental setup. We then compare the performance of our LD-Scene against baseline models and
+provide a quantitative analysis of the results. Additionally, we perform two ablation studies: one to demonstrate the
+effectiveness of the guidance components and another to validate the effectiveness of the debugger module. Finally,
+we perform two controllability studies, examining both the controllable adversarial level and controllable adversarial
+behavior.
+
+4.1. Dataset
+     We conduct our experiments on the nuScenes (Caesar et al., 2020) dataset, which comprises 1,000 driving scenes,
+each lasting 20 seconds and recorded at 2 Hz. The dataset captures 5.5 hours of urban driving data collected from two
+cities, Boston and Singapore, covering diverse traffic conditions and complex interactions between road agents. We
+train our models using the training split and evaluate them on the validation split of nuScenes. Following the standard
+guidelines of the nuScenes prediction challenge, we use 2 seconds (4 steps) of past motion data to predict the future 6
+seconds (12 steps) of trajectories.
+
+4.2. Evaluation Metrics
+   We focus on realistic safety-critical scenarios and propose a set of metrics to evaluate the quality of the generated
+scenarios, mainly in three aspects: adversariality, Behavior Plausibility, and efficiency.
+   • Adversariality: This aspect measures the effectiveness of the generated scenarios in simulating safety-critical
+     situations for the ego vehicle. Adv-Ego Collision Rate quantifies the percentage of scenarios where the
+     adversarial vehicle collides with the ego vehicle, with higher values indicating stronger adversarial effectiveness.
+     Adv Acceleration (Adv Acc) measures the acceleration magnitude of the adversarial vehicle, where higher values
+     represent more aggressive adversarial behavior.
+   • Behavior Plausibility: To ensure the generated scenarios align with real-world traffic behavior, we assess both
+     offroad rates and collision rates. Adv Offroad Rate and Other Offroad Rate measure the frequency at which
+     adversarial and non-adversarial agents drive offroad, where lower values indicate more plausible behavior.
+     Collision rates, including Adv-Other Coll Rate, Other-Ego Coll Rate, and Other-Other Coll Rate, quantify the
+     frequency of crashes among different vehicle groups, with lower values ensuring realistic interactions.
+   • Efficiency: We use the closed-loop simulation time (Sim Time) as the metric, where a shorter simulation time
+     indicates higher efficiency.
+
+4.3. Experimental Setup
+    Baseline. We evaluate our proposed method against existing baseline approaches for generating adversarial driving
+scenarios. Specifically, we compare with: our re-implementation of AdvSim (Wang et al., 2021), which optimizes
+the acceleration of a predefined adversarial vehicle to induce a collision, with initial states generated by SimNet
+(Bergamini et al., 2021); and Strive (Rempe et al., 2022), for which we utilize its open-source implementation. Strive
+
+M. PENG: Preprint submitted to Elsevier                                                                       Page 9 of 18
+      LD-Scene: LLM-Guided Diffusion for Controllable Generation of Adversarial Safety-Critical Driving Scenarios
+
+                    Adversariality                          Behavior Plausibility                     Efficiency
+   Model       Adv-Ego         Adv          Adv          Other     Adv-Other Other-Ego Other-Other
+                                                                                                    Sim Time (s) ↓
+              Coll (%) ↑ Acc (m/s2 ) ↑ Offroad (%) ↓ Offroad (%) ↓ Coll (%) ↓ Coll (%) ↓ Coll (%) ↓
+   AdvSim       24.72        0.90          15.60          14.85         0.56        0.91        0.11          338.35
+    Strive      22.69        0.88          18.94          16.64         0.90        1.08        0.05          609.72
+  DiffScene     15.06        0.98          19.71          19.65         8.03        2.60        1.67          199.01
+  Safe-Sim      27.81        1.09          21.79          18.12         7.52        3.21        0.66          193.59
+  LD-Scene      40.75        1.36          12.52          17.95         4.93        2.17        0.66          229.40
+
+Table 1
+Overall performance comparison of baseline models on the nuScenes dataset. We compare our approach against AdvSim
+(Wang et al., 2021), Strive (Rempe et al., 2022), DiffScene (Xu et al., 2023), and Safe-Sim (Chang et al., 2024) for
+closed-loop safety-critical traffic simulation with a rule-based planner.
+
+
+employs a learned traffic model and performs adversarial optimization in the latent space. We further compare with two
+diffusion-based baselines: DiffScene (Xu et al., 2023), which incorporates a human-designed safety guidance function
+to guide the generation toward safety-critical scenarios; and Safe-Sim (Chang et al., 2024), which enhances the guidance
+function by explicitly incorporating time-to-collision (TTC) constraints to generate more targeted adversarial scenarios.
+    Implementation Details. Our LD-Scene is implemented using the PyTorch framework and trained on four GeForce
+RTX 4090 GPUs for six hours. The diffusion model is trained for 200 epochs using the Adam optimizer with a learning
+rate of 5 × 10−4 . The number of diffusion steps is set to 20. During the inference stage, we generate multiple candidate
+future trajectories for each non-ego agent in a given scene, with the number of test samples set to 10. The final trajectory
+is selected as the one that minimizes the guidance loss and simultaneously satisfies the physical feasibility constraints
+(Peng et al., 2025). Additionally, both the code generator and debugger used in generating guidance utilize the GPT-4o
+model.
+    To ensure a fair evaluation of the controllability of the generated safety-critical scenarios, we adopt a standardized
+strategy for selecting the adversarial vehicle for each model. Specifically, we assign the adversarial vehicle as the
+one closest to the ego vehicle in the initial state of the scenario and ensure that it satisfies the required feasibility
+conditions. This selection strategy follows the approach used in Strive (Rempe et al., 2022); however, unlike Strive, the
+adversarial vehicle remains fixed throughout the scenario and does not change dynamically. Moreover, all experiments
+are conducted under a closed-loop simulation setup, where the ego vehicle is controlled by a rule-based lane-graph
+planner (Montemerlo et al., 2008), ensuring consistent and reactive behavior throughout the scenario.
+
+4.4. Overall Performance
+     The quantitative performance of our approach and the baselines is presented in Table 1. Compared to the baselines,
+the proposed LD-Scene demonstrates significant advantages in adversarial metrics while maintaining realistic and
+plausible agent behaviors. Specifically, our LD-Scene achieves an Adv-Ego Coll (%) of 40.75%, which is substantially
+higher than the baseline models. This highlights the superior capability of our model in controllably generating safety-
+critical driving scenarios that involve adversarial vehicles colliding with the ego vehicle. In terms of realism, the
+LD-Scene shows a lower Adv Offroad (%) of 12.52% compared to AdvSim (15.60%), Strive (18.94%), DiffScene
+(19.71%), and Safe-Sim (21.79%), indicating our model can better generate adversarial scenarios that are realistic and
+feasible within the road constraints. The LD-Scene also maintains an overall good performance across other metrics
+in realism. For instance, the Other Offroad (%) is 17.95%, which is comparable to the baseline models. Additionally,
+the collision rates involving other vehicles (Adv-Other Coll, Other-Ego Coll, and Other-Other Coll) are all within
+reasonable ranges, further confirming the realistic nature of the generated scenarios. Furthermore, our diffusion-based
+framework improves generation efficiency, with LD-Scene achieving an average inference time of 229.40 seconds,
+significantly faster than test-time optimization methods.
+     Moreover, Fig. 3(a)-(d) illustrate the driving behavior distributions of non-adversarial agents. Our LD-Scene
+exhibits more concentrated and narrower distributions, indicating smoother and more stable driving behavior compared
+to the baseline models. In particular, the narrower lateral speed and acceleration distributions show that LD-Scene
+avoids unreasonable sharp turns, while the compact longitudinal distributions reflect stable speed regulation. Fig. 3(e)
+presents a radar chart summarizing each model’s performance in adversariality, behavior plausibility, and efficiency.
+Here, LD-Scene achieves the highest adversariality score, demonstrating its superior ability to induce safety-critical
+events, and also records strong behavior plausibility and efficiency values. This balanced performance confirms that
+
+M. PENG: Preprint submitted to Elsevier                                                                      Page 10 of 18
+      LD-Scene: LLM-Guided Diffusion for Controllable Generation of Adversarial Safety-Critical Driving Scenarios
+
+
+
+
+           (a) Longitudinal Speed Distribution            (b) Lateral Speed Distribution
+
+
+
+
+                                                                                               (e) Model Comparison on Adversariality,
+                                                                                                   Behavior Plausibility, and Efficiency
+
+
+
+
+         (c) Longitudinal Acceleration Distribution    (d) Lateral Acceleration Distribution
+
+Figure 3: Visualizations of overall performance among scenario generation models. (a)–(d): Distributions of longitudi-
+nal/lateral speed and acceleration. (e): Radar chart comparing adversariality, behavior plausibility, and generation efficiency.
+LD-Scene achieves the best overall balance.
+
+
+
+LD-Scene achieves the strongest adversarial effectiveness while maintaining high levels of realism and generation
+efficiency, thus demonstrating its superiority across all evaluation metrics.
+     Fig. 4 shows several example adversarial safety-critical scenarios generated by our proposed LD-Scene. In each
+subfigure, the red vehicle represents the adversarial vehicle, while the green vehicle is the ego vehicle controlled by
+a rule-based planner. Under varying scene contexts, the adversarial vehicle exhibits a range of aggressive behaviors,
+ultimately resulting in collisions with the ego vehicle in closed-loop simulations. This highlights the effectiveness of
+LD-Scene in generating safety-critical scenarios that expose the limitations and vulnerabilities of autonomous driving
+systems. For example, Fig. 4(b) and Fig. 4(e) illustrate typical scenarios where the ego vehicle encounters a critical
+decision between yielding and passing. Such scenarios test the planner’s ability to handle interactions, which remain a
+key concern in real-world autonomous driving. Furthermore, scenarios like Fig. 4(d) and Fig. 4(f) involve violations
+of traffic rules. These scenarios are particularly difficult to anticipate and handle, but their inclusion is crucial for
+improving the robustness of autonomous driving systems.
+     Overall, these results demonstrate the capability of our framework to generate realistic safety-critical driving
+scenarios, which can serve as valuable stress tests for autonomous vehicle systems.
+
+4.5. Ablation Study
+4.5.1. Effectiveness of the Guidance Components
+    Table 2 demonstrates the contribution of each guidance component to the overall generation performance.
+Specifically, with the integration of all three guidance losses (Other-real Guidance, Adv-real Guidance, and Adv
+Guidance), the model shows superior performance compared to a baseline diffusion model without any guidance.
+The Adv Guidance component is particularly critical for increasing the collision rate between an adversarial vehicle
+and the ego vehicle, achieving an Adv-Ego Coll (%) of 39.68%, far exceeding the baseline (1.26%). Additionally, the
+Adv-real Guidance lowers the probability of adversarial vehicles going off-road, reducing the Adv Offroad (%) from
+13.15% to 10.68%, thereby enhancing the realism and feasibility of adversarial trajectories. Meanwhile, the Other-real
+Guidance improves the feasibility of non-adversarial vehicle trajectories by decreasing the Other Offroad (%) to 17.95%
+and maintaining lower collision rates involving other vehicles, such as Adv-Other Coll (%) at 4.93% and Other-Other
+Coll (%) at 0.66%. Consequently, the proposed LD-Scene achieves an optimal Adv-Ego Coll (%) of 40.75% while
+
+
+M. PENG: Preprint submitted to Elsevier                                                                                         Page 11 of 18
+      LD-Scene: LLM-Guided Diffusion for Controllable Generation of Adversarial Safety-Critical Driving Scenarios
+
+                        (a) Cut-In                    (b) Junction Interaction                 (c) U-Turn
+
+
+
+
+     Adversarial
+      Scenarios
+
+
+
+
+      Initial
+     Scenarios
+
+
+
+
+                   (d) Counterflow Driving              (e) Ramp Merge                  (f) Roundabout Conflict
+
+
+
+
+     Adversarial
+      Scenarios
+
+
+
+
+      Initial
+     Scenarios
+
+
+
+
+Figure 4: Adversarial safety-critical scenarios generated by LD-Scene. Examples include cut-in maneuvers, junction
+interactions, U-turns, counterflow driving, ramp merges, and roundabout conflicts, demonstrating our model’s capability
+to generate diverse and realistic safety-critical scenarios.
+
+
+
+keeping the Adv Offroad (%) at a reasonable level of 12.52%, confirming its effectiveness in generating both highly
+adversarial and realistic safety-critical driving scenarios.
+
+4.5.2. Effectiveness of the Debugger Module
+    To validate the stability improvements afforded by the debugger module in our LD-Scene, we compare the
+execution success rates of the generated guidance functions for different LLM models under both with and without
+debugger settings. We evaluate a total of 500 user queries, which are automatically generated by GPT-4o. As shown in
+Fig. 5(a), the debugger significantly improves success rates for all evaluated LLMs. For example, GPT-4o’s success rate
+increases from 69.4% to 95.0%, achieving highly stable generation. These results confirm that the debugger module
+can effectively detect and correct generation errors, ensuring reliable guidance function generation. In addition, we
+assess token consumption and total cost for different LLM models in Fig. 5(b) and Fig. 5(c), respectively. These
+
+
+M. PENG: Preprint submitted to Elsevier                                                                           Page 12 of 18
+      LD-Scene: LLM-Guided Diffusion for Controllable Generation of Adversarial Safety-Critical Driving Scenarios
+
+   Other-real      Adv-real            Adv           Adv-Ego               Adv                     Other       Adv-Other            Other-Other
+   Guidance        Guidance          Guidance       Coll (%) ↑        Offroad (%) ↓            Offroad (%) ↓   Coll (%) ↓            Coll (%) ↓
+       ×                ×                 ×            1.26                 11.44                    20.24       6.12                     2.86
+       ×                ×                 ✓           39.68                 13.15                    19.56       4.70                     1.23
+       ×                ✓                 ✓           39.18                 10.68                    18.66       5.30                     0.96
+       ✓                ✓                 ✓           40.75                 12.52                    17.95       4.93                     0.66
+
+Table 2
+Ablation study on guidance settings. This table presents the impact of different guidance settings on model performance.
+The study evaluates the effects of different guidance loss components on adversarial effectiveness and realism in safety-
+critical traffic scenarios.
+
+
+
+
+       (a) Success Rate with and without Debugger         (b) Average Token Input and Output for Each Model       (c) Total Cost of Each Model
+
+Figure 5: Ablation study on the effectiveness of the debugger module. (a): Success rates of guidance code execution with
+and without the debugger. The debugger significantly improves success rates across all LLMs. (b): Average token input
+and output statistics per model. (c): Total cost of each model.
+
+
+
+results confirm that the debugger module offers substantial reliability improvements at a reasonable computational
+and financial expense. These insights further provide practical guidance for researchers in selecting suitable LLM
+models for similar tasks.
+
+4.6. Controllability Study
+4.6.1. Controllable Adversarial Level
+    We further investigate the controllability of our LD-Scene in terms of generating safety-critical driving scenarios
+with varying levels of adversarial intensity. Three adversarial levels, weak, medium, and strong, are introduced for the
+study, and the three user query examples used in this experiment are as follows:
+   • Weak: Generate a guidance function class where the adversarial vehicle collides with the ego vehicle at a low
+     speed during the interaction between the two vehicles.
+   • Medium: Generate a guidance function class where the adversarial vehicle attempts to collide with the ego vehicle
+     in a realistic and physically feasible manner.
+   • Strong: Generate a guidance function class that encourages the adversarial vehicle to overtake the ego vehicle
+     and collide with the ego vehicle at high speed.
+    The performance comparison under different adversarial levels is presented in Table 3, which demonstrates that
+our model can infer the desired adversarial intensity from the user query and generate corresponding safety-critical
+driving scenarios. At the weak adversarial level, the metrics such as TTC, Adv Acc_lon, and Adv Acc_lat indicate less
+aggressive driving behaviors. In contrast, both the Medium and Strong levels exhibit progressively more aggressive
+maneuvers, as evidenced by shorter TTC and increased acceleration values, thereby validating the controllability of
+adversarial behavior intensity. As illustrated in Fig. 6(a), the TTC distribution shows progressively narrower peaks
+
+M. PENG: Preprint submitted to Elsevier                                                                                                 Page 13 of 18
+      LD-Scene: LLM-Guided Diffusion for Controllable Generation of Adversarial Safety-Critical Driving Scenarios
+
+                                         Adv-Ego                                     Adv Acc_lon         Adv Acc_lat                 Adv Offroad
+      Adversarial Level                                    TTC (s)
+                                         Coll (%)                                      (m/s2 )             (m/s2 )                      (%)
+           Weak                           30.63              2.06                           1.02            0.69                           10.81
+          Medium                          40.75              1.98                           1.09            0.83                           12.52
+          Strong                          39.33              1.91                           1.20            0.92                           14.53
+
+Table 3
+Performance comparison under different adversarial levels.
+
+
+
+
+               (a) TTC Distribution                         (b) Longitudinal Acceleration Distribution        (c) Lateral Acceleration Distribution
+
+
+                                      Figure 6: Visualization of results under different adversarial levels.
+
+
+
+and lower medians from weak to strong levels. Meanwhile, Fig. 6(b) and Fig. 6(c) present the longitudinal and lateral
+acceleration distributions, respectively, which exhibit increasingly broader spreads toward higher acceleration values.
+These visualizations more clearly demonstrate the model’s ability to modulate scenario aggressiveness across multiple
+safety-critical dimensions. An additional observation is that the Adv-Ego Coll (%) at the Strong level(39.33%) is
+comparable to that at the medium level (40.75%), showing that the strong level does not necessarily lead to a higher
+collision rate between the adversarial vehicle and ego vehicle across the NuScenes dataset. This could be because
+high-speed overtaking maneuvers may not always result in increased collision opportunities, especially in low-speed
+interaction scenarios where the timing for generating adversarial collisions can be easily missed.
+     In summary, our LD-Scene provides effective control over the adversarial level, allowing users to generate safety-
+critical driving scenarios tailored to their specific needs. From weak to strong adversarial levels, the model serves as a
+practical tool for testing the performance and safety of autonomous driving systems under diverse risk conditions.
+
+4.6.2. Controllable Adversarial Behavior
+     We conduct three case studies on different user queries for generating adversarial safety-critical scenarios,
+demonstrating our LD-Scene’s capability to synthesize diverse and controllable adversarial behaviors, as illustrated in
+Fig. 7. Each case encompasses two example scenarios presented below the dialog. In case (a), the user query specifies
+a normal collision, leading LD-Scene to generate a loss function that minimizes the relative distance between the ego
+and adversarial vehicles. In case (b), the user query further includes a high-speed requirement, prompting LD-Scene
+to introduce an additional loss function to encourage high velocity. The associated scenarios illustrate the adversarial
+vehicle accelerating to overtake the ego vehicle before colliding, effectively simulating reckless high-speed maneuvers.
+Regarding case (c), the user query requests a sharp turn leading to a collision, and LD-Scene responds by generating
+a corresponding turn-related loss function. In both example scenarios, the adversarial vehicle abruptly swerves off its
+path, ultimately resulting in a collision. These results showcase that our LD-Scene can dynamically generate safety-
+critical scenarios based on different user queries, which provides a flexible and controllable framework for evaluating
+autonomous vehicle performance under diverse adversarial situations.
+
+
+
+
+M. PENG: Preprint submitted to Elsevier                                                                                                       Page 14 of 18
+         LD-Scene: LLM-Guided Diffusion for Controllable Generation of Adversarial Safety-Critical Driving Scenarios
+
+
+                                                                      Generate a guidance function class that
+         Generate a guidance function class where                     encourages the adversarial vehicle to                       Generate a guidance function class where
+         the adversarial vehicle attempts to collide                  overtake the ego vehicle and collide with                   the adversarial vehicle suddenly turns to
+         with the ego vehicle.                                        the ego vehicle at high speed.                              cause a collision with the ego vehicle.
+
+
+
+
+         Response                                                     Response                                                    Response
+    class AdversarialCollisionLoss:                              class AdversarialCollisionLoss:                            class AdversarialCollisionLoss:
+      …                                                            …                                                          …
+      adv_ego_pens = -adv_coll_pens[:, adv_idx,                    adv_ego_pens = -adv_coll_pens[:, adv_idx,                  adv_ego_pens = -adv_coll_pens[:, adv_idx,
+                     ego_idx]                                                     ego_idx]                                                   ego_idx]
+      dist_scale = nn.functional.softmin(                          dist_scale = torch.softmax(-adv_ego_pens,                  dist_scale = torch.softmax(-adv_ego_pens,
+                 adv_ego_pens, dim=0)                                         dim=0).view(T, 1)                                          dim=0).reshape(T, 1)
+      adversarial_collision_loss =                                 adv_speed = torch.norm(traj[adv_idx, 1:, :2]               turn_loss = torch.mean(torch.abs(
+                 torch.mean(adv_ego_pens *                                    traj[adv_idx, :-1, :2], dim=-1)                           x[adv_idx, 1:, 1] - x[adv_idx, :-1, 1]))
+                 dist_scale)                                       speed_loss = -torch.mean(adv_speed)                        turn_loss = -torch.clamp(turn_loss, 0, 1)
+     …                                                            …                                                           …
+
+
+
+
+                          (a)                                                          (b)                                                            (c)
+
+Figure 7: Case studies on adversarial safety-critical scenario generation based on different user queries, including normal
+collisions, high-speed overtaking collisions, and sharp-turn collisions. The results demonstrate the capability of our LD-Scene
+for controllable adversarial behavior, enabling the generation of diverse safety-critical scenarios.
+
+
+
+
+                          (a) Effects of the Number of Samples                                                (b) Effects of the Number of Diffusion Steps
+
+Figure 8: Quantitative results of key parameters on adversarial scenario generation, evaluated in terms of adversariality
+(Adv-Ego collision rate), realism (Adv Offroad collision rate), and efficiency (time consumption).
+
+
+
+4.7. Analysis of the Impact of Key Parameters
+    We analyze the impact of two key parameters, namely the number of samples and the number of diffusion steps, on
+safety-critical scenario generation. The evaluation is based on three criteria: adversariality (Adv-Ego collision rate),
+realism (Adv Offroad collision rate), and efficiency (time consumption).
+    Effects of the Number of Samples. The number of samples primarily controls the statistical stability and diversity
+of the generated adversarial scenarios. With an increased number of samples, as illustrated in Fig. 8(a), the overall
+performance exhibits slight improvement. However, this also leads to a significant rise in time consumption, resulting
+in reduced efficiency. Therefore, there is a clear trade-off between performance and computational cost. In this work,
+we choose the sample number as 10, which provides a good balance between generation quality and efficiency.
+    Effects of the Number of Diffusion Steps. The number of diffusion steps controls the extent of denoising during
+the reverse diffusion process. A larger number of steps indicates more thorough denoising. However, as illustrated in
+Fig. 8(b), increasing the diffusion steps leads to a degradation in both adversariality and realism, while also incurring
+
+M. PENG: Preprint submitted to Elsevier                                                                                                                        Page 15 of 18
+       LD-Scene: LLM-Guided Diffusion for Controllable Generation of Adversarial Safety-Critical Driving Scenarios
+
+higher time consumption. This suggests that more thorough denoising does not necessarily yield better generation
+quality. In fact, excessive diffusion steps may cause error accumulation, ultimately harming performance. Based on
+this observation, we adopt 20 diffusion steps in our implementation, which achieves satisfactory results with acceptable
+computational cost.
+
+
+5. Conclusion
+    In this paper, we present LD-Scene, an LLM-guided diffusion framework for the controllable generation of
+adversarial safety-critical driving scenarios. By integrating LDMs with LLM-enhanced guidance, our approach
+enables flexible, user-friendly scenario generation while ensuring both realism and adversarial effectiveness. Our
+method leverages CoT reasoning for structured guidance loss generation and incorporates an automated debugging
+module to enhance the reliability and stability of the generated guidance. Extensive experiments conducted on the
+nuScenes dataset demonstrate that our LD-Scene outperforms existing adversarial scenario generation baselines in
+terms of adversarial effectiveness, realism, and efficiency. Moreover, our framework allows natural language-based
+customization, making it accessible to users without extensive domain expertise. The controllability studies further
+demonstrate that our LD-Scene effectively modulates both the adversarial level and some specific adversarial behaviors,
+facilitating a more rigorous evaluation of AV performance under diverse safety-critical scenarios.
+
+
+References
+Abeysirigoonawardena, Y., Shkurti, F., Dudek, G., 2019. Generating adversarial driving scenarios in high-fidelity simulators, in: the Proceedings
+   of IEEE International Conference on Robotics and Automation, pp. 8271–8277.
+Achiam, J., Adler, S., Agarwal, S., Ahmad, L., Akkaya, I., Aleman, F.L., Almeida, D., Altenschmidt, J., Altman, S., Anadkat, S., et al., 2023. GPT-4
+   technical report. arXiv preprint arXiv:2303.08774 .
+Argui, I., Gueriau, M., Ainouz, S., 2024. Advancements in mixed reality for autonomous vehicle testing and advanced driver assistance systems: A
+   survey. IEEE Transactions on Intelligent Transportation Systems 25, 19276–19294.
+Bergamini, L., Ye, Y., Scheel, O., Chen, L., Hu, C., Del Pero, L., Osiński, B., Grimmett, H., Ondruska, P., 2021. SimNet: Learning reactive
+   self-driving simulations from real-world observations, in: the Proceedings of IEEE International Conference on Robotics and Automation, pp.
+   5119–5125.
+Bubeck, S., Chadrasekaran, V., Eldan, R., Gehrke, J., Horvitz, E., Kamar, E., Lee, P., Lee, Y.T., Li, Y., Lundberg, S., et al., 2023. Sparks of artificial
+   general intelligence: Early experiments with gpt-4. arXiv preprint arXiv:2303.12712 .
+Caesar, H., Bankiti, V., Lang, A.H., Vora, S., Liong, V.E., Xu, Q., et al., 2020. nuScenes: A multimodal dataset for autonomous driving, in: the
+   Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 11621–11631.
+Chang, W.J., Pittaluga, F., Tomizuka, M., Zhan, W., Chandraker, M., 2024. SAFE-SIM: Safety-critical closed-loop traffic simulation with diffusion-
+   controllable adversaries, in: the Proceedings of European Conference on Computer Vision, pp. 242–258.
+Dhariwal, P., Nichol, A., 2021. Diffusion models beat gans on image synthesis. Advances in Neural Information Processing Systems 34, 8780–8794.
+Ding, W., Chen, B., Li, B., Eun, K.J., Zhao, D., 2021. Multimodal safety-critical scenarios generation for decision-making algorithms evaluation.
+   IEEE Robotics and Automation Letters 6, 1551–1558.
+Ding, W., Chen, B., Xu, M., Zhao, D., a. Learning to Collide: An adaptive safety-critical scenarios generating method, in: the Proceedings of
+   IEEE/RSJ International Conference on Intelligent Robots and Systems, pp. 2243–2250.
+Ding, W., Xu, C., Arief, M., Lin, H., Li, B., Zhao, D., 2023. A survey on safety-critical driving scenario generation—a methodological perspective.
+   IEEE Transactions on Intelligent Transportation Systems 24, 6971–6988.
+Ding, W., Xu, M., Zhao, D., b. CMTS: A conditional multiple trajectory synthesizer for generating safety-critical driving scenarios, in: the
+   Proceedings of IEEE International Conference on Robotics and Automation, pp. 4314–4321.
+Dosovitskiy, A., Ros, G., Codevilla, F., Lopez, A., Koltun, V., 2017. CARLA: An open urban driving simulator, in: the Proceedings of Conference
+   on Robot Learning, pp. 1–16.
+Feng, S., Sun, H., Yan, X., Zhu, H., Zou, Z., Shen, S., Liu, H.X., 2023. Dense reinforcement learning for safety validation of autonomous vehicles.
+   Nature 615, 620–627.
+Feng, S., Yan, X., Sun, H., Feng, Y., Liu, H.X., 2021. Intelligent driving intelligence test for autonomous vehicles with naturalistic and adversarial
+   environment. Nature Communications 12, 748.
+Guo, D., Zhu, Q., Yang, D., Xie, Z., Dong, K., Zhang, W., Chen, G., Bi, X., Wu, Y., Li, Y., et al., 2024. DeepSeek-Coder: When the large language
+   model meets programming–the rise of code intelligence. arXiv preprint arXiv:2401.14196 .
+Guo, X., Yang, X., Peng, M., Lu, H., Zhu, M., Yang, H., 2025. Automating traffic model enhancement with ai research agent. Transportation
+   Research Part C: Emerging Technologies 178, 105187.
+Hanselmann, N., Renz, K., Chitta, K., Bhattacharyya, A., Geiger, A., 2022. KING: Generating safety-critical driving scenarios for robust imitation
+   via kinematics gradients, in: the Proceedings of European Conference on Computer Vision, pp. 335–352.
+Ho, J., Jain, A., Abbeel, P., 2020. Denoising diffusion probabilistic models. Advances in Neural Information Processing Systems 33, 6840–6851.
+Janner, M., Du, Y., Tenenbaum, J.B., Levine, S., 2022. Planning with diffusion for flexible behavior synthesis. arXiv preprint arXiv:2205.09991 .
+Jiang, C., Cornman, A., Park, C., Sapp, B., Zhou, Y., Anguelov, D., et al., 2023. MotionDiffuser: Controllable multi-agent motion prediction using
+   diffusion, in: the Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 9644–9653.
+
+
+M. PENG: Preprint submitted to Elsevier                                                                                                 Page 16 of 18
+       LD-Scene: LLM-Guided Diffusion for Controllable Generation of Adversarial Safety-Critical Driving Scenarios
+
+Jiang, M., Bai, Y., Cornman, A., Davis, C., Huang, X., Jeon, H., Kulshrestha, S., Lambert, J., Li, S., Zhou, X., et al., 2024a. SceneDiffuser: Efficient
+   and controllable driving simulation initialization and rollout. Advances in Neural Information Processing Systems 37, 55729–55760.
+Jiang, R., Zheng, G.C., Li, T., Yang, T.R., Wang, J.D., Li, X., 2024b. A survey of multimodal controllable diffusion models. Journal of Computer
+   Science and Technology 39, 509–541.
+Jiang, Z., Liu, J., Sun, P., Sang, M., Li, H., Pan, Y., 2024c. Generation of risky scenarios for testing automated driving visual perception based on
+   causal analysis. IEEE Transactions on Intelligent Transportation Systems 25, 15991–16004.
+Kang, Y., Yin, H., Berger, C., 2019. Test Your Self-Driving Algorithm: An overview of publicly available driving datasets and virtual testing
+   environments. IEEE Transactions on Intelligent Vehicles 4, 171–185.
+Kojima, T., Gu, S.S., Reid, M., Matsuo, Y., Iwasawa, Y., 2022. Large language models are zero-shot reasoners. Advances in Neural Information
+   Processing Systems 35, 22199–22213.
+Li, Q., Peng, Z., Feng, L., Zhang, Q., Xue, Z., Zhou, B., 2022a. MetaDrive: Composing diverse driving scenarios for generalizable reinforcement
+   learning. IEEE Transactions on Pattern Analysis and Machine Intelligence 45, 3461–3475.
+Li, X., Thickstun, J., Gulrajani, I., Liang, P.S., Hashimoto, T.B., 2022b. Diffusion-LM improves controllable text generation. Advances in Neural
+   Information Processing Systems 35, 4328–4343.
+Lopez, P.A., Behrisch, M., Bieker-Walz, L., Erdmann, J., Flötteröd, Y.P., Hilbrich, R., Lücken, L., Rummel, J., Wagner, P., Wießner, E., 2018.
+   Microscopic traffic simulation using sumo, in: the Proceedings of 2018 21st International Conference on Intelligent Transportation Systems, pp.
+   2575–2582.
+Mao, W., Xu, C., Zhu, Q., Chen, S., Wang, Y., 2023. Leapfrog diffusion model for stochastic trajectory prediction, in: the Proceedings of the
+   IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 5517–5526.
+Montemerlo, M., Becker, J., Bhat, S., Dahlkamp, H., Dolgov, D., Ettinger, S., Haehnel, D., Hilden, T., Hoffmann, G., Huhnke, B., et al., 2008.
+   Junior: The stanford entry in the urban challenge. Journal of Field Robotics 25, 569–597.
+Peng, M., Chen, K., Guo, X., Zhang, Q., Lu, H., Zhong, H., Chen, D., Zhu, M., Yang, H., 2024a. Diffusion models for intelligent transportation
+   systems: A survey. arXiv preprint arXiv:2409.15816 .
+Peng, M., Guo, X., Chen, X., Zhu, M., Chen, K., 2024b. LC-LLM: Explainable lane-change intention and trajectory predictions with large language
+   models. arXiv preprint arXiv:2403.18344 .
+Peng, M., Yao, R., Guo, X., Xie, Y., Chen, X., Ma, J., 2025. Safety-critical traffic simulation with guided latent diffusion model. arXiv preprint
+   arXiv:2505.00515 .
+Rempe, D., Luo, Z., Bin Peng, X., Yuan, Y., Kitani, K., Kreis, K., Fidler, S., Litany, O., 2023. Trace and Pace: Controllable pedestrian animation via
+   guided trajectory diffusion, in: the Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 13756–13766.
+Rempe, D., Philion, J., Guibas, L.J., Fidler, S., Litany, O., 2022. Generating useful accident-prone driving scenarios via a learned traffic prior, in:
+   the Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 17305–17315.
+Rombach, R., Blattmann, A., Lorenz, D., Esser, P., Ommer, B., 2022. High-resolution image synthesis with latent diffusion models, in: the
+   Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 10684–10695.
+Scanlon, J.M., Kusano, K.D., Daniel, T., Alderson, C., Ogle, A., Victor, T., 2021. Waymo simulated driving behavior in reconstructed fatal crashes
+   within an autonomous vehicle operating domain. Accident Analysis & Prevention 163, 106454.
+Scarselli, F., Gori, M., Tsoi, A.C., Hagenbuchner, M., Monfardini, G., 2008. The graph neural network model. IEEE Transactions on Neural
+   Networks 20, 61–80.
+Schulman, J., Wolski, F., Dhariwal, P., Radford, A., Klimov, O., 2017. Proximal policy optimization algorithms. arXiv preprint arXiv:1707.06347 .
+Song, J., Meng, C., Ermon, S., 2020. Denoising diffusion implicit models. arXiv preprint arXiv:2010.02502 .
+Suo, S., Wong, K., Xu, J., Tu, J., Cui, A., Casas, S., Urtasun, R., 2023. Mixsim: A hierarchical framework for mixed reality traffic simulation, in:
+   the Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 9622–9631.
+Tan, S., Ivanovic, B., Weng, X., Pavone, M., Kraehenbuehl, P., 2023. Language conditioned traffic generation. arXiv preprint arXiv:2307.07947 .
+Wang, J., Pun, A., Tu, J., Manivasagam, S., Sadat, A., Casas, S., Ren, M., Urtasun, R., 2021. AdvSim: Generating safety-critical scenarios for
+   self-driving vehicles, in: the Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 9909–9918.
+Wang, Q., Xu, D., Kuang, G., Lv, C., Li, S.E., Nie, B., 2025. Risk-aware vehicle trajectory prediction under safety-critical scenarios. IEEE
+   Transactions on Intelligent Transportation Systems , 1–16.
+Wei, J., Wang, X., Schuurmans, D., Bosma, M., Xia, F., Chi, E., Le, Q.V., Zhou, D., et al., 2022. Chain-of-thought prompting elicits reasoning in
+   large language models. Advances in Neural Information Processing Systems 35, 24824–24837.
+Wen, L., Fu, D., Li, X., Cai, X., Ma, T., Cai, P., Dou, M., Shi, B., He, L., Qiao, Y., 2023. DILU: A knowledge-driven approach to autonomous
+   driving with large language models. arXiv preprint arXiv:2309.16292 .
+Xia, J., Xu, C., Xu, Q., Wang, Y., Chen, S., 2024. Language-driven interactive traffic trajectory generation. Advances in Neural Information
+   Processing Systems 37, 77831–77859.
+Xie, Y., Guo, X., Wang, C., Liu, K., Chen, L., 2024. AdvDiffuser: Generating adversarial safety-critical driving scenarios via guided diffusion, in:
+   the Proceedings of IEEE/RSJ International Conference on Intelligent Robots and Systems, pp. 9983–9989.
+Xu, C., Zhao, D., Sangiovanni-Vincentelli, A., Li, B., 2023. DiffScene: Diffusion-based safety-critical scenario generation for autonomous vehicles,
+   in: The Second Workshop on New Frontiers in Adversarial Machine Learning.
+Yang, Z., Jia, X., Li, H., Yan, J., 2023. LLM4Drive: A survey of large language models for autonomous driving. arXiv preprint arXiv:2311.01043 .
+Zhang, C., Guo, R., Zeng, W., Xiong, Y., Dai, B., Hu, R., Ren, M., Urtasun, R., 2022a. Rethinking closed-loop training for autonomous driving, in:
+   the Proceedings of European Conference on Computer Vision, pp. 264–282.
+Zhang, J., Xu, C., Li, B., 2024. ChatScene: Knowledge-enabled safety-critical scenario generation for autonomous vehicles, in: the Proceedings of
+   the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 15459–15469.
+Zhang, Q., Hu, S., Sun, J., Chen, Q.A., Mao, Z.M., 2022b. On adversarial robustness of trajectory prediction for autonomous vehicles, in: the
+   Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 15159–15168.
+
+
+M. PENG: Preprint submitted to Elsevier                                                                                               Page 17 of 18
+       LD-Scene: LLM-Guided Diffusion for Controllable Generation of Adversarial Safety-Critical Driving Scenarios
+
+Zheng, G., Zhou, X., Li, X., Qi, Z., Shan, Y., Li, X., 2023. LayoutDiffusion: Controllable diffusion model for layout-to-image generation, in: the
+  Proceedings of the IEEE/CVF Conference on Computer Vision and Pattern Recognition, pp. 22490–22499.
+Zheng, L., Yang, R., Yu Wang, M., Ma, J., 2025. Barrier-enhanced parallel homotopic trajectory optimization for safety-critical autonomous driving.
+  IEEE Transactions on Intelligent Transportation Systems 26, 2169–2186.
+Zhong, Z., Rempe, D., Chen, Y., Ivanovic, B., Cao, Y., Xu, D., Pavone, M., Ray, B., 2023a. Language-guided traffic simulation via scene-level
+  diffusion, in: the Proceedings of Conference on Robot Learning, pp. 144–177.
+Zhong, Z., Rempe, D., Xu, D., Chen, Y., Veer, S., Che, T., Ray, B., Pavone, M., 2023b. Guided conditional diffusion for controllable traffic simulation,
+  in: the Proceedings of IEEE International Conference on Robotics and Automation, pp. 3560–3566.
+
+
+
+
+M. PENG: Preprint submitted to Elsevier                                                                                               Page 18 of 18
+

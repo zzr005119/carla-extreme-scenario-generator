@@ -1,0 +1,13 @@
+﻿run_order,block_index,sample_id,target_risk_level,traffic_manager_seed,config_path
+1,1,cvae_high_20260813_0033,high,20260821,configs/cvae_high_20260813_0033.json
+2,1,cvae_critical_20260813_0046,critical,20260821,configs/cvae_critical_20260813_0046.json
+3,1,cvae_low_20260813_0001,low,20260821,configs/cvae_low_20260813_0001.json
+4,1,cvae_medium_20260813_0082,medium,20260821,configs/cvae_medium_20260813_0082.json
+5,2,cvae_medium_20260813_0061,medium,20260822,configs/cvae_medium_20260813_0061.json
+6,2,cvae_low_20260813_0122,low,20260822,configs/cvae_low_20260813_0122.json
+7,2,cvae_high_20260813_0074,high,20260822,configs/cvae_high_20260813_0074.json
+8,2,cvae_critical_20260813_0058,critical,20260822,configs/cvae_critical_20260813_0058.json
+9,3,cvae_critical_20260813_0030,critical,20260823,configs/cvae_critical_20260813_0030.json
+10,3,cvae_medium_20260813_0103,medium,20260823,configs/cvae_medium_20260813_0103.json
+11,3,cvae_high_20260813_0043,high,20260823,configs/cvae_high_20260813_0043.json
+12,3,cvae_low_20260813_0034,low,20260823,configs/cvae_low_20260813_0034.json

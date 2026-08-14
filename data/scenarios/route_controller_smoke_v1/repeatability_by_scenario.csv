@@ -1,0 +1,2 @@
+﻿sample_id,target_risk_level,completed_runs,expected_runs,seeds,score_mean,score_std,score_min,score_max,score_range,modal_observed_level,level_consistency_rate,all_levels_equal,target_match_rate,collision_runs,collision_events
+cvae_medium_20260813_0103,medium,1,1,20260821,27.744,,27.744,27.744,0.0,medium,1.0,True,1.0,0,0

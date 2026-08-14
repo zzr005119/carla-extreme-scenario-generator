@@ -1,0 +1,44 @@
+{
+  "format": "cvae_carla_validation_v1",
+  "created_at": "2026-08-13T14:13:21+08:00",
+  "source_inputs": [
+    "D:\\Xx\\竞赛\\大创实施ing\\artifacts\\final_evaluation\\cvae_low.jsonl",
+    "D:\\Xx\\竞赛\\大创实施ing\\artifacts\\final_evaluation\\cvae_medium.jsonl",
+    "D:\\Xx\\竞赛\\大创实施ing\\artifacts\\final_evaluation\\cvae_high.jsonl",
+    "D:\\Xx\\竞赛\\大创实施ing\\artifacts\\final_evaluation\\cvae_critical.jsonl"
+  ],
+  "selection": "centroid",
+  "per_level": 1,
+  "sensor_profile": "lightweight",
+  "base_config": "D:\\Xx\\竞赛\\大创实施ing\\configs\\multi_hazard_rainy_night.json",
+  "scene_runner": "D:\\Xx\\竞赛\\大创实施ing\\scenes\\scene_04_parameterized.py",
+  "carla_root": "F:\\Carla\\test",
+  "runtime_output_root": "F:\\Carla\\test\\output\\model_generated_validation",
+  "selected_records": "selected_records.jsonl",
+  "records": [
+    {
+      "sample_id": "cvae_low_20260813_0004",
+      "target_risk_level": "low",
+      "config_path": "configs/cvae_low_20260813_0004.json",
+      "expected_run_root": "F:\\Carla\\test\\output\\model_generated_validation\\cvae_low_20260813_0004"
+    },
+    {
+      "sample_id": "cvae_medium_20260813_0033",
+      "target_risk_level": "medium",
+      "config_path": "configs/cvae_medium_20260813_0033.json",
+      "expected_run_root": "F:\\Carla\\test\\output\\model_generated_validation\\cvae_medium_20260813_0033"
+    },
+    {
+      "sample_id": "cvae_high_20260813_0107",
+      "target_risk_level": "high",
+      "config_path": "configs/cvae_high_20260813_0107.json",
+      "expected_run_root": "F:\\Carla\\test\\output\\model_generated_validation\\cvae_high_20260813_0107"
+    },
+    {
+      "sample_id": "cvae_critical_20260813_0114",
+      "target_risk_level": "critical",
+      "config_path": "configs/cvae_critical_20260813_0114.json",
+      "expected_run_root": "F:\\Carla\\test\\output\\model_generated_validation\\cvae_critical_20260813_0114"
+    }
+  ]
+}

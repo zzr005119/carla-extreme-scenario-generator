@@ -1,0 +1,46 @@
+{
+  "profile_id": "waypoint_follower_v1",
+  "description": "通过 2026-08-14 单场景冒烟和 3 场景乘 3 种子严格验收的确定性路线控制配置",
+  "sensor_profile": {
+    "width": 640,
+    "height": 360,
+    "sensor_tick": 0.2,
+    "writer_workers": 1,
+    "writer_queue_size": 8,
+    "rgb_enabled": true,
+    "depth_enabled": false,
+    "semantic_enabled": false
+  },
+  "route": {
+    "route_lock_enabled": true,
+    "route_control_mode": "waypoint_follower",
+    "route_length_m": 300.0,
+    "route_step_m": 2.0,
+    "route_deviation_tolerance_m": 3.0,
+    "auto_lane_change_enabled": false
+  },
+  "controller": {
+    "target_speed_kmh": 29.0,
+    "lookahead_m": 6.0,
+    "steering_gain": 1.35,
+    "maximum_steer": 0.8,
+    "maximum_steer_delta": 0.1,
+    "speed_kp": 0.45,
+    "speed_ki": 0.05,
+    "speed_kd": 0.02,
+    "maximum_throttle": 0.75,
+    "maximum_brake": 1.0,
+    "ego_lead_brake_ttc_seconds": 2.0,
+    "ego_lead_brake_gap_m": 5.0,
+    "ego_pedestrian_brake_distance_m": 8.0,
+    "ego_pedestrian_brake_lateral_m": 4.0
+  },
+  "acceptance_requirements": {
+    "sensor_status": "completed",
+    "server_status": "healthy",
+    "minimum_rgb_frames": 100,
+    "route_control_mode": "waypoint_follower",
+    "minimum_route_both_on_rate": 1.0,
+    "maximum_route_deviation_m": 3.0
+  }
+}

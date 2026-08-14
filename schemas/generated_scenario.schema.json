@@ -1,0 +1,212 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "generated_scenario.schema.json",
+  "title": "CARLA Generated Extreme Scenario Record",
+  "description": "生成模型输出的参数级极端场景记录。传感器、输出目录和风险算法配置由基础运行配置继承。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "sample_id",
+    "family",
+    "conditions",
+    "scenario",
+    "weather",
+    "lead_vehicle",
+    "pedestrian",
+    "observed_risk",
+    "provenance"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "sample_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9_-]{2,63}$"
+    },
+    "family": {
+      "const": "multi_hazard_parameter_v1"
+    },
+    "conditions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "target_risk_level",
+        "weather_tags",
+        "hazard_tags",
+        "condition_text_zh"
+      ],
+      "properties": {
+        "target_risk_level": {
+          "enum": ["low", "medium", "high", "critical"]
+        },
+        "weather_tags": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "rain",
+              "heavy_rain",
+              "fog",
+              "dense_fog",
+              "night",
+              "day",
+              "wet_road",
+              "strong_wind"
+            ]
+          }
+        },
+        "hazard_tags": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "lead_vehicle_braking",
+              "pedestrian_crossing"
+            ]
+          }
+        },
+        "condition_text_zh": {
+          "type": "string",
+          "minLength": 4
+        }
+      }
+    },
+    "scenario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["duration_seconds", "traffic_manager_seed"],
+      "properties": {
+        "duration_seconds": {
+          "type": "number",
+          "minimum": 10.0,
+          "maximum": 60.0
+        },
+        "traffic_manager_seed": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2147483647
+        }
+      }
+    },
+    "weather": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cloudiness",
+        "precipitation",
+        "precipitation_deposits",
+        "wind_intensity",
+        "fog_density",
+        "fog_distance",
+        "sun_altitude_angle",
+        "wetness"
+      ],
+      "properties": {
+        "cloudiness": {"type": "number", "minimum": 0.0, "maximum": 100.0},
+        "precipitation": {"type": "number", "minimum": 0.0, "maximum": 100.0},
+        "precipitation_deposits": {"type": "number", "minimum": 0.0, "maximum": 100.0},
+        "wind_intensity": {"type": "number", "minimum": 0.0, "maximum": 100.0},
+        "fog_density": {"type": "number", "minimum": 0.0, "maximum": 100.0},
+        "fog_distance": {"type": "number", "minimum": 0.0, "maximum": 1000.0},
+        "sun_altitude_angle": {"type": "number", "minimum": -90.0, "maximum": 90.0},
+        "wetness": {"type": "number", "minimum": 0.0, "maximum": 100.0}
+      }
+    },
+    "lead_vehicle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "initial_distance_m",
+        "brake_trigger_seconds",
+        "brake_intensity"
+      ],
+      "properties": {
+        "initial_distance_m": {"type": "number", "minimum": 12.0, "maximum": 60.0},
+        "brake_trigger_seconds": {"type": "number", "minimum": 0.0, "maximum": 60.0},
+        "brake_intensity": {"type": "number", "minimum": 0.0, "maximum": 1.0}
+      }
+    },
+    "pedestrian": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "forward_distance_m",
+        "roadside_offset_m",
+        "spawn_z_offset_m",
+        "trigger_seconds",
+        "speed_mps"
+      ],
+      "properties": {
+        "forward_distance_m": {"type": "number", "minimum": 15.0, "maximum": 60.0},
+        "roadside_offset_m": {"type": "number", "minimum": 3.0, "maximum": 15.0},
+        "spawn_z_offset_m": {"type": "number", "minimum": 0.0, "maximum": 2.0},
+        "trigger_seconds": {"type": "number", "minimum": 0.0, "maximum": 60.0},
+        "speed_mps": {"type": "number", "minimum": 1.0, "maximum": 8.0}
+      }
+    },
+    "observed_risk": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "method", "score", "level", "run_dir"],
+      "properties": {
+        "status": {
+          "enum": ["not_simulated", "completed", "failed"]
+        },
+        "method": {
+          "type": ["string", "null"]
+        },
+        "score": {
+          "type": ["number", "null"],
+          "minimum": 0.0,
+          "maximum": 100.0
+        },
+        "level": {
+          "type": ["string", "null"],
+          "enum": ["low", "medium", "high", "critical", null]
+        },
+        "run_dir": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_kind",
+        "generator",
+        "generator_seed",
+        "split",
+        "created_at"
+      ],
+      "properties": {
+        "source_kind": {
+          "enum": [
+            "synthetic_parameter_design",
+            "real_carla_run",
+            "model_generated"
+          ]
+        },
+        "generator": {
+          "type": "string",
+          "minLength": 1
+        },
+        "generator_seed": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "split": {
+          "enum": ["train", "validation", "test", "inference"]
+        },
+        "created_at": {
+          "type": "string",
+          "minLength": 10
+        }
+      }
+    }
+  }
+}

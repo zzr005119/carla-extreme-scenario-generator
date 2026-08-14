@@ -1,0 +1,5 @@
+﻿sample_id,target_risk_level,config_path
+cvae_low_20260813_0004,low,configs/cvae_low_20260813_0004.json
+cvae_medium_20260813_0033,medium,configs/cvae_medium_20260813_0033.json
+cvae_high_20260813_0107,high,configs/cvae_high_20260813_0107.json
+cvae_critical_20260813_0114,critical,configs/cvae_critical_20260813_0114.json

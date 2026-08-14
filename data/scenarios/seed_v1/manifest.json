@@ -1,0 +1,58 @@
+{
+  "dataset_name": "carla_extreme_scenario_seed_v1",
+  "schema_version": "1.0",
+  "record_count": 256,
+  "generator": "balanced_latin_hypercube_v1",
+  "generator_seed": 20260812,
+  "created_at": "2026-08-12T13:01:18+08:00",
+  "source_kind": "synthetic_parameter_design",
+  "record_order_randomized": true,
+  "target_risk_distribution": {
+    "critical": 64,
+    "high": 64,
+    "low": 64,
+    "medium": 64
+  },
+  "split_distribution": {
+    "test": 36,
+    "train": 180,
+    "validation": 40
+  },
+  "risk_split_distribution": {
+    "low": {
+      "test": 9,
+      "train": 45,
+      "validation": 10
+    },
+    "medium": {
+      "test": 9,
+      "train": 45,
+      "validation": 10
+    },
+    "high": {
+      "test": 9,
+      "train": 45,
+      "validation": 10
+    },
+    "critical": {
+      "test": 9,
+      "train": 45,
+      "validation": 10
+    }
+  },
+  "observed_risk_status": "not_simulated",
+  "validation": {
+    "schema_valid_records": 256,
+    "schema_invalid_records": 0,
+    "unique_sample_ids": 256,
+    "unique_parameter_vectors": 256
+  },
+  "files": {
+    "all": "scenarios.jsonl",
+    "train": "train.jsonl",
+    "validation": "validation.jsonl",
+    "test": "test.jsonl",
+    "example_record": "example_record.json",
+    "example_compiled_config": "example_compiled_config.json"
+  }
+}

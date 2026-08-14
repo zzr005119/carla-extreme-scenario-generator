@@ -1,0 +1,82 @@
+{
+  "expected_run_count": 9,
+  "total_manifest_runs": 9,
+  "completed_runs": 9,
+  "accepted_runs": 9,
+  "acceptance_failed_runs": 0,
+  "failed_runs": 0,
+  "missing_runs": 0,
+  "sensor_completed_runs": 9,
+  "server_healthy_runs": 9,
+  "route_lock_required": true,
+  "route_verified_runs": 9,
+  "route_verified_rate": 1.0,
+  "route_ego_on_route_rate_mean": 1.0,
+  "route_lead_on_route_rate_mean": 1.0,
+  "route_both_on_route_rate_mean": 1.0,
+  "route_maximum_ego_deviation_m": 1.043,
+  "route_maximum_lead_deviation_m": 1.062,
+  "target_levels": [
+    "low",
+    "medium",
+    "high"
+  ],
+  "collision_runs": 0,
+  "collision_events": 0,
+  "collision_sample_ids": [],
+  "target_matched_runs": 5,
+  "target_match_rate": 0.5555555555555556,
+  "target_score_ordinal_correlation": 0.9278549426927947,
+  "scenario_count": 3,
+  "complete_scenario_count": 3,
+  "all_level_equal_scenario_count": 2,
+  "all_level_equal_scenario_rate": 0.6666666666666666,
+  "mean_within_scenario_score_std": 0.36798323942530714,
+  "median_within_scenario_score_std": 0.4036636388545966,
+  "maximum_within_scenario_score_std": 0.6352220084348464,
+  "mean_within_scenario_score_range": 0.6880000000000012,
+  "seed_mean_score_range": 0.470999999999993,
+  "most_variable_scenario": {
+    "sample_id": "cvae_medium_20260813_0103",
+    "score_std": 0.6352220084348464,
+    "score_range": 1.1950000000000003
+  },
+  "mean_scores_strictly_increasing": true,
+  "per_target_level": {
+    "low": {
+      "completed_runs": 3,
+      "score_mean": 24.610666666666663,
+      "score_std": 0.4036636388545966,
+      "target_match_rate": 0.6666666666666666,
+      "observed_distribution": {
+        "low": 2,
+        "medium": 1
+      }
+    },
+    "medium": {
+      "completed_runs": 3,
+      "score_mean": 27.33,
+      "score_std": 0.6352220084348464,
+      "target_match_rate": 1.0,
+      "observed_distribution": {
+        "medium": 3
+      }
+    },
+    "high": {
+      "completed_runs": 3,
+      "score_mean": 42.20366666666666,
+      "score_std": 0.06506407098647837,
+      "target_match_rate": 0.0,
+      "observed_distribution": {
+        "medium": 3
+      }
+    },
+    "critical": {
+      "completed_runs": 0,
+      "score_mean": null,
+      "score_std": null,
+      "target_match_rate": null,
+      "observed_distribution": {}
+    }
+  }
+}

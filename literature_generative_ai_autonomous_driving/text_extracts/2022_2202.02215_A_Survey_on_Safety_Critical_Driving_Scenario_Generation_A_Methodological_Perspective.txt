@@ -1,0 +1,1275 @@
+                                         JOURNAL OF LATEX CLASS FILES                                                                                                       1
+
+
+
+
+                                                  A Survey on Safety-Critical Driving Scenario
+                                                   Generation – A Methodological Perspective
+                                                                 Wenhao Ding, Chejian Xu, Mansur Arief, Haohong Lin, Bo Li, Ding Zhao
+
+
+
+
+                                            Abstract—Autonomous driving systems have witnessed signifi-    achievement that current AVs are successful in normal cases
+                                         cant development during the past years thanks to the advance in   trained by hundreds of millions of miles of training. However,
+                                         machine learning-enabled sensing and decision-making algorithms.  we are still not sure whether AVs have enough safety and
+                                         One critical challenge for their massive deployment in the real
+                                                                                                           robustness in distinct scenarios. For example, when one AV
+arXiv:2202.02215v6 [cs.RO] 20 Jun 2023
+
+
+
+
+                                         world is their safety evaluation. Most existing driving systems are
+                                                                                                           is driving on the road, a kid suddenly runs into the drive lane
+                                         still trained and evaluated on naturalistic scenarios collected from
+                                         daily life or heuristically-generated adversarial ones. However,  chasing a ball. This emergency case leaves the AV a very
+                                         the large population of cars, in general, leads to an extremely   short time to react, and even a subtle misbehave could cause
+                                         low collision rate, indicating that safety-critical scenarios are rare
+                                                                                                           vital damage. This kind of situation is named safety-critical
+                                         in the collected real-world data. Thus, methods to artificially
+                                         generate scenarios become crucial to measure the risk and         scenarios and is usually extremely rare in the normal driving
+                                         reduce the cost. In this survey, we focus on the algorithms of    case, as shown in Figure 1.
+                                         safety-critical scenario generation in autonomous driving. We        To efficiently evaluate the safety of AVs, more and more peo-
+                                         first provide a comprehensive taxonomy of existing algorithms     ple from the government, industry, and academia start to focus
+                                         by dividing them into three categories: data-driven generation,
+                                         adversarial generation, and knowledge-based generation. Then, we
+                                                                                                           on the generation of safety-critical scenarios. National Highway
+                                         discuss useful tools for scenario generation, including simulationTraffic Safety Administration (NHTSA), a government agency
+                                         platforms and packages. Finally, we extend our discussion to five of the United States Department of Transportation, summarized
+                                         main challenges of current works – fidelity, efficiency, diversity,
+                                                                                                           driving system testable cases [6] and pre-crash scenarios [7]
+                                         transferability, controllability – and research opportunities lighted
+                                                                                                           as well as published a review of simulation frameworks and
+                                         up by these challenges.
+                                                                                                           standards related to driving scenarios [8]. Waymo, one of
+                                            Index Terms—Autonomous vehicles, Safety, Robustness, Deep the leading companies in autonomous driving, released a
+                                         Generative Models                                                 safety report to illustrate how they reconstruct fatal crashes
+                                                                                                           in simulations from collected data [9]. Meanwhile, academic
+                                                                 I. I NTRODUCTION                          research aims to generate safety-critical scenarios [10], [11]
+                                               RTIFICIAL Intelligence (AI) has been widely used in surges by developing methods in Deep Generative Models
+                                         A     software products such as facial recognition [1] and voice- (DGMs) [12] and adversarial attack techniques [13]. With the
+                                         print verification [2]. But as AI continues to grow and research upcoming massive deployment of self-driving cars, an overview
+                                         has expanded to physical products like autonomous vehicles that systematically summarizes existing works in safety-critical
+                                         (AVs), the question of safety is now at the forefront of this scenario generation is urgently demanded.
+                                         cutting-edge field. The reason why intelligent physical systems      The objective of this survey is to thoroughly review
+                                         are much harder to be deployed is that our world is complicated the literature on safety-critical scenario generation from a
+                                         and long-tailed, causing too much uncertainty to the intelligent methodological perspective and provide a panorama of the
+                                         agents. The driving skills would take several months to learn, approaches developed so far. The key contributions are as
+                                         even for us humans, due to the complex traffic scenarios. follows:
+                                         Therefore, the AVs should be trained and evaluated on lots of        • We built a taxonomy to categorize existing algorithms
+                                         different scenarios to demonstrate their safety and capability          of safety-critical scenarios generation according to the
+                                         of dealing with diverse situations [3], [4].                            information and general framework they leverage.
+                                            According to the 2020 disengagement report from the               • We summarized the tools used for scenario generation, in-
+                                         California Department of Motor Vehicle [5], there were                  cluding autonomous driving simulators and open-sourced
+                                         at least five companies (Waymo, Cruise, AutoX, Pony.AI,                 packages for scenario design, as well as commonly used
+                                         Argo.AI) that made their AVs drive more than 10,000 miles               scenario datasets.
+                                         without disengagement. These results are usually recorded in         • We identify five challenges of safety-critical scenario
+                                         normal driving scenarios without risky situations. It is a great        generation and corresponding future directions to further
+                                           Wenhao Ding, Mansur Arief, Haohong Lin, and Ding Zhao were                 push the frontier.
+                                         with the Department of Mechanical Engineering, Carnegie Mellon
+                                         University, Pittsburgh, PA, USA. e-mail: {wenhaod, marief,               Existing surveys. There have existed surveys [3], [4], [14]
+                                         haohongl}@andrew.cmu.edu, dingzhao@cmu.edu.                              summarizing the scenario-based method for autonomous ve-
+                                                                                                                  hicle evaluation. Among these previous works, [4] gives a
+                                           Chejian Xu and Bo Li were with the Computer Science Department,
+                                         University of Illinois Urbana-Champaign, Urbana, IL, USA. e-mail:        clear and inspiring definition and categorization of traffic
+                                         chejian2@illinois.edu, lbo@illinois.edu.                                 scenarios. Their framework divide the scenario generation
+JOURNAL OF LATEX CLASS FILES                                                                                                                                     2
+
+
+
+
+Fig. 1. The overview of autonomous vehicle evaluation. (a) Most of the scenarios that happen in the real world are typical scenarios; safety-critical scenarios are
+extremely rare. (b) AVs are supposed to have higher average safety than human drivers, but the gap is not easy to be evaluated and measured. (c) Comparison
+between different generation methods. Most existing methods cannot satisfy the fidelity and safety-critic metrics simultaneously.
+
+
+
+problem into two processes: (1) scenario collection, where from the current stage.
+the scenarios either come from expert abstract knowledge or
+real-world collected dataset; (2) scenario selection, where the             II. OVERVIEW OF S AFETY- CRITICAL S CENARIO
+scenario is selected by sampling or feedback optimization. A A. Definitions
+recent survey [3] about scenario-based testing algorithms for           In this survey, we define a scenario with static and dynamic
+autonomous driving systems divides a scenario into five layers contents in it and also consider the behavior of dynamic objects.
+(road level, traffic infrastructure, manipulation of previous Formally, we have the following definition:
+two layers, object, environment) and discusses the parameters           Definition 2.1 (Driving Scenario): The driving scenario is
+searching in each layer separately. In [14], the authors propose defined by a combination of three sets: x ∈ X = {S, I, B}. S
+another perspective by categorizing traffic scenarios into three represents the static environment, including road shape, traffic
+layers: functional, logical, and concrete. This is a hierarchical sign, traffic light, etc. I represents the initial condition and
+structure since the abstracting level decreases from left to right, properties of dynamic objects. B represents the sequential
+and the number of scenarios increases at the same time. These behaviors of dynamic objects.
+categorizations provide inspiring yet different perspectives on         Separating the static and dynamic contents benefits the
+scenario-based testing. These works provide a great overview of representation and generation of scenarios and has shown great
+the entire framework of the evaluation of autonomous driving success in [91]. The road geometry and static traffic objects
+systems.We want to emphasize that our work differs from them (e.g., traffic signs and traffic lights) determine the background of
+in that we focus on the algorithms of safety-critical scenario the scenario and the long-term goal of the testing. The dynamic
+generation - the core component in evaluating safety and objects that participate in the traffic enable complex interaction
+robustness. Our taxonomy is built according to the information with the AV and influence its short-term decisions of it. Note
+that the generation algorithms leverage, focusing on how these that in this definition, we do not have any specific requirements
+generation methods deal with the structure of traffic participants for the AV. Since modern AV algorithms are usually divided
+in a scenario and how the autonomous vehicle interacts with into several important components, we consider the following
+surrounding objects. Moreover, we identify five challenges that definition of an AV system:
+limit the current generation method, which we hope would                Definition 2.2 (AV System): An AV system is denoted as F (x),
+inspire future directions.                                           which consists of three modules: F (x) = Fper ◦ Fpla ◦ Fcon .
+Organization of this survey. Section II gives an overview of Fper denotes the perception module that takes sensor data
+safety-critical scenarios, including the definition, representation, in and outputs locations of surrounding objects. Fpla denotes
+and metrics used for selecting the scenarios. Then, we divide the the planning module that provides a feasible trajectory using
+generation methods into three types: Data-driven Generation the prediction of potential obstacles. Fcon denotes the control
+(Section III) purely samples collect dataset and uses density module that executes control signals to follow given waypoints.
+estimation models for generation; Adversarial Generation                With the above two definitions, we then define the objective
+(Section IV) considers the ego vehicle during the generation of safety-critical scenario generation:
+and builds an adversarial learning framework. Knowledge-                Definition 2.3 (Safety-critical Scenario Generation): Assume
+based Generation (Section V) either uses pre-defined rules by the distribution of scenario x is parametrized by θ, the safety-
+experts or integrates external knowledge during the generation. critical scenarios can be generated by
+We also summarize the traffic simulators, datasets, and open-
+                                                                                     θ̂ = arg max Ex∼pθ (x) [g(F (x))]            (1)
+sourced packages that can accelerate the development of driving
+scenarios in Section VI. In Section VII, we list five challenges where g(·) is the metric function that measures the risk level
+of safety-critical scenario generation and discuss the potential and safety-related properties (e.g., collision rate and distance
+research directions lighted up by these challenges. Section VIII driven out of road). F (x) is the AV system that takes scenario
+closes this survey with general conclusions and lessons learned x in and outputs a sequence of control signals.
+JOURNAL OF LATEX CLASS FILES                                                                                                                             3
+
+
+
+                                                                     Safety-critical
+                                                                  Scenario Generation
+
+
+                   Data-driven                                         Adversarial                                     Knowledge-based
+                   Generation                                          Generation                                         Generation
+                  (Section III)                                       (Section IV)                                       (Section V)
+
+
+       Direct                    Density                    Static                  Dynamic                  Pre-defined           Knowledge-guided
+      Sampling                 Estimation                 Scenarios                Scenarios                    Rules                  Learning
+   (Section III-A)           (Section III-B)           (Section IV-A)            (Section IV-B)             (Section V-A)            (Section V-B)
+
+     [15] [16] [17]        [23] [24] [25] [26]          [45] [46] [47]            [52] [53] [54]               [72] [73]                    [81]
+                           [27] [28] [29] [30]       [48] [49] [50] [51]                                    [74] [75] [76]
+     [9] [18] [19]                                                             [11] [55] [56] [57]                                 [82] [83] [84] [85]
+                              [31] [32] [33]                 N/A                                            [77] [14] [78]
+    [20] [21] [22]                                                             [58] [59] [60] [61]                                 [86] [87] [88] [89]
+                           [34] [35] [36] [37]
+                                                                               [62] [63] [64] [65]
+                           [38] [39] [40] [41]
+         N/A                                                 N/A                                               [79] [80]                    [90]
+                                                                                  [66] [67] [68]
+                               [42] [43] [44]
+                                                                                  [69] [70] [71]
+
+Fig. 2. Taxonomy of safety-critical scenarios generation methods. The colors of boxes denote the modules of AV system that the generation algorithms target
+on: Perception, Planning, Control.
+
+
+
+This optimization problem is not easy to solve mainly because                  the risk of collision is high. This intuition can be described by
+of two aspects: a) the representation of the distribution pθ (x),              Time-to-Collision (TTC) [95]:
+and b) the selection of the metric g(·). We will discuss how                                     XL (t) − XF (t) − lL
+existing methods deal with these two problems in the following                   T T CF (t) =                         , ∀ ẊF (t) > ẊL (t), (2)
+two subsections, respectively.                                                                    ẊF (t) − ẊL (t)
+                                                                 where X denotes the position, Ẋ denotes the derivative of
+                                                                 X with respect to time or the speed, and lL denotes the
+B. Representation of Scenario                                    leading vehicle’s length; L and F as subscripts refer to leading
+                                                                 and following vehicles in a car-following process. Following
+   We have multiple choices to represent the scenario, and
+                                                                 this time-based metric, there are numerous variants of TTC
+generally, the selection depends on the module to be eval-
+                                                                 such as Time Exposed TTC (TET) [96] and Modified TTC
+uated. If the target module is a perception module, we use
+                                                                 (MTTC) [97].
+high-dimensional sensing data, such as images and LiDAR
+                                                                     Another two main types of metrics are distance-based and
+point cloud. Directly generating high-fidelity sensing data is
+                                                                 deceleration-based metrics. The first one uses the distance
+quite difficult, and there are an increasing number of works
+                                                                 available to avoid a collision, e.g., Proportion of Stopping
+focused on this area [92]. An alternating method is leveraging
+                                                                 Distance (PSD) [98]. The second one defines dangerous
+differential renderer [93], [94] and LiDAR simulator [46], [81]
+                                                                 situations using the rate deceleration during an emergency, e.g.,
+to generate high-dimensional data with ray casting algorithms.
+                                                                 Deceleration Rate to Avoid the Crash (DRAC) [99]. Please
+If we want to evaluate motion planning or control module, we
+                                                                 check [100] for more metrics belonging to these two types.
+can turn to lower dimensions. We can use either trajectories
+                                                                 In addition, we can also use the post-hoc analysis of unsafe
+or policy models of dynamic objects. Using a trajectory is
+                                                                 behavior to indicate the risk, for example, collision rate, average
+less flexible than using a policy model, but the scenarios with
+                                                                 distance driven out of the road, and the frequency of running
+trajectory representation are more controllable.
+                                                                 stop signs and red lights [73], [74].
+                                                                    However, measuring only the risk is not enough for scenario
+                                                                 generation. We need to ensure that the scenarios are realistic
+C. Metrics for Generation
+                                                                 and able to happen in the physical world. We also want to
+    The most important factor of solving the optimization discover as many as possible scenarios rather than a single
+problem Definition 2.3 is the metric of risk g(·). A proper risk one. In fact, these kinds of constraints make the generation of
+metric makes the generated scenarios useful for discovering scenarios a much harder task. We will discuss this topic more
+failure cases of AV systems, while an improper risk metric in Section VII.
+only provides useless scenarios that either is too trivial for      Finally, we highlight the need to balance the effort in
+AV systems or too rare to happen in the real world. The modeling the input scenario with the effort in utilizing the
+level of risk is mainly reflected by the interaction between the scenario to compute the final metrics. This is of particular
+autonomous vehicle and participants in the scenario, which can importance since the uncertainty in the final metrics is due to
+be naturally described by the distance – a small distance means both modeling uncertainty and sampling uncertainty. While the
+JOURNAL OF LATEX CLASS FILES                                                                                                                                 4
+
+
+
+
+Fig. 3. Illustration of three types of generation methods. (a) Data-driven methods only use the collected data to sample directly or via generative models. (b)
+Adversarial methods use the feedback from the autonomous vehicle that is deployed in the simulation. (c) Knowledge-based methods leverage the information
+mainly from external knowledge as constraints or guidance to the generation.
+
+
+
+former can be driven down by designing as accurate a model                          2) Clustering: To better categorize the collected scenario,
+as possible, the latter can only be reduced by running longer,                   [20] and [21] propose to use unsupervised clustering methods
+and larger number of simulation runs [101]. A good review                        to put similar scenarios into groups, which helps improve
+of this input-induced uncertainty and ways to deal with it in                    the efficiency of testing AVs on a specific type of scenario.
+modeling can be found in [102]–[104].                                            However, clustering the entire scenario might be inefficient
+                                                                                 and inaccurate since the scenarios are usually complex and
+                 III. DATA - DRIVEN G ENERATION                                  composed of finite building blocks. The concept of Traffic
+   In this section, we consider the algorithms that only leverage                Primitive is proposed in [22] to represent those blocks. They use
+information from the collected datasets. For example, we                         the Hierarchical Dirichlet Process Hidden Markov Model (HDP-
+control several vehicles to pass an intersection by making                       HMM) [107], a non-parametric Bayesian learning method, to
+them follow the trajectories recorded in the same intersection                   unsupervised extract primitives from scenarios to better cluster
+in the real world. These methods are mainly divided into two                     similar scenarios.
+parts. The first part directly samples from the dataset x ∼ D                       3) Random Perturbation: The main obstacle to direct
+to reproduce the real-world log, which usually suffers from                      conversion is that the diversity of scenarios is limited. Therefore,
+the problem of rareness. The second part is using density                        recent works from some leading companies have started to use
+estimation models (e.g. DGMs) pθ (x) parameterized by θ to                       random perturbation to augment the number of scenarios. Baidu
+learn the distribution of scenarios, which enables the generation                creates a physical-based LiDAR model [16] to transfer a dense
+of unseen scenarios. Usually, the learning objective of these                    point cloud to match the line-style output of the LiDAR sensor.
+models is maximizing the log-likelihood                                          By randomly placing the Computer-Aided Design model of
+                                 X                                               vehicles and pedestrians, their algorithms can generate a huge
+                    θ̂ = arg max      log pθ (x),              (3)               number of scenarios. Similarly, Uber builds a more precise
+                                        x                                        LiDAR model [17] using neural networks (NNs) to mimic
+and the sampling process is conducted by x ∼ pθ (x) from                         the reflection details of the real-world sensors. Besides the
+random noises.                                                                   high-dimensional representation, Waymo tries to reconstruct
+                                                                                 more fatal crashes from collected data by randomly perturbing
+A. Direct Sampling                                                               important parameters [9].
+   An intuitive way of generation is directly sampling from
+a collected dataset which reproduces the scenario from the B. Density Estimation Methods
+road test log. According to different algorithms used before          Consider the driving scenarios following a distribution, and
+and during the sampling, we summarize the following three then we can use collected data to learn a density model to
+groups.                                                             approximate this distribution. We divide this type of algorithm
+   1) Data Replay: Most autonomous driving companies into three categories according to the density model they use.
+maintain scenario bases to store the scenarios they recognized        1) Bayesian Networks: Bayesian Networks is a probabilistic
+as important [105]. During this process, one crucial step is graphical model that uses nodes to represent objects and
+the tools that can automatically convert the scenario from log edges to represent the relation between nodes. This structured
+to virtual simulations [15]. In addition, efficiently selecting model can naturally describe the objects in the scenario.
+the critical scenario from a huge number of scenarios is [38] uses Dynamic Bayesian Network [108] to model the
+another problem. [19] extracts useful scenarios according to complex traffic scenarios, and [39] uses factor graphs to
+the cooperative actions for cooperative maneuver planning model driving behaviors between multiple vehicles. In [41],
+evaluation. In [18], the authors developed a method to select a Importance Sampling (IS) is used to sample driving scenarios
+testing ground to accelerate the performance estimation of AVs represented by Bayesian Networks. In [40], the authors try
+performance on public streets, where the main contribution is to find as many risky scenarios as possible and cluster them.
+describing the risk intensities of the traffic system in an area of They first uniformly sample from the clusters and then use
+interest with Non-Homogeneous Poisson Process model [106]. IS to sample the specific scenarios represented by factor
+JOURNAL OF LATEX CLASS FILES                                                                                                          5
+
+
+
+graphs. Besides using Dynamic Bayesian Network or factor                 4) Imitation learning: Another way of mimicking the dataset
+graphs to model the structures of traffic participants, Gaussian      is using imitation learning (IL) methods [120], which takes
+Process (GP) is a powerful non-parametric method to model             the observation as input and directly outputs the behavior
+the distribution of sequential scenarios [34]. Following this         to control agents. The training of IL is exactly the same as
+direction, [35] combines GP and Dirichlet Process to build            supervised learning. After training, the IL model [42]–[44] can
+a model with an infinite number of clusters to discover               reproduce the same behavior as real-world agents when the
+traffic primitives [22], which can be combined to create new          model encounter the same observation. However, when the
+scenarios. [27] generates point cloud sequential datasets via         observation is not covered by the dataset, the behavior of the
+minimizing the gap between real-world LiDAR and simulation            model could be unreasonable and unpredictable.
+data. Similarly, Meta-sim [28] and Meta-Sim2 [29] try to
+minimize the sim-to-real gap to reconstruct traffic scenarios                       IV. A DVERSARIAL G ENERATION
+for automatic labeling. Their main contribution is that they use         In this section, we consider a more efficient way for
+a scene graph to represent the scenario, which is a hierarchical      generation, which actively creates risky scenarios by attacking
+structure that makes the generation more efficient. In [30], the      the AV system. For example, we control a pedestrian to cross
+scene graph is also used to generate image scenarios.                 the road and intentionally make it collide with the AV. Although
+   2) Deep Learning Models: Deep learning models are also             the AV may avoid the collision in most cases, we can still
+introduced into the generation in [36] and [37]. [36] inputs the      obtain safety-critical scenarios where accidents happen. This
+current state of the AV and a high-definition map to a Long           framework, named adversarial generation, consists of two
+Short Term Memory (LSTM) [109] module to sequentially                 components, one is the generator, and the other is the victim
+generate the trajectory of surrounding vehicles and pedestrians.      model, i.e., the AV. Then the targeted generation process can
+They train their model with normal traffic data since their           be formulated as
+target is to generate naturalistic scenarios. [37] proposes a quite
+complex system to generate scenarios in a simulator, which                             θ̂ = arg min Epθ (x) [Q(x, π)]               (4)
+uses Convolution Neural Network (CNN) [110] as a selector to
+                                                                      where Q(·, π) is a quantitative function to indicate the perfor-
+generate agents surrounding the AV. In TrafficSim [111], both
+                                                                      mance of the policy π taken by the AV. We notice that the
+Gated Recurrent Unit (GRU) and CNN are used to learn the
+                                                                      adversarial generation will mainly focus on a specific small
+behaviors of multi-agents from real-world data. This method
+                                                                      set of scenarios therefore it would be good to consider the
+can generate realistic multi-agent traffic scenarios.
+                                                                      diversity by adding constraint or entropy of the distribution
+   3) Deep Generative Models (DGMs): Recently, DGMs have
+                                                                      H(x). Since we consider the influence of AV, this type is also
+shown great success in generating image and voice data. There
+                                                                      named Vehicle-in-the-loop testing in previous work [121]. Since
+are five types of modern generative models: Generative Adver-
+                                                                      the autonomous driving system consists of multiple modules,
+sarial Nets (GAN) [112], Variational Auto-encoder (VAE) [113],
+                                                                      we divide these methods according to the type of victim models.
+Autoregressive Models [114], [115], Flow-based model [116],
+                                                                      When the model is used for single frame inputs, e.g., object
+[117], Diffusion model [118], [119]. The readers can find more
+                                                                      detection and segmentation, we only need to generate static
+details about DGMs in this survey [12]. With the power of VAE,
+                                                                      scenarios. When the victim model requires a sequential testing
+[31] learns a latent space of encounter trajectories and generates
+                                                                      case, we generate dynamic scenarios which contain the motion
+unseen scenarios by sampling from the latent space. However,
+                                                                      of all objects.
+with less understanding of the latent code, the generation is
+not controllable. In [33], the authors propose CMTS, which
+combines normal and collision trajectories to generate safety-        A. Static Scenarios Generation
+critical scenarios by doing interpolation in the latent space. As        Under the adversarial framework, directly generating high-
+for the usage of GAN, [32] introduces recurrent models to             dimensional data could be challenging. Thus most methods
+generate realistic scenarios of highway lane changes. They use        generate the poses of objects and then use renders to get
+real-world data in the discriminator to help the improvement          the final output. [45] learns the poses of vehicles and uses a
+of the generator. The advantage of DGMs is that they can              differentiable render to get the first-point-view images to attack
+learn a low-dimensional latent space of high-dimensional and          object detection algorithms. [49] and [50] extend the original
+structured data using NNs. Therefore, we can easily generate          Domain Randomization methods [122] to the adversarial
+high-dimensional sensing scenarios. SurfelGAN is proposed in          generation. [49] proposes Structured Domain Randomization,
+[23] to directly generate point cloud data to represent scenarios     which uses a Bayesian Network to actively generate the poses
+from the view of the AV. [24] can add new vehicles to collected       of vehicles. [50] proposes Adversarial Domain Randomization,
+driving videos to generate realistic video scenarios, where they      which targets the scenario of parking lots.
+also consider the motion planning of vehicles. [25] generates            All of the above methods focus on image generation, but
+traffic videos with multi-object scene synthesis using a GAN          some works generate point cloud scenarios. [46] puts an
+framework. To make the video realistic, they integrate physical       adversarial object on the top of a vehicle and optimizes the
+conditions into the generation. A data-driven scenario simulator      shape of the object to make the vehicle disappear in LiDAR
+is designed in [26] to generate both LiDAR and trajectory data        detection algorithms. Similarly, [47] shares the same idea but
+to augment the diversity of driving scenarios.                        uses both LiDAR and image information. After the optimization
+                                                                      of the shape of the object, [48] use 3D printing to build the
+JOURNAL OF LATEX CLASS FILES                                                                                                      6
+
+
+
+object in the real world. The experiment shows that the object          A series of works on generating risky and adversarial
+on the road is indeed ignored by the detection algorithms. In        scenarios in the context of IS also appear in the literature.
+addition to using renders, [51] tries to directly add new points     [129] uses heuristic approaches to generate dangerous lane
+to the existing point cloud to attack segmentation algorithms.       change scenarios. [130] constructs IS distribution to sample
+                                                                     dangerous AV lane change scenarios. [131] extends IS approach
+                                                                     to dynamic systems to sample dangerous AV car-following
+B. Dynamic Scenario Generation
+                                                                     scenarios. [132] uses piece-wise models to design a more
+    When the target is to evaluate planning and control modules, expressive IS distribution. [133] uses Gaussian Mixture Model
+the scenarios are required to be dynamic and sequential. For (GMM) for IS distribution and further analyzes the efficiency
+these kinds of algorithms, we further divide current works into of GMM-based IS distribution for random forest and NN
+two types according to the flexibility of the scenario.              classifiers [134]. ReLU-activated NNs are considered in [135]
+    1) Initial Condition: The first type is controlling the initial to estimate the dangerous set and compute an IS estimator for
+conditions of the scenario (e.g., initial velocity and spawn a risk upper bound for Gaussian case, with a more general case
+position) or providing the entire trajectory at the beginning. presented in [67]. The Adaptive IS approach is used to construct
+The advantage is the low dimension of search space and the adversarial environments to accelerate policy evaluation [136].
+little computational resource required. In [11] and [55], the Finally, there is a series of works named Adaptive Stress
+authors generate the initial poses of a cyclist to attack the AV. Testing (AST) that explores different ways to generate stress
+[55] approximates the parameters with a Gaussian distribution, testing scenarios. [71] uses Monte Carlo tree search (MCTS)
+which limits the diversity of generated scenario. As a remedy, to search action of testing scenario, but this method does not
+[55] use normalizing flow models to learn a multi-modal target autonomous driving systems. [61] generates a scenario
+distribution. It also uses the distribution of real-world data controlling a pedestrian to cross the road. [62] improves the last
+as a constraint to improve fidelity. Parallel work [56] generates paper by using LSTM to generate initial conditions and actions
+a set of possible driving paths and identifies all the possible safe in each step. Instead of defining heuristic reward functions,
+driving trajectories that can be taken starting at different times. [63] leverage the Go-Explore framework to find failure cases.
+Similarly, [57] directly optimizes existing trajectories to perturb [64] extends previous works to high-fidelity simulation and
+the driving paths of surrounding vehicles. They use Bayesian changes the learning algorithm to Proximal Policy Optimization
+Optimization [123] for the optimization, and the scenario is (PPO) [137].
+represented with point cloud. To generate real-world traffic
+scenarios, [65] optimizes the adversarial trajectory in the latent                V. K NOWLEDGE - BASED G ENERATION
+space of a VAE model. Besides controlling the dynamic objects,
+some works also focus on searching the weather parameters               In Section III and Section IV, we discussed methods that
+(e.g., sun and rain) to create different scenarios. [52] searches purely use data or interact with the AV to generate scenarios.
+the type of weather using REINFORCE [124] algorithm. [53] However, scenarios are constructed in the physical world,
+uses Generative Adversarial Imitation Learning [43] to generate therefore, need to satisfy traffic rules and physical laws.
+parameters of weather and uses the cross-entropy method for The samples in the density we estimate or the adversarial
+efficient scenario searching.                                        examples we generate could easily violate these constraints. In
+    2) Adversarial Policy: The second type is building a policy addition, domain knowledge also improves the efficiency of the
+model to sequentially control the dynamic objects, which generation. After traffic accidents happen, we humans analyze
+contains the most number of existing works. This type is usually the scenario and find the reasons that cause the accidents.
+formulated as a Reinforcement Learning (RL) problem [125], Finding the underlying causality, e.g., the view of the sensor
+where the AV belongs to the environment and the generator is blocked, is important to efficiently generate safety-critical
+is the agent we can control. Intuitively, we have much more scenarios.
+flexibility under this setting, but the complexity also increases.      Therefore, in this section, we consider methods that incor-
+Since the AV and objects in scenarios interact step-wise, this porate external domain knowledge into the generation process.
+problem can be formulated in an RL framework, and there We will first explore rule-based methods that artificially design
+are lots of works using RL methods. [59] and [60] use Deep the structure and parameters of scenarios. Then, we turn to
+Q-Network to generate discrete adversarial traffic scenarios. the learning-based methods that use explicit knowledge to
+[70] uses Advantage Actor Critic (A2C) [126] to control one guide the generation. Assume we can obtain certain domain
+surrounding vehicle in the car following scenarios. [68] uses knowledge K from experts, then we can augment the learning
+Deep Deterministic Policy Gradient (DDPG) [127] to generate with
+adversarial policy to control surrounding agents to generate                         θ̂ = arg max Ex∼pθ (x|K) [g(F (x))]         (5)
+lane-changing scenarios. [69] uses Multi-agent DDPG [128]
+to control two surrounding vehicles (which are called Non- where the scenarios are sampled from a conditional distribution
+player Characters) to attack the ego vehicle. This method pθ (x|K). In addition, we can also use K as constraints to
+also sets auxiliary goals for Non-player characters to avoid manipulate existing scenarios:
+generating unrealistic scenarios. [58] proposes CriSGen that                       x̃ = arg max g(F (x)) s.t. K(x) ≥ 0           (6)
+uses constraint-based optimization and [54] uses Bayesian
+Optimization.                                                        where K(x) ≥ 0 means the constraint is satisfied.
+JOURNAL OF LATEX CLASS FILES                                                                                                                7
+
+
+
+A. Pre-defined Rules                                                 model that can use this graph to increase the efficiency of the
+   Driving scenarios are very common in daily life thus we generation.
+humans can easily design scenarios with pre-defined rules and           2) Constraint Optimization: Another way of using explicit
+specific conditions to trigger events. [79] uses prior knowledge     knowledge     is resorting to the constraint optimization framework.
+to design random risk scenarios with equations. The authors          We    know    that safety-critical scenarios are extremely rare
+also conduct interventional experiments by training RL agents        in  the  real-world     log, and random augmentation could be
+on different scenarios to get comparable results. [14] focuses       inefficient   to  generate     safety-critical scenarios. One of the
+on functional and logical scenarios, which can be represented        heuristic  metrics   of  risk is  the drivable area for the autonomous
+by natural language from human experts. [78] views ontologies        vehicle.  [85]  and  [86]   minimize    the drivable area by controlling
+as knowledge-based systems in the field of AV and proposes           the  surrounding      vehicles     with  an evolutionary method and
+a generation of traffic scenes in natural language as a basis        constraint   optimization     methods,    respectively. To explore more
+for scenario creation. In [76], the authors combines formal          different  kinds   of scenarios,    [87]  generates the motion of other
+specification [138] of scenarios and safety properties to generate   traffic  participants    with   a  backtracking    search. To make the
+test cases from formal simulation.                                   scenarios    diverse,   [88]    build  a  pipeline  that introduces the
+   There are also a large number of works that build the             road   topology    from    OpenStreetMap       [145].  Using the safety-
+entire platform with pre-defined scenarios implemented. We           critical  scenarios    from     [88],  [89]  designs   a  comprehensive
+categorize them under the knowledge-based generation method          open-source     toolbox    to train  and   evaluate RL   motion  planners
+and will also discuss more details about these platforms in          for  AVs   with   customized      configuration   from   users. To obtain
+Section VI. A 2D platform named SMARTS is developed in               a  robust  trajectory    prediction    model,   [83]  and  [84]  generate
+[80] containing multiple diverse behavior models using both adversarial trajectory by perturbing existing trajectory with
+rule-based and learning-based models. [74] proposes MetaDrive, feasible constraints.
+a 3D simulator that supports different road shapes defined by          VI. DATASET AND T OOLS FOR S CENARIO G ENERATION
+users or directly imported from existing real-world datasets
+(e.g. Argoverse [139]). [73] is a competition built on top of           In this section, we introduce the tools that are useful
+CARLA [140] and [141], which consists of a large number of           for  safety-critical scenario generation. We first discuss the
+pre-defined scenarios. In [142], the authors build a rule-based      scenario   datasets, then turn to the traffic simulators. Finally, we
+scenario casezoo in CARLA [140], which shares some similar           review   existing   platforms that support the function of scenario
+scenarios with [141]. To manage complex traffic scenarios with       generation.
+hundreds of objects, SUMMIT [72] is specifically designed for
+                                                                     A. Scenario Dataset
+generating massive mixed traffic with an autopilot algorithm.
+To explore the causality between vehicles in the scenario,              For modern machine learning methods, datasets are crucial
+CausalCity [77] is developed for evaluating causal discovery and necessary. Specifically, for the scenario generation task,
+algorithms. It builds an agency mechanism to define high-level there are also many published datasets by companies and
+behaviors.                                                           academic organizations. In Table I, we summarize and compare
+                                                                     available scenario datasets in various aspects that we are
+                                                                     especially interested in.
+B. Knowledge-guided Learning                                            1) Fidelity: In Table I, we include datasets that are either
+   1) Knowledge as Condition: Combining learning methods collected from onboard sensors on public roads or synthetic
+and domain knowledge is a popular trend in the machine virtual worlds simulated by traffic simulators. Collecting real-
+learning area. One of the biggest obstacles is how to define the world data is very time-consuming, which requires humans
+representation space of knowledge. This representation should to operate vehicles or drones to record data in the real world
+be easily integrated into NNs and still has interpretability. in a variety of environments. However, these data are more
+In [90], the authors assume that diversity and high skill are representative of real-world data distribution. Models developed
+important for scenarios. They use RL methods to generate with these realistic data can be directly applied to the real world.
+diverse scenarios and show improvement of the AV trained in Synthetic datasets, on the other hand, are simple to collect.
+their scenarios. [81] represent the explicit knowledge (e.g., the But they heavily rely on the authenticity of traffic simulators,
+vehicles should not have overlap, the orientation of vehicles which usually fail to accurately imitate and render real-world
+should follow the direction of the lane) as first-order-logic [143], data.
+which can be embedded into a tree structure. Then they search           2) Collect View: In addition to different levels of reality,
+in the latent space of a VAE model and apply the knowledge we also present datasets with different views. For example,
+to the tree encoder to constraint the searching process. They HighD [156], InD [165], and RounD [166] datasets collect
+evaluate their scenarios on point cloud segmentation methods data in bird’s-eye view (BEV), which is recorded from drone
+and show that their scenario can cause failure to some models cameras. KITTI [147] and Argoverse [172] datasets collect
+that are not robust. In [82] and [144], the authors explore the data in first-person view (FPV), which is captured by cameras
+fundamental reason for the safety-critical scenario, which can in front of a car. The BEV data happens in a fixed region,
+be represented by causality. This work assumes there is a causal therefore it is more useful to analyze the behavior of objects
+graph that can represent the relationships between objects in in a fixed background. In contrast, FPV data is more suitable
+a scenario. Then, they propose an autoregressive generative to train AV algorithms that take egocentric information.
+JOURNAL OF LATEX CLASS FILES                                                                                                                    8
+
+
+
+                                                                 TABLE I
+ C OMPARISON OF S CENARIO DATASETS . W E LIST EXISTING DATASETS AND DIFFERENT ASPECTS THAT WE ARE INTERESTED IN . ✓/× IN THE WEATHER
+COLUMN MEANS THE DATASET CONTAINS / DOESN ’ T CONTAIN DATA UNDER VARIOUS WEATHER CONDITIONS . BEV: BIRD ’ S - EYE VIEW, FPV: FIRST- PERSON
+      VIEW. D: DAYTIME , N: NIGHTTIME . H: HIGHWAY, I: INTERSECTION , RA: ROUNDABOUT, C: CAMPUS , U: URBAN , S: SUBURBAN , R: RURAL .
+
+
+                                                          Data Sensor                       Annotation                Traffic Condition
+       Dataset          Year   Real   View
+                                               Image      LiDAR     RADAR      Traj.   3D     2D     Lane   Weather     Time     Region   Jam
+    CamVid [146]        2009    ✓     FPV       RGB         ×         ×         ×      ×      ✓        ✓      ×           D         U      ×
+     KITTI [147]        2013    ✓     FPV    RGB/Stereo     ✓         ×         ×      ✓      ✓        ✓      ×           D      U/R/H     ×
+    Cyclists [148]      2016    ✓     FPV       RGB         ×         ×         ×      ×      ✓        ×      ×           D         U      ×
+   Cityscapes [149]     2016    ✓     FPV    RGB/Stereo     ×         ×         ✓      ✓      ✓        ×      ×           D         U      ✓
+   SYNTHIA [150]        2016    ×     FPV       RGB         ×         ×         ×      ✓      ✓        ×      ✓          D/N        U      ✓
+    Campus [151]        2016    ✓     BEV       RGB         ×         ×         ✓      ×      ✓        ✓      ×           D         C      ×
+   RobotCar [152]       2016    ✓     FPV       RGB         ✓         ×         ✓      ✓      ✓        ×      ✓          D/N        U      ×
+   Mapillary [153]      2017    ✓     FPV       RGB         ×         ×         ×      ×      ✓        ✓      ✓          D/N        U      ×
+     P.F.B. [154]       2017    ×     FPV       RGB         ×         ×         ✓      ✓      ✓        ×      ✓          D/N        U      ×
+   BDD100K [155]        2018    ✓     FPV       RGB         ×         ×         ✓      ×      ✓        ✓      ✓           D       U/H      ×
+    HighD [156]         2018    ✓     BEV       RGB         ×         ×         ✓      ×      ✓        ×      ×           D         H      ✓
+    Udacity [157]       2018    ✓     FPV       RGB         ×         ×         ×      ×      ✓        ×      ×           D         U      ×
+    KAIST [158]         2018    ✓     FPV    RGB/Stereo     ✓         ×         ✓      ×      ✓        ×      ×          D/N        U      ×
+   Argoverse [159]      2019    ✓     FPV    RGB/Stereo     ✓         ×         ✓      ✓      ×        ✓      ✓          D/N        U      ×
+     TRAF [160]         2019    ✓     FPV       RGB         ×         ×         ✓      ×      ✓        ×      ✓          D/N        U      ×
+  ApolloScape [161]     2019    ✓     FPV    RGB/Stereo     ✓         ×         ✓      ✓      ✓        ✓      ✓           D         U      ✓
+     ACFR [162]         2019    ✓     BEV       RGB         ×         ×         ✓      ×      ✓        ×      ×           D        RA      ×
+      H3D [163]         2019    ✓     FPV       RGB         ✓         ×         ✓      ✓      ×        ×      ×           D         U      ✓
+ INTERACTION [164]      2019    ✓     BEV       RGB         ×         ×         ×      ×      ✓        ✓      ×           D       I/RA     ×
+     InD [165]          2020    ✓     BEV       RGB         ×         ×         ✓      ×      ✓        ×      ×           D          I     ×
+   RounD [166]          2020    ✓     BEV       RGB         ×         ×         ✓      ×      ✓        ×      ×           D        RA      ×
+  nuScenes [167]        2020    ✓     FPV       RGB         ✓         ✓         ×      ✓      ✓        ×      ✓          D/N        U      ×
+ Lyft Level 5 [168]     2020    ✓     BEV       RGB         ✓         ✓         ✓      ×      ✓        ✓      ×           D          S     ×
+ Waymo Open [169]       2020    ✓     FPV       RGB         ✓         ×         ×      ✓      ✓        ✓      ✓          D/N       U/S     ×
+    A*3D [170]          2020    ✓     FPV       RGB         ✓         ×         ×      ✓      ✓        ×      ✓          D/N        U      ✓
+ RobotCar Radar [171]   2020    ✓     FPV       RGB         ✓         ✓         ✓      ×      ×        ×      ✓          D/N        U      ×
+  Argoverse 2 [172]     2021    ✓     FPV    RGB/Stereo     ✓         ×         ✓      ✓      ×        ✓      ✓          D/N        U      ×
+   PandaSet [173]       2021    ✓     FPV       RGB         ✓         ×         ✓      ✓      ×        ×      ×          D/N        U      ×
+    ONCE [174]          2021    ✓     FPV    RGB/Stereo     ✓         ×         ×      ✓      ✓        ×      ✓          D/N        U      ×
+
+
+
+   3) Data Sensor: For each dataset, we examine whether               be divided into two categories: 3D bounding box annotations
+it has the following data types: RGB image, stereo image,             and 3D point cloud annotations. A 3D bounding box annotation
+LiDAR data, Radar, and trajectory. All datasets included in           describes a cube that exactly holds one specific object. 3D
+the table have RGB images since it is a common data type in           point cloud annotations assign point-wise labels to each point
+traffic scenarios. RGB images are usually collected by cameras        in the point cloud, indicating the point’s category. Many tasks
+mounted on vehicles or drones, and they can be utilized for           in autonomous driving, such as 3D object detection and 3D
+a variety of computer vision tasks such as object detection           segmentation, require 3D annotations. Similarly, 2D annotations
+and image segmentation. Stereo images are captured by stereo          include 2D bounding box annotations and pixel-wise 2D
+cameras and LiDAR data is collected by LiDAR sensors. Both            semantic annotations. Lane annotations describe different types
+of them provide 3D information that is particularly useful in 3D      of lanes in the data, as well as the boundaries of drivable
+tasks such as 3D object detection. RADAR is also a common             regions. This lane information can be used to integrate map
+sensor that returns similar 3D information as LiDAR but at a          and traffic rule information into the algorithm of AVs, enabling
+cheaper price. It can work in harsher conditions (e.g., rain and      more efficient decision-making functions.
+storm) due to the longer wavelength than LiDAR’s lights. The             5) Traffic Condition: Datasets with a limited level of diver-
+trajectory data is either recorded by sensors such as GPS or          sity in conditions and situations are skewed to redundant and
+converted from object detection results. This type of data is         highly safe scenarios, which leads to the long tail problem [175],
+frequently used in trajectory prediction tasks for planning and       [176]. In order to evaluate the performance of AVs in various
+control purposes.                                                     scenarios, a dataset must include data under a variety of settings.
+   4) Annotation Type: The availability of various types of           We mainly consider the following four key aspects: weather,
+annotations is crucial to each dataset, as it determines which        time, region, and traffic density. The weather conditions change
+tasks the dataset may be used for. We explore three forms             the entire world as well as the style of the data collected by
+of data annotations in Table I: 3D object annotations, 2D             sensors. For example, the nuScenes dataset [167] includes data
+object annotations, and lane annotations. 3D annotations can          from sunny, rainy, and cloudy conditions. As a result, the
+JOURNAL OF LATEX CLASS FILES                                                                                                        9
+
+
+
+                                                                TABLE II
+                                                    C OMPARISON OF T RAFFIC S IMULATION
+
+                                    Open     Realistic    Customized                     Map Source               API Support
+          Simulator         Year                                       Back-end
+                                   Source   Perception     Scenario               Real World  Human Design   Python   C++     ROS
+        TORCE [177]         2000     ✓          ✓             ×         None          ×             ✓          ×       ✓       ×
+         Webots [178]       2004     ✓          ✓             ✓          ODE          ✓             ✓          ✓       ✓       ✓
+       CarRacing [179]      2016     ✓          ×             ×         None          ×             ✓          ✓       ×       ×
+        CARLA [140]         2017     ✓          ✓             ✓          UE4          ×             ✓          ✓       ✓       ✓
+     SimMobilityST [180]    2017     ✓          ×             ✓         None          ×             ✓          ✓       ×       ×
+         GTA-V [154]        2017     ×          ✓             ✓         RAGE          ×             ×          ×       ×       ×
+      highway-env [181]     2018     ✓          ×             ✓         None          ×             ✓          ✓       ×       ×
+       Deepdrive [182]      2018     ✓          ✓             ✓          UE4          ×             ✓          ✓       ✓       ×
+         esmini [183]       2018     ✓          ✓             ✓         Unity         ×             ✓          ✓       ✓       ×
+      AutonoViSim [184]     2018     ×          ✓             ✓         PhysX         ×             ✓          ×       ×       ×
+         AirSim [185]       2018     ✓          ✓             ✓          UE4          ×             ✓          ✓       ✓       ✓
+         SUMO [186]         2018     ✓          ×             ✓         None          ✓             ✓          ✓       ✓       ×
+         Apollo [187]       2018     ✓          ×             ✓         Unity         ×             ✓          ✓       ✓       ×
+        Sim4CV [188]        2018     ✓          ✓             ✓          UE4          ×             ✓          ✓       ✓       ×
+        SUMMIT [72]         2020     ✓          ✓             ×          UE4          ✓             ✓          ✓       ×       ✓
+     MultiCarRacing [189]   2020     ✓          ×             ×         None          ×             ✓          ✓       ×       ×
+        SMARTS [80]         2020     ✓          ×             ✓         None          ×             ✓          ✓       ×       ×
+        LGSVL [190]         2020     ✓          ✓             ✓         Unity         ✓             ✓          ✓       ×       ✓
+       CausalCity [77]      2021     ✓          ✓             ✓          UE4          ×             ✓          ✓       ×       ×
+        MetaDrive [74]      2021     ✓          ✓             ✓        Panda3D        ✓             ✓          ✓       ×       ×
+          L2R [191]         2021     ✓          ✓             ✓          UE4          ✓             ✓          ✓       ×       ×
+      AutoDRIVE [192]       2021     ✓          ✓             ✓         Unity         ×             ✓          ✓       ✓       ✓
+
+
+
+images have different appearances depending on the weather. assessment of AV performance in the real world. For example,
+The time condition specifies whether the data was obtained SUMMIT [72] is able to simulate 3D towns with a large
+during the day or at night. The main distinction between number of vehicles, pedestrians, and buildings. Besides, weather
+these two scenarios is the lighting. The region denotes the conditions can be further simulated, which include controlling
+location from which the data is gathered. For example, the the strength of precipitation, cloudiness, fog density, etc. Simple
+INTERACTION dataset [164] is collected at intersections and traffic simulators, on the other hand, are incapable of supporting
+roundabouts, whereas the KITTI dataset [147] is collected such detailed simulations. However, they are usually light-
+in urban, rural, and highway settings. Finally, traffic density weighted and easy to use (especially for RL algorithms),
+considers the number of objects in traffic scenarios. Higher where algorithms can be tested quickly without complicated
+density indicates a traffic jam or congestion, which requires configurations. For example, Highway-env [181] is a 2D
+traffic participants to pay more attention to surrounding objects simulator that can be installed using only one command and
+and take action more carefully.                                   provide preliminary experimental results in a short amount
+                                                                  of time. We provide screenshots of six typical simulators in
+B. Traffic Simulation Platforms                                   Figure 4.
+   In Table II, we summarize existing traffic simulators and
+compare them in different aspects that we are particularly           3) Customized Scenario: The freedom to customize sce-
+interested in.                                                     narios is of great importance since we mainly focus on the
+   1) Open Source: Open-source simulators are easily cus- generation and evaluation of safety-critical scenarios. The
+tomized, which enables users to design and evaluate various customization of scenarios usually involves the modification
+safety-critical scenarios easily, as these scenarios are typically of vehicles’ positions, speeds, and behaviors. For example,
+rare and sophisticated and require a high level of customization. CARLA [140] offers a systematical way for users to define
+Therefore, whether the simulator is open source becomes a scenario, through which users can specify the number of
+one of our primary considerations. Most of the simulation vehicles in a town as well as their own behaviors. Even weather
+platforms we list in Table II are open source. Simulators such and the surrounding environment can be arbitrarily adjusted to
+as AirSim [185] and SMARTS [80], for example, release their create variations in the visual appearance of the scene. These
+source code to the public, making it easier for users to modify functions provide higher flexibility for users and allow for
+and enrich the testing environment.                                more comprehensive testing of the reliability of AVs.
+   2) Realistic Perception: The realism and fidelity in the
+virtual simulation have a significant impact on AV algorithms.       4) Back-end Engine: The simulator engines have a direct
+High-fidelity, photo-realistic simulators provide data that is impact on the fidelity of the simulated vehicle dynamics and
+similar to the physical world, allowing for a more accurate the rendered 3D environment. Most simulation platforms are
+JOURNAL OF LATEX CLASS FILES                                                                                                        10
+
+
+
+built upon Unreal Engine 4 (UE4) 1 or Unity 2 , which are and scenario generation algorithms following the instructions.
+popular and professional game engines. Other less popular SafeBench also provides several RL-based autonomous driving
+engines, such as Panda3D [193], are also considered. Some algorithms with pre-trained RL model weights. Users can easily
+non-realistic environments, such as Highway-env [181], do not test and improve the generated scenarios based on feedback
+even need back-end engines due to the low requirement of from diverse autonomous driving algorithms.
+rendering. A simple graphical user interface (GUI) is sufficient        DI-Drive Casezoo [142] consists of a set of scenarios used
+for such type of platform.                                           to train and evaluate diving policy in a simulator. Similar to
+    5) Map Source: Maps are critical components in AV testing CARLA Scenario Runner [141], DI-drive Casezoo has a routing
+systems. The maps in these traffic simulators are either created scenario and multiple single scenarios that can be triggered
+by humans or based on real-world data. For example, Learn- along the route. There are 18 route scenarios and 8 types of
+to-Race (L2R) [191] platform has three racetracks in its racing single scenarios that can be triggered depending on the route
+simulator, all of which are based on real-world racetracks. definition. Route scenario is defined in an XML file with its
+Human-designed maps can be further classified into two types: corresponding scenarios. Trigger locations along the route are
+rule-based maps and procedurally generated maps. Highway- defined in JSON files. A single scenario is defined in a Python
+env [181] incorporates 11 rule-based maps, including highways, file, describing the behaviors of traffic participants.
+parking lots, roundabouts, etc., all of which are manually              SUMO NETEDIT [196] is a graphical scenario editor which
+written by humans. MetaDrive [74] maintains several basic can be used to create traffic networks from scratch and to
+roadblocks and generates numerous maps in a procedural modify all aspects of existing networks, including basic network
+manner by randomly selecting one roadblock at one time.              elements (junctions, edges, and lanes), advanced network
+    6) API Support: API support for specific programming elements (e.g., traffic lights), and additional infrastructure (e.g.,
+languages is crucial in large-scale automated evaluation since bus stops). This tool is specifically designed for SUMO [186],
+it allows users to run batches of scenarios. Popular program- which mainly generates large-scale traffic conditions without
+ming languages like Python and C++ are supported by most high-fidelity rendering.
+simulation platforms. Some simulators like CARLA [140] and              SMARTS Scenario Studio [197] is a scenario design
+LGSVL [190] also provide support for Robot Operating System tool in the SMARTS [80] platform that supports flexible
+(ROS) 3 , allowing users to integrate other open-source modules and expressive scenario specification. Scenario definitions are
+developed by the ROS community.                                      written in the Domain Specific Language, which describes the
+                                                                     traffic environment, such as traffic vehicles, routes, and agent
+C. Scenario Design Platform                                          missions. Scenario Studio also supports configuration files from
+                                                                     SUMO’s NETEDIT [196]. Maps edited by NETEDIT [196]
+    There are several user-friendly platforms that support sce-
+                                                                     can be easily included and reused in Scenario Studio, which
+nario design, which already implements a lot of rule-based
+                                                                     enriches the training and testing environments in the SMARTS
+scenarios that are normal or safety-critical. We list some popular
+                                                                     platform.
+platforms in this section.
+                                                                        CommonRoad [89] is a simulator and an open-source
+    CARLA Scenario Runner [141] provides traffic scenario
+                                                                     toolbox to train and evaluate RL-based motion planners for
+definitions and an execution engine for CARLA. Scenarios
+                                                                     AVs. Scenario configurations are written in XML files. Users
+can be defined through a Python interface that allows users to
+                                                                     can read, modify, visualize, and store their own traffic scenarios
+easily describe sophisticated and synchronized maneuvers that
+                                                                     using the Python API provided by CommonRoad. In addition,
+involve multiple entities like vehicles, pedestrians, and other
+                                                                     CommonRoad also supports more scenario specifications, such
+traffic participants. It also supports the OpenSCENARIO [194]
+                                                                     as Lanelet2 [198] and OpenSCENARIO [194].
+standard file format for scenario descriptions, making it simple
+and efficient to incorporate a variety of existing traffic scenarios
+from the community.                                                         VII. C HALLENGES AND P OTENTIAL S OLUTIONS
+     SCENIC [75] defines a language for scenario specification          In previous sections, we discussed the safety-critical scenario
+and generation. It describes distributions over scenes and the generation methods from three different views: data-driven,
+behaviors of their agents over time. One advantage of SCENIC adversarial, and knowledge-based. We notice that generating
+over other scenario languages is that it combines the concise, safety-critical scenarios could be a hard problem due to the
+readable syntax for spatiotemporal relationships with the ability many constraints and required properties. In this section, we
+to impose hard and soft constraints over the scenario.               identify five main challenges that cover the difficulty of the
+    SafeBench [195] is an open-source platform focusing on sys- generating process, as shown in Figure 5. Digging into the
+tematically evaluating the safety and robustness of autonomous details of these challenges also helps us discover potential
+driving algorithms based on diverse testing scenarios and directions that can improve existing algorithms. The five
+comprehensive evaluation metrics. The platform integrates eight challenges are as the following:
+types of safety-critical scenarios and incorporates four genera-        • Fidelity. Our ultimate goal is to develop safe AVs that
+tion algorithms. Users can also design their own traffic scenarios         can run in the real world. Therefore, it is useless to make
+   1 https://www.unrealengine.com                                          AVs pass difficult but unrealistic scenarios. We need to
+   2 https://www.unity.com                                                 ensure that generated scenarios have the chance to happen
+   3 https://www.ros.org                                                   in real traffic situations.
+JOURNAL OF LATEX CLASS FILES                                                                                                                  11
+
+
+
+
+                                                                  Fig. 5. Comparison between three types of generation under the five challenges.
+
+
+                                                                     The fidelity of the scenario is also reflected by the high-
+                                                                  dimensional sensing data, which usually requires powerful
+                                                                  DGMs to generate. The state-of-the-art methods mainly focus
+                                                                  on the generation of static images such as faces. Recently,
+                                                                  Neural Radiance Fields (NeRF) [201] is popular for visual
+                                                                  scene generation. This method uses NNs to learn the ray-
+                                                                  casting functions and then output different views of a scene.
+Fig. 4. Screenshots of six typical simulators.
+                                                                  Extending this method to large-scale traffic scenario generation
+                                                                  is also an interesting direction, which has been explored in
+                                                                  Block-NeRF [202]. Block-NeRF builds a large-scale traffic
+   •  Efficiency. Safety-critical scenarios are extremely rare
+                                                                  scene from pure image data.
+      in the real world. The generation needs to consider the
+      efficiency and increase the density of the scenarios we
+      are interested in.                                            B. Efficiency
+   • Diversity. Safety-critical scenarios are also diverse. The        Due to the black-box property of most autonomous systems,
+      generation algorithm should be able to discover and it is inefficient to generate adversarial examples without ac-
+      generate as many different safety-critical scenarios as cessing the inner information of the systems. In the adversarial
+      possible.                                                     attack area, methods with surrogate models [203] or gradient
+   • Transferability. Scenarios are dynamic due to the interac- estimation methods [204] are utilized to tackle this problem.
+      tion between the AVs and their surrounding objects. The They either learn a differentiable surrogate model to imitate the
+      scenarios we generate should be variable for different AVs original autonomous systems or query the system to estimate
+      rather than targeting one specific AV.                        the approximate direction gradient.
+   • Controllability. In most times, we want to reproduce or           It is also noticed that uniform sampling from collected data
+      repeat specific scenarios rather than random ones. The is quite inefficient because of the rareness of safety-critical
+      generative model should be able to follow instructions or scenarios. Therefore, previous methods propose to use IS,
+      conditions to generate corresponding scenarios.               which focuses on the region of the distribution that we are
+We will discuss more details from the above five perspectives in interested in. However, it is difficult to extend IS methods to
+the following sections, and we will show that the combination high-dimensional cases. In addition, even for the adversarial
+of the previous three types of generation methods could be generation methods, the black-box property of victim AVs
+very promising ways to solve those challenges.                      is still the biggest obstacle. Without access to the internal
+                                                                    information of failure, the generation algorithms are unable to
+                                                                    update their scenarios efficiently.
+A. Fidelity                                                            one potential solution to this problem is leveraging the
+                                                                    symbolic reasoning [205] and causal discovery [206] techniques.
+   The generation algorithm can create infinite scenarios, but
+                                                                    Instead of performing the optimization only in large numerical
+not all of them are able to happen in the real world. Particularly,
+                                                                    space, using symbolic representation helps the generative
+under the adversarial generation framework, the searched
+                                                                    model to reason about the elements that make the scenario
+scenarios are likely to violate the basic traffic rules. The
+                                                                    safety-critical. Causal discovery methods can uncover the
+intuitive way to avoid this problem is adding constraints during
+                                                                    underlying causality behind safety-critical scenarios, finding
+the generation, but sometimes the constraints are not easy to
+                                                                    the mechanisms that cause the risk.
+define. Another promising direction is combining real-world
+data and adversarial generation, where the real-world data
+can be used as a prior distribution or constraints. Metrics C. Diversity
+such as Kullback–Leibler divergence [199] and Wasserstein              Safety-critical scenarios are rare but also diverse. Most of
+distance [200] can be used to minimize the gap between the the current generative methods focus on searching for the best
+generated and real-world scenarios.                                 scenario that satisfies the requirements but ignores diversity.
+JOURNAL OF LATEX CLASS FILES                                                                                                         12
+
+
+
+To comprehensively evaluate the performance of AV, we need            basically consists of dynamic objects on a 2D surface, but the
+a large range of scenarios. It is easy to fall into the risk of       indoor scenarios contain a large number of objects interacting
+over-fitting if the testing scenarios are very similar. To increase   in a 3D space. The relations between these objects are also
+the diversity of the scenario, there are generally two directions.    diverse and complex. The direction of how to extend scenario
+One is from the optimization perspective, where sampled-              generation methods to these applications is still challenging.
+based methods, such as the evolutionary method or Bayesian
+Optimization can be used to get feasible solutions from multiple                 VIII. C ONCLUSION AND D ISCUSSION
+modes. The other direction is applying regularization to the
+                                                                         In this survey, we review existing safety-critical scenario
+density estimation model or building multi-modal distribution
+                                                                      generation methods and categorize them into three types. We
+(e.g., Gaussian Mixture Model) to represent the scenario.
+                                                                      also review the simulation platforms and datasets that can be
+                                                                      used for scenario generation. Most importantly, we identify
+D. Transferability                                                    five challenges for this topic and point out potential directions
+   In the safety and robustness areas, the adversarial attack is      to tackle these challenges. In the end, we summarize the
+considered a common way to generate risky examples. The               important message that the readers can take away from this
+transferability, which means the generated samples are also           survey, including why is safety-critical scenario generation
+applicable to other algorithms, is a crucial factor in evaluating     important, how to select generation algorithms from so many
+the generation method. For example, the pixel-level adversarial       existing methods, and what are future directions to improve
+attack only works for the target victim. It is believed that          existing algorithms.
+the attack should happen at group level [207] or semantic
+level [208] to achieve better transferability. One example in the A. Importance of This Topic
+safety-critical scenario is controlling one surrounding vehicle
+                                                                      Most existing driving systems are still evaluated on natu-
+(SV) to hit the AV step by step. After the policy of the SV is
+                                                                   ralistic scenarios collected from daily life or human-designed
+trained, we change the target AV. The new AV shows a very
+                                                                   scenarios. Even if they can autonomously drive more than
+different behavior and follows a route that the SV has never
+                                                                   thousands of miles without disengagement, we are still not
+seen before. It is most likely that this scenario is not risky for
+                                                                   sure about their safety and robustness, e.g., whether the
+the new AV. In this example, we should let the SV learn at a
+                                                                   AV can keep safe when the surrounding vehicles behave
+higher level, where it contains the semantic meaning of risk.
+                                                                   aggressively or whether the AV can successfully stop when
+The SV can suddenly show up behind another vehicle, which
+                                                                   a pedestrian suddenly runs out from behind an object. The
+leaves the AV a very short time to react. Essentially, we need
+                                                                   generation methods accelerate the development and evaluation
+to build a hierarchical scenario where the high level makes
+                                                                   of driving systems by creating diverse and realistic safety-
+a plan for the risky scenario, and the low level executes that
+                                                                   critical scenarios.
+plan with control commands.
+
+                                                                      B. How to Select Generation Algorithms
+E. Controllability
+                                                                         Although we have categorized existing methods with a
+   Controllability is useful in two cases. One is that we want
+                                                                      taxonomy, it is still not clear how to select a specific algo-
+to repeat one specific scenario with several parameters fixed,
+                                                                      rithm according to different situations. We summarized three
+and the other is generating different scenarios with similar
+                                                                      combinations to help make choices in general cases.
+settings. For example, we want to test the performance in a
+                                                                         • Data-driven generation + Adversarial generation. If
+highway environment, and then we want to generate vehicles
+that approach the AV from different directions. Conditional                the goal is to broadly evaluate your system under diverse
+generative models [209], [210] are widely used to generate                 scenarios to discover the weakness, combining multi-
+controllable samples, which learn a joint distribution of the              modal density models and adversarial training is preferred.
+condition and the data. Sometimes, the condition could be                  Randomly sample from the generative models and search
+simple as numerical values or as complex as natural languages.             the safety-critical scenarios with adversarial generation.
+                                                                         • Data-driven generation + Knowledge-based generation.
+The challenge is that current NN-based models have poor
+generalization, therefore, fail when the given unseen conditions           When there are specific requirements that can be converted
+during the generating. One promising direction could be to                 into constraints, using constraint optimization to manipu-
+increase the generalizability under such a zero-shot setting.              late existing scenarios (e.g., trajectories) is preferred. In
+                                                                           that case, the scenarios will concentrate on one single
+                                                                           cluster with low diversity, which is helpful if the target is
+F. Extension to Other Applications                                         to test the driving system on specific scenarios.
+   Autonomous driving is essentially an application of mobile            • Adversarial generation + Knowledge-based genera-
+robots. To make the intelligent hardware widely used in the                tion If we already have rules that can design safety-
+real world, other types of applications should also be evaluated           critical scenarios but also want to increase the diversity
+on safety-critical scenarios – for example, household robots               of generated scenarios by automatically learning the
+and manipulation tasks. However, the generation of indoor                  parameters, combining the adversarial generation and rule-
+scenarios could be much more difficult. The traffic scenario               based method is proffered.
+JOURNAL OF LATEX CLASS FILES                                                                                                                                  13
+
+
+
+C. What are Future Directions                                                   [5] “California Department of Motor Vehicle Disengagement
+                                                                                    Report,”       https://www.dmv.ca.gov/portal/vehicle-industry-services/
+   Properly integrate inductive bias. We want to emphasize                          autonomous-vehicles/disengagement-reports/, 2022, [Online].
+that driving scenarios are created by the relations of objects                  [6] E. Thorn, S. C. Kimmel, M. Chaka, B. A. Hamilton et al., “A framework
+and physical laws rather than being designed by the human                           for automated driving system testable cases and scenarios,” United
+                                                                                    States. Department of Transportation. National Highway Traffic Safety
+mind. Purely relying on NNs or optimization methods is                              Administration, Tech. Rep., 2018.
+not the ultimate solution for generating realistic and critical                 [7] W. G. Najm, J. D. Smith, M. Yanagisawa et al., “Pre-crash scenario
+scenarios. Instead, the model should leverage as much external                      typology for crash avoidance research,” United States. National Highway
+                                                                                    Traffic Safety Administration, Tech. Rep., 2007.
+knowledge and rules as possible to make the generated                           [8] S. C. Schnelle, M. K. Salaani, S. J. Rao, F. S. Barickman, D. Elsasser
+scenarios interpretable and satisfy the goal. For instance, the                     et al., “Review of simulation frameworks and standards related to driving
+representation of the scenario is crucial and usually determines                    scenarios,” United States. Department of Transportation. National
+                                                                                    Highway Traffic Safety Administration, Tech. Rep., 2019.
+the quality of the generation. A representation that naturally                  [9] J. M. Scanlon, K. D. Kusano, T. Daniel, C. Alderson, A. Ogle, and
+embeds rules and laws within a structure could be easily                            T. Victor, “Waymo simulated driving behavior in reconstructed fatal
+optimized by considering the complex relationship between                           crashes within an autonomous vehicle operating domain,” 2021.
+objects. In addition, correctly injecting the distribution of real-            [10] K. Eykholt, I. Evtimov, E. Fernandes, B. Li, A. Rahmati, C. Xiao,
+                                                                                    A. Prakash, T. Kohno, and D. Song, “Robust physical-world attacks
+world data is important to ensure the reality of generated                          on deep learning visual classification,” in Proceedings of the IEEE
+scenarios. Using Offline RL [211] and imitation learning could                      conference on computer vision and pattern recognition, 2018, pp. 1625–
+be a potential direction to achieve this goal.                                      1634.
+                                                                               [11] W. Ding, B. Chen, M. Xu, and D. Zhao, “Learning to collide: An
+   Use scenarios to increase robustness and safety. Another                         adaptive safety-critical scenarios generating method,” in 2020 IEEE/RSJ
+aspect that is worth investigating is how to effectively use                        International Conference on Intelligent Robots and Systems (IROS).
+the generated scenarios to improve robustness and safety. The                       IEEE, 2020, pp. 2243–2250.
+                                                                               [12] G. Harshvardhan, M. K. Gourisaria, M. Pandey, and S. S. Rautaray, “A
+most intuitive way is training the autonomous system against                        comprehensive survey and analysis of generative models in machine
+generated safety-critical scenarios under the adversarial training                  learning,” Computer Science Review, vol. 38, p. 100285, 2020.
+framework. However, the adversarial scenarios usually represent                [13] I. J. Goodfellow, J. Shlens, and C. Szegedy, “Explaining and harnessing
+                                                                                    adversarial examples,” arXiv preprint arXiv:1412.6572, 2014.
+the worst cases, therefore, learning to a robust yet conservative              [14] T. Menzel, G. Bagschik, and M. Maurer, “Scenarios for development,
+system. It is not easy to select the difficulty and category                        test and validation of automated vehicles,” in 2018 IEEE Intelligent
+of scenarios due to the problems of imbalanced data and                             Vehicles Symposium (IV). IEEE, 2018, pp. 1821–1827.
+                                                                               [15] R. van der Made, M. Tideman, U. Lages, R. Katz, and M. Spencer,
+over-fitting. These problems bridge the topic discussed in this                     “Automated generation of virtual driving scenarios from test drive data,”
+survey to other areas such as robust optimization [212] and                         in 24th International Technical Conference on the Enhanced Safety
+distributional robust optimization [213], which have broadly                        of Vehicles (ESV) National Highway Traffic Safety Administration, no.
+                                                                                    15-0268, 2015.
+literature to be explored.                                                     [16] J. Fang, D. Zhou, F. Yan, T. Zhao, F. Zhang, Y. Ma, L. Wang, and
+   Use scenarios to improve generalization. Besides increas-                        R. Yang, “Augmented lidar simulator for autonomous driving,” IEEE
+ing the robustness, the generated scenarios could also be used                      Robotics and Automation Letters, vol. 5, no. 2, pp. 1931–1938, 2020.
+to improve the generalization of AVs. For instance, gradually                  [17] S. Manivasagam, S. Wang, K. Wong, W. Zeng, M. Sazanovich, S. Tan,
+                                                                                    B. Yang, W.-C. Ma, and R. Urtasun, “Lidarsim: Realistic lidar simulation
+training AVs with increasing risk levels under curriculum                           by leveraging the real world,” in Proceedings of the IEEE/CVF
+learning [214] framework may help systems easily generalize to                      Conference on Computer Vision and Pattern Recognition, 2020, pp.
+more types of safety-critical scenarios. One recent survey [215]                    11 167–11 176.
+                                                                               [18] M. Arief, P. Glynn, and D. Zhao, “An accelerated approach to safely and
+that investigates the generalization problem in RL emphasizes                       efficiently test pre-production autonomous vehicles on public streets,”
+the importance of environment generation in increasing the                          in 2018 21st International Conference on Intelligent Transportation
+similarity between training and testing domains. This direction                     Systems (ITSC). IEEE, 2018, pp. 2006–2011.
+                                                                               [19] C. Knies and F. Diermeyer, “Data-driven test scenario generation for
+extends the scenario generation from safety to broader views                        cooperative maneuver planning on highways,” Applied Sciences, vol. 10,
+that require goal-conditioned environment generation.                               no. 22, p. 8154, 2020.
+                                                                               [20] F. Kruber, J. Wurst, and M. Botsch, “An unsupervised random forest
+                                                                                    clustering technique for automatic traffic scenario categorization,”
+                       ACKNOWLEDGEMENT                                              in 2018 21st International Conference on Intelligent Transportation
+  The authors gratefully acknowledge the support from the                           Systems (ITSC). IEEE, 2018, pp. 2811–2818.
+                                                                               [21] F. Kruber, J. Wurst, E. S. Morales, S. Chakraborty, and M. Botsch,
+National Science Foundation (under grants CNS:CAREER-                               “Unsupervised and supervised learning with the random forest algorithm
+2047454).                                                                           for traffic scenario clustering and classification,” in 2019 IEEE Intelligent
+                                                                                    Vehicles Symposium (IV). IEEE, 2019, pp. 2463–2470.
+                                                                               [22] W. Wang and D. Zhao, “Extracting traffic primitives directly from
+                             R EFERENCES                                            naturalistically logged data for self-driving applications,” IEEE Robotics
+  [1] I. Masi, Y. Wu, T. Hassner, and P. Natarajan, “Deep face recognition:         and Automation Letters, vol. 3, no. 2, pp. 1223–1229, 2018.
+      A survey,” in 2018 31st SIBGRAPI conference on graphics, patterns        [23] Z. Yang, Y. Chai, D. Anguelov, Y. Zhou, P. Sun, D. Erhan, S. Rafferty,
+      and images (SIBGRAPI). IEEE, 2018, pp. 471–478.                               and H. Kretzschmar, “Surfelgan: Synthesizing realistic sensor data for
+  [2] Z. Saquib, N. Salam, R. P. Nair, N. Pandey, and A. Joshi, “A survey           autonomous driving,” in Proceedings of the IEEE/CVF Conference on
+      on automatic speaker recognition systems,” Signal Processing and              Computer Vision and Pattern Recognition, 2020, pp. 11 118–11 127.
+      Multimedia, pp. 134–145, 2010.                                           [24] Y. Chen, F. Rong, S. Duggal, S. Wang, X. Yan, S. Manivasagam, S. Xue,
+  [3] Z. Zhong, Y. Tang, Y. Zhou, V. d. O. Neves, Y. Liu, and B. Ray,               E. Yumer, and R. Urtasun, “Geosim: Realistic video simulation via
+      “A survey on scenario-based testing for automated driving systems in          geometry-aware composition for self-driving,” in Proceedings of the
+      high-fidelity simulation,” arXiv preprint arXiv:2112.00964, 2021.             IEEE/CVF Conference on Computer Vision and Pattern Recognition,
+  [4] S. Riedmaier, T. Ponn, D. Ludwig, B. Schick, and F. Diermeyer, “Survey        2021, pp. 7230–7240.
+      on scenario-based safety assessment of automated vehicles,” IEEE         [25] S. Ehrhardt, O. Groth, A. Monszpart, M. Engelcke, I. Posner, N. Mitra,
+      access, vol. 8, pp. 87 456–87 477, 2020.                                      and A. Vedaldi, “Relate: Physically plausible multi-object scene syn-
+JOURNAL OF LATEX CLASS FILES                                                                                                                                     14
+
+
+
+      thesis using structured latent spaces,” arXiv preprint arXiv:2007.01272,      [47] M. Abdelfattah, K. Yuan, Z. J. Wang, and R. Ward, “Towards universal
+      2020.                                                                              physical attacks on cascaded camera-lidar 3d object detection models,”
+ [26] W. Li, C. Pan, R. Zhang, J. Ren, Y. Ma, J. Fang, F. Yan, Q. Geng,                  arXiv preprint arXiv:2101.10747, 2021.
+      X. Huang, H. Gong et al., “Aads: Augmented autonomous driving                 [48] Y. Cao, C. Xiao, D. Yang, J. Fang, R. Yang, M. Liu, and B. Li,
+      simulation using data-driven algorithms,” Science robotics, vol. 4, no. 28,        “Adversarial objects against lidar-based autonomous driving systems,”
+      2019.                                                                              arXiv preprint arXiv:1907.05418, 2019.
+ [27] A. Xiao, J. Huang, D. Guan, F. Zhan, and S. Lu, “Synlidar: Learning           [49] A. Prakash, S. Boochoon, M. Brophy, D. Acuna, E. Cameracci, G. State,
+      from synthetic lidar sequential point cloud for semantic segmentation,”            O. Shapira, and S. Birchfield, “Structured domain randomization:
+      arXiv preprint arXiv:2107.05399, 2021.                                             Bridging the reality gap by context-aware synthetic data,” in 2019
+ [28] A. Kar, A. Prakash, M.-Y. Liu, E. Cameracci, J. Yuan, M. Rusiniak,                 International Conference on Robotics and Automation (ICRA). IEEE,
+      D. Acuna, A. Torralba, and S. Fidler, “Meta-sim: Learning to generate              2019, pp. 7249–7255.
+      synthetic datasets,” in Proceedings of the IEEE/CVF International             [50] R. Khirodkar, D. Yoo, and K. M. Kitani, “Vadra: Visual ad-
+      Conference on Computer Vision, 2019, pp. 4551–4560.                                versarial domain randomization and augmentation,” arXiv preprint
+ [29] J. Devaranjan, A. Kar, and S. Fidler, “Meta-sim2: Unsupervised learning            arXiv:1812.00491, 2018.
+      of scene structure for synthetic data generation,” in European Conference     [51] Y. Zhu, C. Miao, F. Hajiaghajani, M. Huai, L. Su, and C. Qiao,
+      on Computer Vision. Springer, 2020, pp. 715–733.                                   “Adversarial attacks against lidar semantic segmentation in autonomous
+ [30] A. Savkin, R. Ellouze, N. Navab, and F. Tombari, “Unsupervised traffic             driving,” in Proceedings of the 19th ACM Conference on Embedded
+      scene generation with synthetic 3d scene graphs,” in 2021 IEEE/RSJ                 Networked Sensor Systems, 2021, pp. 329–342.
+      International Conference on Intelligent Robots and Systems (IROS).            [52] N. Ruiz, S. Schulter, and M. Chandraker, “Learning to simulate,” arXiv
+      IEEE, 2021, pp. 1229–1235.                                                         preprint arXiv:1810.02513, 2018.
+ [31] W. Ding, W. Wang, and D. Zhao, “A new multi-vehicle trajectory                [53] M. O’Kelly, A. Sinha, H. Namkoong, J. Duchi, and R. Tedrake, “Scalable
+      generator to simulate vehicle-to-vehicle encounters,” arXiv preprint               end-to-end autonomous vehicle testing via rare-event simulation,” arXiv
+      arXiv:1809.05680, 2018.                                                            preprint arXiv:1811.00145, 2018.
+ [32] M. Håkansson and J. Wall, “Driving scenario generation using generative       [54] Y. Abeysirigoonawardena, F. Shkurti, and G. Dudek, “Generating
+      adversarial networks,” Master Thesis, 2021.                                        adversarial driving scenarios in high-fidelity simulators,” in 2019
+ [33] W. Ding, M. Xu, and D. Zhao, “Cmts: A conditional multiple trajectory              International Conference on Robotics and Automation (ICRA). IEEE,
+      synthesizer for generating safety-critical driving scenarios,” in 2020             2019, pp. 8271–8277.
+      IEEE International Conference on Robotics and Automation (ICRA).              [55] W. Ding, B. Chen, B. Li, K. J. Eun, and D. Zhao, “Multimodal safety-
+      IEEE, 2020, pp. 4314–4321.                                                         critical scenarios generation for decision-making algorithms evaluation,”
+ [34] Z. Huang, M. Arief, H. Lam, and D. Zhao, “Synthesis of different                   IEEE Robotics and Automation Letters, vol. 6, no. 2, pp. 1551–1558,
+      autonomous vehicles test approaches,” in 2018 21st International                   2021.
+      Conference on Intelligent Transportation Systems (ITSC). IEEE, 2018,          [56] Z. Ghodsi, S. K. S. Hari, I. Frosio, T. Tsai, A. Troccoli, S. W.
+      pp. 2000–2005.                                                                     Keckler, S. Garg, and A. Anandkumar, “Generating and characterizing
+ [35] Y. Guo, V. V. Kalidindi, M. Arief, W. Wang, J. Zhu, H. Peng,                       scenarios for safety testing of autonomous vehicles,” arXiv preprint
+      and D. Zhao, “Modeling multi-vehicle interaction scenarios using                   arXiv:2103.07403, 2021.
+      gaussian random field,” in 2019 IEEE Intelligent Transportation Systems       [57] J. Wang, A. Pun, J. Tu, S. Manivasagam, A. Sadat, S. Casas, M. Ren,
+      Conference (ITSC). IEEE, 2019, pp. 3974–3980.                                      and R. Urtasun, “Advsim: Generating safety-critical scenarios for self-
+ [36] S. Tan, K. Wong, S. Wang, S. Manivasagam, M. Ren, and R. Urtasun,                  driving vehicles,” in Proceedings of the IEEE/CVF Conference on
+      “Scenegen: Learning to generate realistic traffic scenes,” in Proceed-             Computer Vision and Pattern Recognition, 2021, pp. 9909–9918.
+      ings of the IEEE/CVF Conference on Computer Vision and Pattern                [58] A. Nonnengart, M. Klusch, and C. Müller, “Crisgen: Constraint-
+      Recognition, 2021, pp. 892–901.                                                    based generation of critical scenarios for autonomous vehicles,” in
+ [37] M. Wen, J. Park, and K. Cho, “A scenario generation pipeline                       International Symposium on Formal Methods. Springer, 2019, pp.
+      for autonomous vehicle simulators,” Human-centric Computing and                    233–248.
+      Information Sciences, vol. 10, pp. 1–15, 2020.                                [59] S. Feng, X. Yan, H. Sun, Y. Feng, and H. X. Liu, “Intelligent driving
+ [38] T. A. Wheeler, M. J. Kochenderfer, and P. Robbel, “Initial scene                   intelligence test for autonomous vehicles with naturalistic and adversarial
+      configurations for highway traffic propagation,” in 2015 IEEE 18th                 environment,” Nature communications, vol. 12, no. 1, pp. 1–14, 2021.
+      International Conference on Intelligent Transportation Systems. IEEE,         [60] H. Sun, S. Feng, X. Yan, and H. X. Liu, “Corner case generation and
+      2015, pp. 279–284.                                                                 analysis for safety assessment of autonomous vehicles,” arXiv preprint
+ [39] T. A. Wheeler and M. J. Kochenderfer, “Factor graph scene distributions            arXiv:2102.03483, 2021.
+      for automotive safety analysis,” in 2016 IEEE 19th International              [61] M. Koren, S. Alsaif, R. Lee, and M. J. Kochenderfer, “Adaptive stress
+      Conference on Intelligent Transportation Systems (ITSC). IEEE, 2016,               testing for autonomous vehicles,” in 2018 IEEE Intelligent Vehicles
+      pp. 1035–1040.                                                                     Symposium (IV). IEEE, 2018, pp. 1–7.
+ [40] ——, “Critical factor graph situation clusters for accelerated automotive      [62] M. Koren and M. J. Kochenderfer, “Efficient autonomy validation
+      safety validation,” in 2019 IEEE Intelligent Vehicles Symposium (IV).              in simulation with adaptive stress testing,” in 2019 IEEE Intelligent
+      IEEE, 2019, pp. 2133–2139.                                                         Transportation Systems Conference (ITSC). IEEE, 2019, pp. 4178–
+ [41] B. Wulfe, S. Chintakindi, S.-C. T. Choi, R. Hartong-Redden, A. Kodali,             4183.
+      and M. J. Kochenderfer, “Real-time prediction of intermediate-horizon         [63] ——, “Adaptive stress testing without domain heuristics using go-
+      automotive collision risk,” arXiv preprint arXiv:1802.01532, 2018.                 explore,” in 2020 IEEE 23rd International Conference on Intelligent
+ [42] M. Bojarski, D. Del Testa, D. Dworakowski, B. Firner, B. Flepp,                    Transportation Systems (ITSC). IEEE, 2020, pp. 1–6.
+      P. Goyal, L. D. Jackel, M. Monfort, U. Muller, J. Zhang et al., “End          [64] M. Koren, A. Nassar, and M. J. Kochenderfer, “Finding failures in
+      to end learning for self-driving cars,” arXiv preprint arXiv:1604.07316,           high-fidelity simulation using adaptive stress testing and the backward
+      2016.                                                                              algorithm,” arXiv preprint arXiv:2107.12940, 2021.
+ [43] J. Ho and S. Ermon, “Generative adversarial imitation learning,”              [65] D. Rempe, J. Philion, L. J. Guibas, S. Fidler, and O. Litany, “Generating
+      Advances in neural information processing systems, vol. 29, pp. 4565–              useful accident-prone driving scenarios via a learned traffic prior,” in
+      4573, 2016.                                                                        Proceedings of the IEEE/CVF Conference on Computer Vision and
+ [44] J. Chen, B. Yuan, and M. Tomizuka, “Deep imitation learning for                    Pattern Recognition, 2022, pp. 17 305–17 315.
+      autonomous driving in generic urban scenarios with enhanced safety,”          [66] M. Arief, Z. Huang, G. K. S. Kumar, Y. Bai, S. He, W. Ding, H. Lam,
+      in 2019 IEEE/RSJ International Conference on Intelligent Robots and                and D. Zhao, “Deep probabilistic accelerated evaluation: A robust
+      Systems (IROS). IEEE, 2019, pp. 2884–2890.                                         certifiable rare-event simulation methodology for black-box safety-
+ [45] L. Jain, V. Chandrasekaran, U. Jang, W. Wu, A. Lee, A. Yan, S. Chen,               critical systems,” in International Conference on Artificial Intelligence
+      S. Jha, and S. A. Seshia, “Analyzing and improving neural networks by              and Statistics. PMLR, 2021, pp. 595–603.
+      generating semantic counterexamples through differentiable rendering,”        [67] M. Arief, Y. Bai, W. Ding, S. He, Z. Huang, H. Lam, and D. Zhao,
+      arXiv preprint arXiv:1910.00727, 2019.                                             “Certifiable deep importance sampling for rare-event simulation of black-
+ [46] J. Tu, M. Ren, S. Manivasagam, M. Liang, B. Yang, R. Du, F. Cheng,                 box systems,” arXiv preprint arXiv:2111.02204, 2021.
+      and R. Urtasun, “Physically realizable adversarial examples for lidar         [68] B. Chen, X. Chen, Q. Wu, and L. Li, “Adversarial evaluation of
+      object detection,” in Proceedings of the IEEE/CVF Conference on                    autonomous vehicles in lane-change scenarios,” IEEE Transactions
+      Computer Vision and Pattern Recognition, 2020, pp. 13 716–13 725.                  on Intelligent Transportation Systems, 2021.
+JOURNAL OF LATEX CLASS FILES                                                                                                                                     15
+
+
+
+ [69] A. Wachi, “Failure-scenario maker for rule-based agent using multi-            [91] O. E. L. Team, A. Stooke, A. Mahajan, C. Barros, C. Deck, J. Bauer,
+      agent adversarial reinforcement learning and its application to au-                 J. Sygnowski, M. Trebacz, M. Jaderberg, M. Mathieu et al., “Open-
+      tonomous driving,” arXiv preprint arXiv:1903.10654, 2019.                           ended learning leads to generally capable agents,” arXiv preprint
+ [70] S. Kuutti, S. Fallah, and R. Bowden, “Training adversarial agents to                arXiv:2107.12808, 2021.
+      exploit weaknesses in deep control policies,” in 2020 IEEE International       [92] T. Karras, S. Laine, M. Aittala, J. Hellsten, J. Lehtinen, and T. Aila,
+      Conference on Robotics and Automation (ICRA). IEEE, 2020, pp.                       “Analyzing and improving the image quality of stylegan,” in Proceed-
+      108–114.                                                                            ings of the IEEE/CVF Conference on Computer Vision and Pattern
+ [71] R. Lee, M. J. Kochenderfer, O. J. Mengshoel, G. P. Brat, and M. P.                  Recognition, 2020, pp. 8110–8119.
+      Owen, “Adaptive stress testing of airborne collision avoidance systems,”       [93] H. Kato, Y. Ushiku, and T. Harada, “Neural 3d mesh renderer,” in
+      in 2015 IEEE/AIAA 34th Digital Avionics Systems Conference (DASC).                  Proceedings of the IEEE conference on computer vision and pattern
+      IEEE, 2015, pp. 6C2–1.                                                              recognition, 2018, pp. 3907–3916.
+ [72] P. Cai, Y. Lee, Y. Luo, and D. Hsu, “Summit: A simulator for urban             [94] S. Liu, T. Li, W. Chen, and H. Li, “Soft rasterizer: A differentiable
+      driving in massive mixed traffic,” in 2020 IEEE International Conference            renderer for image-based 3d reasoning,” in Proceedings of the IEEE/CVF
+      on Robotics and Automation (ICRA). IEEE, 2020, pp. 4023–4029.                       International Conference on Computer Vision, 2019, pp. 7708–7717.
+ [73] G. Ros, V. Koltun, F. Codevilla, and A. Lopez, “Carla autonomous               [95] J. C. Hayward, “Near miss determination through use of a scale of
+      driving challenge 2019,” [EB/OL], https://carlachallenge.org/.                      danger,” 1972.
+ [74] Q. Li, Z. Peng, Z. Xue, Q. Zhang, and B. Zhou, “Metadrive: Composing           [96] M. M. Minderhoud and P. H. Bovy, “Extended time-to-collision
+      diverse driving scenarios for generalizable reinforcement learning,”                measures for road traffic safety assessment,” Accident Analysis &
+      arXiv preprint arXiv:2109.12674, 2021.                                              Prevention, vol. 33, no. 1, pp. 89–97, 2001.
+ [75] D. J. Fremont, E. Kim, T. Dreossi, S. Ghosh, X. Yue, A. L. Sangiovanni-        [97] K. Ozbay, H. Yang, B. Bartin, and S. Mudigonda, “Derivation and valida-
+      Vincentelli, and S. A. Seshia, “Scenic: A language for scenario                     tion of new simulation-based surrogate safety measure,” Transportation
+      specification and data generation,” Machine Learning, pp. 1–45, 2022.               research record, vol. 2083, no. 1, pp. 105–113, 2008.
+ [76] D. J. Fremont, E. Kim, Y. V. Pant, S. A. Seshia, A. Acharya, X. Bruso,         [98] B. L. Allen, B. T. Shin, and P. J. Cooper, “Analysis of traffic conflicts
+      P. Wells, S. Lemke, Q. Lu, and S. Mehta, “Formal scenario-based                     and collisions,” Tech. Rep., 1978.
+      testing of autonomous vehicles: From simulation to the real world,” in         [99] S. Almqvist, C. Hyden, and R. Risser, “Use of speed limiters in cars
+      2020 IEEE 23rd International Conference on Intelligent Transportation               for increased safety and a better environment,” Transportation Research
+      Systems (ITSC). IEEE, 2020, pp. 1–8.                                                Record, no. 1318, 1991.
+ [77] D. McDuff, Y. Song, J. Lee, V. Vineet, S. Vemprala, N. Gyde,                  [100] S. S. Mahmud, L. Ferreira, M. S. Hoque, and A. Tavassoli, “Application
+      H. Salman, S. Ma, K. Sohn, and A. Kapoor, “Causalcity: Complex                      of proximal surrogate indicators for safety evaluation: A review of recent
+      simulations with agency for causal discovery and reasoning,” arXiv                  developments and research needs,” IATSS research, vol. 41, no. 4, pp.
+      preprint arXiv:2106.13364, 2021.                                                    153–163, 2017.
+ [78] G. Bagschik, T. Menzel, and M. Maurer, “Ontology based scene creation         [101] Z. Huang, M. Arief, H. Lam, and D. Zhao, “Evaluation uncertainty in
+      for the development of automated vehicles,” in 2018 IEEE Intelligent                data-driven self-driving testing,” in 2019 IEEE Intelligent Transportation
+      Vehicles Symposium (IV). IEEE, 2018, pp. 1813–1820.                                 Systems Conference (ITSC). IEEE, 2019, pp. 1902–1907.
+ [79] A. Rana and A. Malhi, “Building safer autonomous agents by leveraging
+                                                                                    [102] S. G. Henderson, “Input model uncertainty: Why do we care and what
+      risky driving behavior knowledge,” arXiv preprint arXiv:2103.10245,
+                                                                                          should we do about it?” in Winter Simulation Conference, vol. 1, 2003,
+      2021.
+                                                                                          pp. 90–100.
+ [80] M. Zhou, J. Luo, J. Villella, Y. Yang, D. Rusu, J. Miao, W. Zhang,
+                                                                                    [103] R. R. Barton, B. L. Nelson, and W. Xie, “A framework for input
+      M. Alban, I. Fadakar, Z. Chen et al., “Smarts: Scalable multi-agent
+                                                                                          uncertainty analysis,” in Proceedings of the 2010 Winter Simulation
+      reinforcement learning training school for autonomous driving,” arXiv
+                                                                                          Conference. IEEE, 2010, pp. 1189–1198.
+      preprint arXiv:2010.09776, 2020.
+                                                                                    [104] S. Shafaei, S. Kugele, M. H. Osman, and A. Knoll, “Uncertainty in
+ [81] W. Ding, B. Li, K. J. Eun, and D. Zhao, “Semantically controllable
+                                                                                          machine learning: A safety perspective on autonomous driving,” in
+      scene generation with guidance of explicit knowledge,” arXiv preprint
+                                                                                          International Conference on Computer Safety, Reliability, and Security.
+      arXiv:2106.04066, 2021.
+                                                                                          Springer, 2018, pp. 458–464.
+ [82] W. Ding, H. Lin, B. Li, and D. Zhao, “Causalaf: Causal autoregressive
+      flow for goal-directed safety-critical scenes generation,” arXiv preprint     [105] N. Webb, D. Smith, C. Ludwick, T. Victor, Q. Hommes, F. Favaro,
+      arXiv:2110.13939, 2021.                                                             G. Ivanov, and T. Daniel, “Waymo’s safety methodologies and safety
+ [83] Q. Zhang, S. Hu, J. Sun, Q. A. Chen, and Z. M. Mao, “On adversarial                 readiness determinations,” arXiv preprint arXiv:2011.00054, 2020.
+      robustness of trajectory prediction for autonomous vehicles,” arXiv           [106] H. Pham and X. Zhang, “Nhpp software reliability and cost models
+      preprint arXiv:2201.05057, 2022.                                                    with testing coverage,” European Journal of Operational Research, vol.
+ [84] Y. Cao, D. Xu, X. Weng, Z. Mao, A. Anandkumar, C. Xiao, and                         145, no. 2, pp. 443–454, 2003.
+      M. Pavone, “Robust trajectory prediction against adversarial attacks,”        [107] E. B. Fox, E. B. Sudderth, M. I. Jordan, and A. S. Willsky, “An hdp-
+      arXiv preprint arXiv:2208.00094, 2022.                                              hmm for systems with state persistence,” in Proceedings of the 25th
+ [85] M. Klischat and M. Althoff, “Generating critical test scenarios for                 international conference on Machine learning, 2008, pp. 312–319.
+      automated vehicles with evolutionary algorithms,” in 2019 IEEE                [108] Z. Ghahramani, “Learning dynamic bayesian networks,” International
+      Intelligent Vehicles Symposium (IV). IEEE, 2019, pp. 2352–2358.                     School on Neural Networks, Initiated by IIASS and EMFCSC, pp. 168–
+ [86] M. Althoff and S. Lutz, “Automatic generation of safety-critical test               197, 1997.
+      scenarios for collision avoidance of road vehicles,” in 2018 IEEE             [109] S. Hochreiter and J. Schmidhuber, “Long short-term memory,” Neural
+      Intelligent Vehicles Symposium (IV). IEEE, 2018, pp. 1326–1333.                     computation, vol. 9, no. 8, pp. 1735–1780, 1997.
+ [87] E. Rocklage, H. Kraft, A. Karatas, and J. Seewig, “Automated scenario         [110] K. O’Shea and R. Nash, “An introduction to convolutional neural
+      generation for regression testing of autonomous vehicles,” in 2017 ieee             networks,” arXiv preprint arXiv:1511.08458, 2015.
+      20th international conference on intelligent transportation systems (itsc).   [111] S. Suo, S. Regalado, S. Casas, and R. Urtasun, “Trafficsim: Learning
+      IEEE, 2017, pp. 476–483.                                                            to simulate realistic multi-agent behaviors,” in Proceedings of the
+ [88] M. Klischat, E. I. Liu, F. Holtke, and M. Althoff, “Scenario factory:               IEEE/CVF Conference on Computer Vision and Pattern Recognition,
+      Creating safety-critical traffic scenarios for automated vehicles,” in              2021, pp. 10 400–10 409.
+      2020 IEEE 23rd International Conference on Intelligent Transportation         [112] I. Goodfellow, J. Pouget-Abadie, M. Mirza, B. Xu, D. Warde-Farley,
+      Systems (ITSC). IEEE, 2020, pp. 1–7.                                                S. Ozair, A. Courville, and Y. Bengio, “Generative adversarial nets,”
+ [89] X. Wang, H. Krasowski, and M. Althoff, “Commonroad-rl: a con-                       Advances in neural information processing systems, vol. 27, 2014.
+      figurable reinforcement learning environment for motion planning              [113] D. P. Kingma and M. Welling, “Auto-encoding variational bayes,” arXiv
+      of autonomous vehicles,” in 2021 IEEE International Intelligent                     preprint arXiv:1312.6114, 2013.
+      Transportation Systems Conference (ITSC). IEEE, 2021, pp. 466–                [114] A. Van Oord, N. Kalchbrenner, and K. Kavukcuoglu, “Pixel recurrent
+      472.                                                                                neural networks,” in International Conference on Machine Learning.
+ [90] S. Shiroshita, S. Maruyama, D. Nishiyama, M. Y. Castro, K. Hamzaoui,                PMLR, 2016, pp. 1747–1756.
+      G. Rosman, J. DeCastro, K.-H. Lee, and A. Gaidon, “Behaviorally               [115] A. v. d. Oord, S. Dieleman, H. Zen, K. Simonyan, O. Vinyals,
+      diverse traffic simulation via reinforcement learning,” in 2020 IEEE/RSJ            A. Graves, N. Kalchbrenner, A. Senior, and K. Kavukcuoglu, “Wavenet:
+      International Conference on Intelligent Robots and Systems (IROS).                  A generative model for raw audio,” arXiv preprint arXiv:1609.03499,
+      IEEE, 2020, pp. 2103–2110.                                                          2016.
+JOURNAL OF LATEX CLASS FILES                                                                                                                                         16
+
+
+
+[116] L. Dinh, J. Sohl-Dickstein, and S. Bengio, “Density estimation using                     Conference on Computer Vision and Pattern Recognition, 2019, pp.
+      real nvp,” arXiv preprint arXiv:1605.08803, 2016.                                        8748–8757.
+[117] R. T. Chen, Y. Rubanova, J. Bettencourt, and D. Duvenaud, “Neural                  [140] A. Dosovitskiy, G. Ros, F. Codevilla, A. Lopez, and V. Koltun, “Carla:
+      ordinary differential equations,” arXiv preprint arXiv:1806.07366, 2018.                 An open urban driving simulator,” in Conference on robot learning.
+[118] J. Ho, A. Jain, and P. Abbeel, “Denoising diffusion probabilistic models,”               PMLR, 2017, pp. 1–16.
+      arXiv preprint arXiv:2006.11239, 2020.                                             [141] S. R. Contributors, “Carla Scenario Runner,” https://github.com/
+[119] J. Song, C. Meng, and S. Ermon, “Denoising diffusion implicit models,”                   carla-simulator/scenario_runner, 2019.
+      arXiv preprint arXiv:2010.02502, 2020.                                             [142] D. drive Contributors, “DI-drive: OpenDILab decision intelligence plat-
+[120] A. Hussein, M. M. Gaber, E. Elyan, and C. Jayne, “Imitation learning: A                  form for autonomous driving simulation,” https://github.com/opendilab/
+      survey of learning methods,” ACM Computing Surveys (CSUR), vol. 50,                      DI-drive, 2021.
+      no. 2, pp. 1–35, 2017.                                                             [143] R. M. Smullyan, First-order logic. Courier Corporation, 1995.
+[121] D. Fernández Llorca and E. Gómez, “Trustworthy autonomous vehicles,”               [144] W. Ding, H. Lin, B. Li, and D. Zhao, “Generalizing goal-conditioned
+      Joint Research Centre (Seville site), Tech. Rep., 2021.                                  reinforcement learning with variational causal reasoning,” arXiv preprint
+[122] J. Tobin, R. Fong, A. Ray, J. Schneider, W. Zaremba, and P. Abbeel,                      arXiv:2207.09081, 2022.
+      “Domain randomization for transferring deep neural networks from                   [145] J. Bennett, OpenStreetMap. Packt Publishing Ltd, 2010.
+      simulation to the real world,” in 2017 IEEE/RSJ international conference           [146] G. J. Brostow, J. Fauqueur, and R. Cipolla, “Semantic object classes in
+      on intelligent robots and systems (IROS). IEEE, 2017, pp. 23–30.                         video: A high-definition ground truth database,” Pattern Recognition
+[123] P. I. Frazier, “A tutorial on bayesian optimization,” arXiv preprint                     Letters, vol. 30, no. 2, pp. 88–97, 2009.
+      arXiv:1807.02811, 2018.                                                            [147] A. Geiger, P. Lenz, C. Stiller, and R. Urtasun, “Vision meets robotics:
+[124] R. J. Williams, “Simple statistical gradient-following algorithms for                    The kitti dataset,” The International Journal of Robotics Research,
+      connectionist reinforcement learning,” Machine learning, vol. 8, no. 3,                  vol. 32, no. 11, pp. 1231–1237, 2013.
+      pp. 229–256, 1992.                                                                 [148] X. Li, F. Flohr, Y. Yang, H. Xiong, M. Braun, S. Pan, K. Li, and
+[125] R. S. Sutton and A. G. Barto, Reinforcement learning: An introduction.                   D. M. Gavrila, “A new benchmark for vision-based cyclist detection,”
+      MIT press, 2018.                                                                         in 2016 IEEE Intelligent Vehicles Symposium (IV). IEEE, 2016, pp.
+[126] V. Mnih, A. P. Badia, M. Mirza, A. Graves, T. Lillicrap, T. Harley,                      1028–1033.
+      D. Silver, and K. Kavukcuoglu, “Asynchronous methods for deep rein-                [149] M. Cordts, M. Omran, S. Ramos, T. Rehfeld, M. Enzweiler, R. Benenson,
+      forcement learning,” in International conference on machine learning.                    U. Franke, S. Roth, and B. Schiele, “The cityscapes dataset for semantic
+      PMLR, 2016, pp. 1928–1937.                                                               urban scene understanding,” in Proceedings of the IEEE conference on
+                                                                                               computer vision and pattern recognition, 2016, pp. 3213–3223.
+[127] T. P. Lillicrap, J. J. Hunt, A. Pritzel, N. Heess, T. Erez, Y. Tassa, D. Silver,
+                                                                                         [150] G. Ros, L. Sellart, J. Materzynska, D. Vazquez, and A. M. Lopez, “The
+      and D. Wierstra, “Continuous control with deep reinforcement learning,”
+                                                                                               synthia dataset: A large collection of synthetic images for semantic
+      arXiv preprint arXiv:1509.02971, 2015.
+                                                                                               segmentation of urban scenes,” in Proceedings of the IEEE conference
+[128] R. Lowe, Y. Wu, A. Tamar, J. Harb, P. Abbeel, and I. Mordatch, “Multi-
+                                                                                               on computer vision and pattern recognition, 2016, pp. 3234–3243.
+      agent actor-critic for mixed cooperative-competitive environments,”
+                                                                                         [151] A. Robicquet, A. Sadeghian, A. Alahi, and S. Savarese, “Learning
+      arXiv preprint arXiv:1706.02275, 2017.
+                                                                                               social etiquette: Human trajectory understanding in crowded scenes,” in
+[129] D. Zhao, H. Peng, H. Lam, S. Bao, K. Nobukawa, D. J. LeBlanc, and                        European conference on computer vision. Springer, 2016, pp. 549–565.
+      C. S. Pan, “Accelerated evaluation of automated vehicles in lane change            [152] W. Maddern, G. Pascoe, C. Linegar, and P. Newman, “1 Year, 1000km:
+      scenarios,” in ASME 2015 Dynamic Systems and Control Conference.                         The Oxford RobotCar Dataset,” The International Journal of Robotics
+      American Society of Mechanical Engineers, 2015, pp. V001T17A002—                         Research (IJRR), vol. 36, no. 1, pp. 3–15, 2017. [Online]. Available:
+      -V001T17A002.                                                                            http://dx.doi.org/10.1177/0278364916679498
+[130] D. Zhao, H. Lam, H. Peng, S. Bao, D. J. LeBlanc, K. Nobukawa,                      [153] G. Neuhold, T. Ollmann, S. Rota Bulo, and P. Kontschieder, “The
+      and C. S. Pan, “Accelerated evaluation of automated vehicles safety in                   mapillary vistas dataset for semantic understanding of street scenes,” in
+      lane-change scenarios based on importance sampling techniques,” IEEE                     Proceedings of the IEEE international conference on computer vision,
+      Transactions on Intelligent Transportation Systems.                                      2017, pp. 4990–4999.
+[131] D. Zhao, X. Huang, H. Peng, H. Lam, and D. J. LeBlanc, “Accelerated                [154] S. R. Richter, Z. Hayder, and V. Koltun, “Playing for benchmarks,” in
+      evaluation of automated vehicles in car-following maneuvers,” IEEE                       Proceedings of the IEEE International Conference on Computer Vision,
+      Transactions on Intelligent Transportation Systems, vol. 19, no. 3, pp.                  2017, pp. 2213–2222.
+      733–744, 2018.                                                                     [155] F. Yu, H. Chen, X. Wang, W. Xian, Y. Chen, F. Liu, V. Madhavan,
+[132] Z. Huang, D. Zhao, H. Lam, D. J. LeBlanc, and H. Peng, “Evaluation                       and T. Darrell, “Bdd100k: A diverse driving dataset for heterogeneous
+      of automated vehicles in the frontal cut-in scenario — an enhanced                       multitask learning,” in Proceedings of the IEEE/CVF conference on
+      approach using piecewise mixture models,” in 2017 IEEE International                     computer vision and pattern recognition, 2020, pp. 2636–2645.
+      Conference on Robotics and Automation (ICRA), May 2017, pp. 197–                   [156] R. Krajewski, J. Bock, L. Kloeker, and L. Eckstein, “The highd dataset:
+      202.                                                                                     A drone dataset of naturalistic vehicle trajectories on german highways
+[133] Z. Huang, Y. Guo, M. Arief, H. Lam, and D. Zhao, “A versatile approach                   for validation of highly automated driving systems,” in 2018 21st
+      to evaluating and testing automated vehicles based on kernel methods,”                   International Conference on Intelligent Transportation Systems (ITSC).
+      in 2018 Annual American Control Conference (ACC). IEEE, 2018,                            IEEE, 2018, pp. 2118–2125.
+      pp. 4796–4802.                                                                     [157] “Udacity Dataset,” https://github.com/udacity/self-driving-car/tree/
+[134] Z. Huang, H. Lam, and D. Zhao, “Rare-event simulation without                            master/datasets, 2018.
+      structural information: a learning-based approach,” in 2018 Winter                 [158] Y. Choi, N. Kim, S. Hwang, K. Park, J. S. Yoon, K. An, and I. S. Kweon,
+      Simulation Conference (WSC). IEEE, 2018, pp. 1826–1837.                                  “Kaist multi-spectral day/night data set for autonomous and assisted
+[135] M. Arief, Z. Huang, G. K. S. Kumar, Y. Bai, S. He, W. Ding, H. Lam,                      driving,” IEEE Transactions on Intelligent Transportation Systems,
+      and D. Zhao, “Deep probabilistic accelerated evaluation: A certifiable                   vol. 19, no. 3, pp. 934–948, 2018.
+      rare-event simulation methodology for black-box autonomy,” arXiv                   [159] M.-F. Chang, J. W. Lambert, P. Sangkloy, J. Singh, S. Bak, A. Hartnett,
+      preprint arXiv:2006.15722, 2020.                                                         D. Wang, P. Carr, S. Lucey, D. Ramanan, and J. Hays, “Argoverse: 3d
+[136] M. Xu, P. Huang, F. Li, J. Zhu, X. Qi, K. Oguchi, Z. Huang, H. Lam,                      tracking and forecasting with rich maps,” in Conference on Computer
+      and D. Zhao, “Accelerated policy evaluation: Learning adversarial                        Vision and Pattern Recognition (CVPR), 2019.
+      environments with adaptive importance sampling,” arXiv preprint                    [160] R. Chandra, U. Bhattacharya, A. Bera, and D. Manocha, “Traphic:
+      arXiv:2106.10566, 2021.                                                                  Trajectory prediction in dense and heterogeneous traffic using weighted
+[137] J. Schulman, F. Wolski, P. Dhariwal, A. Radford, and O. Klimov, “Prox-                   interactions,” in Proceedings of the IEEE/CVF Conference on Computer
+      imal policy optimization algorithms,” arXiv preprint arXiv:1707.06347,                   Vision and Pattern Recognition, 2019, pp. 8483–8492.
+      2017.                                                                              [161] X. Huang, P. Wang, X. Cheng, D. Zhou, Q. Geng, and R. Yang, “The
+[138] A. v. Lamsweerde, “Formal specification: a roadmap,” in Proceedings                      apolloscape open dataset for autonomous driving and its application,”
+      of the Conference on the Future of Software Engineering, 2000, pp.                       IEEE transactions on pattern analysis and machine intelligence, vol. 42,
+      147–159.                                                                                 no. 10, pp. 2702–2719, 2019.
+[139] M.-F. Chang, J. Lambert, P. Sangkloy, J. Singh, S. Bak, A. Hartnett,               [162] A. Zyner, S. Worrall, and E. M. Nebot, “Acfr five roundabouts dataset:
+      D. Wang, P. Carr, S. Lucey, D. Ramanan et al., “Argoverse: 3d tracking                   Naturalistic driving at unsignalized intersections,” IEEE Intelligent
+      and forecasting with rich maps,” in Proceedings of the IEEE/CVF                          Transportation Systems Magazine, vol. 11, no. 4, pp. 8–18, 2019.
+JOURNAL OF LATEX CLASS FILES                                                                                                                                     17
+
+
+
+[163] A. Patil, S. Malla, H. Gang, and Y.-T. Chen, “The h3d dataset for             [184] A. Best, S. Narang, L. Pasqualin, D. Barber, and D. Manocha, “Autonovi-
+      full-surround 3d multi-object detection and tracking in crowded urban               sim: Autonomous vehicle simulation platform with weather, sensing,
+      scenes,” in 2019 International Conference on Robotics and Automation                and traffic control,” in Proceedings of the IEEE Conference on Computer
+      (ICRA). IEEE, 2019, pp. 9552–9557.                                                  Vision and Pattern Recognition Workshops, 2018, pp. 1048–1056.
+[164] W. Zhan, L. Sun, D. Wang, H. Shi, A. Clausse, M. Naumann, J. Küm-             [185] S. Shah, D. Dey, C. Lovett, and A. Kapoor, “Airsim: High-fidelity visual
+      merle, H. Königshof, C. Stiller, A. de La Fortelle, and M. Tomizuka,                and physical simulation for autonomous vehicles,” in Field and service
+      “INTERACTION Dataset: An INTERnational, Adversarial and Cooper-                     robotics. Springer, 2018, pp. 621–635.
+      ative moTION Dataset in Interactive Driving Scenarios with Semantic           [186] P. A. Lopez, M. Behrisch, L. Bieker-Walz, J. Erdmann, Y.-P. Flötteröd,
+      Maps,” arXiv:1910.03088 [cs, eess], Sep. 2019.                                      R. Hilbrich, L. Lücken, J. Rummel, P. Wagner, and E. Wießner,
+[165] J. Bock, R. Krajewski, T. Moers, S. Runde, L. Vater, and L. Eckstein,               “Microscopic traffic simulation using sumo,” in 2018 21st International
+      “The ind dataset: A drone dataset of naturalistic road user trajectories            Conference on Intelligent Transportation Systems (ITSC). IEEE, 2018,
+      at german intersections,” in 2020 IEEE Intelligent Vehicles Symposium               pp. 2575–2582.
+      (IV). IEEE, 2020, pp. 1929–1934.                                              [187] “Apollo Simulation,” http://apollo.auto/platform/simulation.html, 2018.
+[166] R. Krajewski, T. Moers, J. Bock, L. Vater, and L. Eckstein, “The round        [188] M. Müller, V. Casser, J. Lahoud, N. Smith, and B. Ghanem, “Sim4cv: A
+      dataset: A drone dataset of road user trajectories at roundabouts in                photo-realistic simulator for computer vision applications,” International
+      germany,” in 2020 IEEE 23rd International Conference on Intelligent                 Journal of Computer Vision, vol. 126, no. 9, pp. 902–919, 2018.
+      Transportation Systems (ITSC). IEEE, 2020, pp. 1–6.                           [189] W. Schwarting, T. Seyde, I. Gilitschenski, L. Liebenwein, R. Sander,
+[167] H. Caesar, V. Bankiti, A. H. Lang, S. Vora, V. E. Liong, Q. Xu,                     S. Karaman, and D. Rus, “Deep latent competition: Learning to race
+      A. Krishnan, Y. Pan, G. Baldan, and O. Beijbom, “nuscenes: A                        using visual control policies in latent space,” in Conference on Robot
+      multimodal dataset for autonomous driving,” in Proceedings of the                   Learning, 2020.
+      IEEE/CVF conference on computer vision and pattern recognition,               [190] G. Rong, B. H. Shin, H. Tabatabaee, Q. Lu, S. Lemke, M. Možeiko,
+      2020, pp. 11 621–11 631.                                                            E. Boise, G. Uhm, M. Gerow, S. Mehta et al., “Lgsvl simulator: A
+[168] J. Houston, G. Zuidhof, L. Bergamini, Y. Ye, L. Chen, A. Jain, S. Omari,            high fidelity simulator for autonomous driving,” in 2020 IEEE 23rd
+      V. Iglovikov, and P. Ondruska, “One thousand and one hours: Self-                   International Conference on Intelligent Transportation Systems (ITSC).
+      driving motion prediction dataset,” arXiv preprint arXiv:2006.14480,                IEEE, 2020, pp. 1–6.
+      2020.                                                                         [191] J. Herman, J. Francis, S. Ganju, B. Chen, A. Koul, A. Gupta,
+[169] P. Sun, H. Kretzschmar, X. Dotiwalla, A. Chouard, V. Patnaik, P. Tsui,              A. Skabelkin, I. Zhukov, M. Kumskoy, and E. Nyberg, “Learn-to-
+      J. Guo, Y. Zhou, Y. Chai, B. Caine et al., “Scalability in perception               race: A multimodal control environment for autonomous racing,” in
+      for autonomous driving: Waymo open dataset,” in Proceedings of the                  Proceedings of the IEEE/CVF International Conference on Computer
+      IEEE/CVF Conference on Computer Vision and Pattern Recognition,                     Vision, 2021, pp. 9793–9802.
+      2020, pp. 2446–2454.                                                          [192] T. V. Samak, C. V. Samak, and M. Xie, “Autodrive simulator: A
+[170] Q.-H. Pham, P. Sevestre, R. S. Pahwa, H. Zhan, C. H. Pang, Y. Chen,                 simulator for scaled autonomous vehicle research and education,” arXiv
+      A. Mustafa, V. Chandrasekhar, and J. Lin, “A* 3d dataset: Towards                   preprint arXiv:2103.10030, 2021.
+      autonomous driving in challenging environments,” in 2020 IEEE                 [193] M. Goslin and M. R. Mine, “The panda3d graphics engine,” Computer,
+      International Conference on Robotics and Automation (ICRA). IEEE,                   vol. 37, no. 10, pp. 112–114, 2004.
+      2020, pp. 2267–2273.                                                          [194] J.-M. Jullien, C. Martel, L. Vignollet, and M. Wentland, “Openscenario:
+[171] D. Barnes, M. Gadd, P. Murcutt, P. Newman, and I. Posner, “The                      a flexible integrated environment to develop educational activities based
+      oxford radar robotcar dataset: A radar extension to the oxford robotcar             on pedagogical scenarios,” in 2009 Ninth IEEE International Conference
+      dataset,” in Proceedings of the IEEE International Conference on                    on Advanced Learning Technologies. IEEE, 2009, pp. 509–513.
+      Robotics and Automation (ICRA), Paris, 2020. [Online]. Available:
+                                                                                    [195] C. Xu, W. Ding, W. Lyu, Z. Liu, S. Wang, Y. He, H. Hu, D. Zhao, and
+      https://arxiv.org/abs/1909.01300
+                                                                                          B. Li, “Safebench: A benchmarking platform for safety evaluation of
+[172] B. Wilson, W. Qi, T. Agarwal, J. Lambert, J. Singh, S. Khandelwal,
+                                                                                          autonomous vehicles,” in Advances in Neural Information Processing
+      B. Pan, R. Kumar, A. Hartnett, J. K. Pontes et al., “Argoverse 2: Next
+                                                                                          Systems, 2022.
+      generation datasets for self-driving perception and forecasting,” 2021.
+                                                                                    [196] “SUMO NETEDIT,” https://sumo.dlr.de/docs/Netedit/index.html, 2018.
+[173] P. Xiao, Z. Shao, S. Hao, Z. Zhang, X. Chai, J. Jiao, Z. Li, J. Wu, K. Sun,
+      K. Jiang et al., “Pandaset: Advanced sensor suite dataset for autonomous      [197] “SMARTS Scenario Studio,” https://github.com/huawei-noah/SMARTS/
+      driving,” in 2021 IEEE International Intelligent Transportation Systems             tree/master/smarts/sstudio, 2020.
+      Conference (ITSC). IEEE, 2021, pp. 3095–3101.                                 [198] F. Poggenhans, J.-H. Pauls, J. Janosovits, S. Orf, M. Naumann, F. Kuhnt,
+[174] J. Mao, M. Niu, C. Jiang, H. Liang, J. Chen, X. Liang, Y. Li, C. Ye,                and M. Mayr, “Lanelet2: A high-definition map framework for the
+      W. Zhang, Z. Li et al., “One million scenes for autonomous driving:                 future of automated driving,” in 2018 21st International Conference on
+      Once dataset,” arXiv preprint arXiv:2106.11037, 2021.                               Intelligent Transportation Systems (ITSC). IEEE, 2018, pp. 1672–1679.
+[175] Y. Cui, M. Jia, T.-Y. Lin, Y. Song, and S. Belongie, “Class-balanced          [199] S. Kullback and R. A. Leibler, “On information and sufficiency,” The
+      loss based on effective number of samples,” in Proceedings of the                   annals of mathematical statistics, vol. 22, no. 1, pp. 79–86, 1951.
+      IEEE/CVF conference on computer vision and pattern recognition,               [200] L. V. Kantorovich, “Mathematical methods of organizing and planning
+      2019, pp. 9268–9277.                                                                production,” Management science, vol. 6, no. 4, pp. 366–422, 1960.
+[176] H. B. Lee, H. Lee, D. Na, S. Kim, M. Park, E. Yang, and S. J. Hwang,          [201] B. Mildenhall, P. P. Srinivasan, M. Tancik, J. T. Barron, R. Ramamoorthi,
+      “Learning to balance: Bayesian meta-learning for imbalanced and out-                and R. Ng, “Nerf: Representing scenes as neural radiance fields for
+      of-distribution tasks,” arXiv preprint arXiv:1905.12917, 2019.                      view synthesis,” in European conference on computer vision. Springer,
+[177] B. Wymann, E. Espié, C. Guionneau, C. Dimitrakakis, R. Coulom, and                  2020, pp. 405–421.
+      A. Sumner, “Torcs, the open racing car simulator,” Software available         [202] M. Tancik, V. Casser, X. Yan, S. Pradhan, B. Mildenhall, P. P. Srinivasan,
+      at http://torcs. sourceforge. net, vol. 4, no. 6, p. 2, 2000.                       J. T. Barron, and H. Kretzschmar, “Block-nerf: Scalable large scene
+[178] O. Michel, “Webots: Professional mobile robot simulation,”                          neural view synthesis,” arXiv preprint arXiv:2202.05263, 2022.
+      Journal of Advanced Robotics Systems, vol. 1, no. 1, pp.                      [203] N. Papernot, P. McDaniel, I. Goodfellow, S. Jha, Z. B. Celik, and
+      39–42, 2004. [Online]. Available: http://www.ars-journal.com/                       A. Swami, “Practical black-box attacks against machine learning,” in
+      International-Journal-of-Advanced-Robotic-Systems/Volume-1/39-42.                   Proceedings of the 2017 ACM on Asia conference on computer and
+      pdf                                                                                 communications security, 2017, pp. 506–519.
+[179] “Openai gym car racing,” 2016. [Online]. Available: https://gym.openai.       [204] C. Guo, J. Gardner, Y. You, A. G. Wilson, and K. Weinberger, “Simple
+      com/envs/CarRacing-v0/                                                              black-box adversarial attacks,” in International Conference on Machine
+[180] C. L. Azevedo, N. M. Deshmukh, B. Marimuthu, S. Oh, K. Marczuk,                     Learning. PMLR, 2019, pp. 2484–2493.
+      H. Soh, K. Basak, T. Toledo, L.-S. Peh, and M. E. Ben-Akiva,                  [205] J. Mao, C. Gan, P. Kohli, J. B. Tenenbaum, and J. Wu, “The neuro-
+      “Simmobility short-term: An integrated microscopic mobility simulator,”             symbolic concept learner: Interpreting scenes, words, and sentences
+      Transportation Research Record, vol. 2622, no. 1, pp. 13–23, 2017.                  from natural supervision,” arXiv preprint arXiv:1904.12584, 2019.
+[181] E. Leurent, “An environment for autonomous driving decision-making,”          [206] P. Spirtes and K. Zhang, “Causal discovery and inference: concepts and
+      https://github.com/eleurent/highway-env, 2018.                                      recent methodological advances,” in Applied informatics, vol. 3, no. 1.
+[182] “Deepdrive Simulation,” https://deepdrive.io/, 2018.                                SpringerOpen, 2016, pp. 1–28.
+[183] “Environment Simulator Minimalistic (esmini),” https://github.com/            [207] K. Xu, S. Liu, P. Zhao, P.-Y. Chen, H. Zhang, Q. Fan, D. Erdog-
+      esmini/esmini, 2018.                                                                mus, Y. Wang, and X. Lin, “Structured adversarial attack: Towards
+JOURNAL OF LATEX CLASS FILES                                                   18
+
+
+
+      general implementation and better interpretability,” arXiv preprint
+      arXiv:1808.01664, 2018.
+[208] C. Xiao, J.-Y. Zhu, B. Li, W. He, M. Liu, and D. Song, “Spatially
+      transformed adversarial examples,” arXiv preprint arXiv:1801.02612,
+      2018.
+[209] M. Mirza and S. Osindero, “Conditional generative adversarial nets,”
+      arXiv preprint arXiv:1411.1784, 2014.
+[210] K. Sohn, H. Lee, and X. Yan, “Learning structured output represen-
+      tation using deep conditional generative models,” Advances in neural
+      information processing systems, vol. 28, pp. 3483–3491, 2015.
+[211] R. F. Prudencio, M. R. Maximo, and E. L. Colombini, “A survey on
+      offline reinforcement learning: Taxonomy, review, and open problems,”
+      arXiv preprint arXiv:2203.01387, 2022.
+[212] H.-G. Beyer and B. Sendhoff, “Robust optimization–a comprehensive
+      survey,” Computer methods in applied mechanics and engineering, vol.
+      196, no. 33-34, pp. 3190–3218, 2007.
+[213] H. Rahimian and S. Mehrotra, “Distributionally robust optimization: A
+      review,” arXiv preprint arXiv:1908.05659, 2019.
+[214] P. Soviany, R. T. Ionescu, P. Rota, and N. Sebe, “Curriculum learning:
+      A survey,” arXiv preprint arXiv:2101.10382, 2021.
+[215] R. Kirk, A. Zhang, E. Grefenstette, and T. Rocktäschel, “A survey
+      of generalisation in deep reinforcement learning,” arXiv preprint
+      arXiv:2111.09794, 2021.
+

@@ -1,0 +1,14 @@
+{
+  "manifest": "D:\\Xx\\竞赛\\大创实施ing\\data\\scenarios\\cvae_validation_v2\\manifest.json",
+  "total": 12,
+  "completed": 12,
+  "failed": 0,
+  "missing": 0,
+  "target_level_matches": 4,
+  "target_level_match_rate": 0.3333333333333333,
+  "observed_records": "D:\\Xx\\竞赛\\大创实施ing\\data\\scenarios\\cvae_validation_v2\\observed_records.jsonl",
+  "result_csv": "D:\\Xx\\竞赛\\大创实施ing\\data\\scenarios\\cvae_validation_v2\\result_summary.csv",
+  "analysis_json": "D:\\Xx\\竞赛\\大创实施ing\\data\\scenarios\\cvae_validation_v2\\validation_analysis.json",
+  "analysis_markdown": "D:\\Xx\\竞赛\\大创实施ing\\data\\scenarios\\cvae_validation_v2\\validation_analysis.md",
+  "mean_scores_strictly_increasing": true
+}
