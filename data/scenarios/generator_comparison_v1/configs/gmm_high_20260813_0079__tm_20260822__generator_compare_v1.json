@@ -1,0 +1,175 @@
+{
+  "scenario": {
+    "name": "gmm_high_20260813_0079__tm_20260822__generator_compare_v1",
+    "duration_seconds": 20.0,
+    "ego_spawn_index": 40,
+    "traffic_manager_port": 8000,
+    "stop_on_collision": false,
+    "synchronous_mode": true,
+    "fixed_delta_seconds": 0.05,
+    "traffic_manager_seed": 20260822
+  },
+  "weather": {
+    "cloudiness": 88.827,
+    "precipitation": 91.783,
+    "precipitation_deposits": 81.942,
+    "wind_intensity": 77.953,
+    "fog_density": 85.017,
+    "fog_distance": 13.67,
+    "sun_altitude_angle": -17.463,
+    "wetness": 84.619
+  },
+  "traffic": {
+    "force_green_lights": true,
+    "ignore_lights_percentage": 100.0,
+    "leading_distance_m": 2.5,
+    "route_lock_enabled": true,
+    "route_control_mode": "waypoint_follower",
+    "route_length_m": 300.0,
+    "route_step_m": 2.0,
+    "route_deviation_tolerance_m": 3.0,
+    "route_controller": {
+      "target_speed_kmh": 29.0,
+      "lookahead_m": 6.0,
+      "steering_gain": 1.35,
+      "maximum_steer": 0.8,
+      "maximum_steer_delta": 0.1,
+      "speed_kp": 0.45,
+      "speed_ki": 0.05,
+      "speed_kd": 0.02,
+      "maximum_throttle": 0.75,
+      "maximum_brake": 1.0,
+      "ego_lead_brake_ttc_seconds": 2.0,
+      "ego_lead_brake_gap_m": 5.0,
+      "ego_pedestrian_brake_distance_m": 8.0,
+      "ego_pedestrian_brake_lateral_m": 4.0
+    }
+  },
+  "ego_vehicle": {
+    "blueprint": "vehicle.tesla.model3"
+  },
+  "lead_vehicle": {
+    "blueprint": "vehicle.audi.a2",
+    "initial_distance_m": 20.031,
+    "brake_trigger_seconds": 6.209,
+    "brake_intensity": 0.975
+  },
+  "pedestrian": {
+    "blueprint": "walker.pedestrian.0007",
+    "forward_distance_m": 29.001,
+    "roadside_offset_m": 7.055,
+    "spawn_z_offset_m": 0.5,
+    "trigger_seconds": 2.91,
+    "speed_mps": 5.16
+  },
+  "sensors": {
+    "transform": {
+      "x": 1.5,
+      "y": 0.0,
+      "z": 2.4,
+      "pitch": 0.0,
+      "yaw": 0.0,
+      "roll": 0.0
+    },
+    "camera": {
+      "width": 640,
+      "height": 360,
+      "fov": 90.0,
+      "sensor_tick": 0.2,
+      "writer_workers": 1,
+      "writer_queue_size": 8,
+      "frame_wait_timeout_seconds": 30.0,
+      "flush_timeout_seconds": 120.0
+    },
+    "rgb": {
+      "enabled": true
+    },
+    "depth": {
+      "enabled": false,
+      "visualization_max_distance_m": 100.0
+    },
+    "semantic": {
+      "enabled": false,
+      "save_raw_labels": true
+    },
+    "collision": {
+      "enabled": true
+    }
+  },
+  "risk_evaluation": {
+    "method": "heuristic_v2",
+    "vehicle_distance_buffer_m": 4.5,
+    "ttc": {
+      "critical_seconds": 1.0,
+      "safe_seconds": 5.0,
+      "weight": 35.0
+    },
+    "lead_distance": {
+      "critical_m": 2.0,
+      "safe_m": 10.0,
+      "weight": 15.0
+    },
+    "pedestrian_distance": {
+      "critical_m": 1.0,
+      "safe_m": 8.0,
+      "weight": 20.0
+    },
+    "collision": {
+      "weight": 30.0
+    },
+    "levels": {
+      "medium": 25.0,
+      "high": 50.0,
+      "critical": 75.0
+    },
+    "v2": {
+      "weights": {
+        "collision": 0.25,
+        "ttc": 0.25,
+        "lead_gap": 0.15,
+        "pedestrian_distance": 0.12,
+        "pedestrian_speed": 0.08,
+        "weather_visibility": 0.15
+      },
+      "ttc": {
+        "critical_seconds": 0.5,
+        "safe_seconds": 4.0
+      },
+      "lead_gap": {
+        "critical_m": 1.0,
+        "safe_m": 8.0
+      },
+      "pedestrian_distance": {
+        "critical_m": 1.0,
+        "safe_m": 6.0
+      },
+      "pedestrian_speed": {
+        "safe_mps": 3.0,
+        "critical_mps": 6.0
+      },
+      "weather": {
+        "fog_density_safe": 60.0,
+        "fog_density_critical": 95.0,
+        "fog_distance_critical_m": 5.0,
+        "fog_distance_safe_m": 30.0,
+        "precipitation_safe": 60.0,
+        "precipitation_critical": 100.0,
+        "sun_altitude_critical": -15.0,
+        "sun_altitude_safe": 10.0,
+        "fog_density_weight": 0.4,
+        "fog_distance_weight": 0.3,
+        "precipitation_weight": 0.2,
+        "night_weight": 0.1
+      },
+      "levels": {
+        "medium": 25.0,
+        "high": 50.0,
+        "critical": 75.0
+      }
+    }
+  },
+  "output": {
+    "root": "F:\\Carla\\test\\output\\generator_comparison_v1",
+    "timestamp_format": "%Y%m%d_%H%M%S"
+  }
+}

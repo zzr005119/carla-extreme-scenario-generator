@@ -1,0 +1,254 @@
+{
+  "planned_runs": 108,
+  "completed_runs": 108,
+  "accepted_runs": 108,
+  "generator_rows": [
+    {
+      "generator": "lhs",
+      "selected_scenarios": 12,
+      "planned_runs": 36,
+      "completed_runs": 36,
+      "accepted_runs": 36,
+      "route_verified_runs": 36,
+      "score_mean": 38.75952777777778,
+      "score_std": 11.497345433958996,
+      "target_match_rate": 0.5833333333333334,
+      "high_or_critical_rate": 0.3333333333333333,
+      "critical_rate": 0.0,
+      "collision_run_rate": 0.0,
+      "target_score_ordinal_correlation": 0.937245052039926,
+      "mean_scores_strictly_increasing": true,
+      "mean_within_scenario_score_std": 0.2938372240871064,
+      "maximum_within_scenario_score_std": 1.42136694769507,
+      "seed_mean_score_range": 0.3785833333333386,
+      "mean_within_level_pairwise_distance": 0.6185576733133432,
+      "design_record_rate": 1.0,
+      "design_field_rate": 1.0
+    },
+    {
+      "generator": "gmm",
+      "selected_scenarios": 12,
+      "planned_runs": 36,
+      "completed_runs": 36,
+      "accepted_runs": 36,
+      "route_verified_runs": 36,
+      "score_mean": 45.34147222222222,
+      "score_std": 22.42222817331831,
+      "target_match_rate": 0.5555555555555556,
+      "high_or_critical_rate": 0.25,
+      "critical_rate": 0.25,
+      "collision_run_rate": 0.25,
+      "target_score_ordinal_correlation": 0.8218741635960567,
+      "mean_scores_strictly_increasing": true,
+      "mean_within_scenario_score_std": 0.36876232304476436,
+      "maximum_within_scenario_score_std": 0.8911436472309061,
+      "seed_mean_score_range": 0.2745833333333323,
+      "mean_within_level_pairwise_distance": 0.5408893249324824,
+      "design_record_rate": 0.6666666666666666,
+      "design_field_rate": 0.9722222222222222
+    },
+    {
+      "generator": "cvae",
+      "selected_scenarios": 12,
+      "planned_runs": 36,
+      "completed_runs": 36,
+      "accepted_runs": 36,
+      "route_verified_runs": 36,
+      "score_mean": 36.0975,
+      "score_std": 10.72946344151734,
+      "target_match_rate": 0.4722222222222222,
+      "high_or_critical_rate": 0.08333333333333333,
+      "critical_rate": 0.0,
+      "collision_run_rate": 0.0,
+      "target_score_ordinal_correlation": 0.9539177805639754,
+      "mean_scores_strictly_increasing": true,
+      "mean_within_scenario_score_std": 0.6343020719170079,
+      "maximum_within_scenario_score_std": 1.2082319037888931,
+      "seed_mean_score_range": 0.29608333333332837,
+      "mean_within_level_pairwise_distance": 0.3396709456645696,
+      "design_record_rate": 0.9166666666666666,
+      "design_field_rate": 0.9888888888888889
+    }
+  ],
+  "generator_target_rows": [
+    {
+      "generator": "lhs",
+      "target_risk_level": "low",
+      "selected_scenarios": 3,
+      "completed_runs": 9,
+      "accepted_runs": 9,
+      "score_mean": 24.97511111111111,
+      "score_std": 0.7139398511857362,
+      "target_match_rate": 0.6666666666666666,
+      "observed_distribution": {
+        "medium": 3,
+        "low": 6
+      },
+      "collision_runs": 0
+    },
+    {
+      "generator": "lhs",
+      "target_risk_level": "medium",
+      "selected_scenarios": 3,
+      "completed_runs": 9,
+      "accepted_runs": 9,
+      "score_mean": 30.59044444444444,
+      "score_std": 1.8389539221464415,
+      "target_match_rate": 1.0,
+      "observed_distribution": {
+        "medium": 9
+      },
+      "collision_runs": 0
+    },
+    {
+      "generator": "lhs",
+      "target_risk_level": "high",
+      "selected_scenarios": 3,
+      "completed_runs": 9,
+      "accepted_runs": 9,
+      "score_mean": 48.934,
+      "score_std": 3.209734763185271,
+      "target_match_rate": 0.6666666666666666,
+      "observed_distribution": {
+        "high": 6,
+        "medium": 3
+      },
+      "collision_runs": 0
+    },
+    {
+      "generator": "lhs",
+      "target_risk_level": "critical",
+      "selected_scenarios": 3,
+      "completed_runs": 9,
+      "accepted_runs": 9,
+      "score_mean": 50.538555555555554,
+      "score_std": 1.6574618480609984,
+      "target_match_rate": 0.0,
+      "observed_distribution": {
+        "high": 6,
+        "medium": 3
+      },
+      "collision_runs": 0
+    },
+    {
+      "generator": "gmm",
+      "target_risk_level": "low",
+      "selected_scenarios": 3,
+      "completed_runs": 9,
+      "accepted_runs": 9,
+      "score_mean": 24.848333333333333,
+      "score_std": 0.7098441730408165,
+      "target_match_rate": 0.5555555555555556,
+      "observed_distribution": {
+        "medium": 4,
+        "low": 5
+      },
+      "collision_runs": 0
+    },
+    {
+      "generator": "gmm",
+      "target_risk_level": "medium",
+      "selected_scenarios": 3,
+      "completed_runs": 9,
+      "accepted_runs": 9,
+      "score_mean": 30.158222222222225,
+      "score_std": 2.3580115445952434,
+      "target_match_rate": 1.0,
+      "observed_distribution": {
+        "medium": 9
+      },
+      "collision_runs": 0
+    },
+    {
+      "generator": "gmm",
+      "target_risk_level": "high",
+      "selected_scenarios": 3,
+      "completed_runs": 9,
+      "accepted_runs": 9,
+      "score_mean": 55.92644444444444,
+      "score_std": 17.292985941640552,
+      "target_match_rate": 0.0,
+      "observed_distribution": {
+        "medium": 6,
+        "critical": 3
+      },
+      "collision_runs": 3
+    },
+    {
+      "generator": "gmm",
+      "target_risk_level": "critical",
+      "selected_scenarios": 3,
+      "completed_runs": 9,
+      "accepted_runs": 9,
+      "score_mean": 70.4328888888889,
+      "score_std": 18.119373419384875,
+      "target_match_rate": 0.6666666666666666,
+      "observed_distribution": {
+        "critical": 6,
+        "medium": 3
+      },
+      "collision_runs": 6
+    },
+    {
+      "generator": "cvae",
+      "target_risk_level": "low",
+      "selected_scenarios": 3,
+      "completed_runs": 9,
+      "accepted_runs": 9,
+      "score_mean": 24.461000000000002,
+      "score_std": 0.9187303739400368,
+      "target_match_rate": 0.8888888888888888,
+      "observed_distribution": {
+        "medium": 1,
+        "low": 8
+      },
+      "collision_runs": 0
+    },
+    {
+      "generator": "cvae",
+      "target_risk_level": "medium",
+      "selected_scenarios": 3,
+      "completed_runs": 9,
+      "accepted_runs": 9,
+      "score_mean": 27.49211111111111,
+      "score_std": 1.1225129670124572,
+      "target_match_rate": 1.0,
+      "observed_distribution": {
+        "medium": 9
+      },
+      "collision_runs": 0
+    },
+    {
+      "generator": "cvae",
+      "target_risk_level": "high",
+      "selected_scenarios": 3,
+      "completed_runs": 9,
+      "accepted_runs": 9,
+      "score_mean": 43.08555555555555,
+      "score_std": 2.2157212770964163,
+      "target_match_rate": 0.0,
+      "observed_distribution": {
+        "medium": 9
+      },
+      "collision_runs": 0
+    },
+    {
+      "generator": "cvae",
+      "target_risk_level": "critical",
+      "selected_scenarios": 3,
+      "completed_runs": 9,
+      "accepted_runs": 9,
+      "score_mean": 49.35133333333333,
+      "score_std": 2.90515726768793,
+      "target_match_rate": 0.0,
+      "observed_distribution": {
+        "medium": 6,
+        "high": 3
+      },
+      "collision_runs": 0
+    }
+  ],
+  "analysis_unit": "selected_scenario",
+  "traffic_seed_role": "repeated_measure",
+  "supports_significance_testing": false
+}

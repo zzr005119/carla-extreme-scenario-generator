@@ -1,0 +1,93 @@
+{
+  "expected_run_count": 108,
+  "total_manifest_runs": 108,
+  "completed_runs": 108,
+  "accepted_runs": 108,
+  "acceptance_failed_runs": 0,
+  "failed_runs": 0,
+  "missing_runs": 0,
+  "sensor_completed_runs": 108,
+  "server_healthy_runs": 108,
+  "route_lock_required": true,
+  "route_verified_runs": 108,
+  "route_verified_rate": 1.0,
+  "route_ego_on_route_rate_mean": 1.0,
+  "route_lead_on_route_rate_mean": 1.0,
+  "route_both_on_route_rate_mean": 1.0,
+  "route_maximum_ego_deviation_m": 1.04,
+  "route_maximum_lead_deviation_m": 1.208,
+  "target_levels": [
+    "low",
+    "medium",
+    "high",
+    "critical"
+  ],
+  "collision_runs": 9,
+  "collision_events": 39,
+  "collision_sample_ids": [
+    "gmm_critical_20260813_0004",
+    "gmm_critical_20260813_0067",
+    "gmm_high_20260813_0079"
+  ],
+  "target_matched_runs": 58,
+  "target_match_rate": 0.5370370370370371,
+  "target_score_ordinal_correlation": 0.8067397701233686,
+  "scenario_count": 36,
+  "complete_scenario_count": 36,
+  "all_level_equal_scenario_count": 30,
+  "all_level_equal_scenario_rate": 0.8333333333333334,
+  "mean_within_scenario_score_std": 0.4323005396829596,
+  "median_within_scenario_score_std": 0.3213641721609024,
+  "maximum_within_scenario_score_std": 1.42136694769507,
+  "mean_within_scenario_score_range": 0.8068888888888892,
+  "seed_mean_score_range": 0.29294444444444423,
+  "most_variable_scenario": {
+    "sample_id": "lhs_critical_20260813_0101",
+    "score_std": 1.42136694769507,
+    "score_range": 2.6580000000000013
+  },
+  "mean_scores_strictly_increasing": true,
+  "per_target_level": {
+    "low": {
+      "completed_runs": 27,
+      "score_mean": 24.76148148148148,
+      "score_std": 0.7881932782475654,
+      "target_match_rate": 0.7037037037037037,
+      "observed_distribution": {
+        "medium": 8,
+        "low": 19
+      }
+    },
+    "medium": {
+      "completed_runs": 27,
+      "score_mean": 29.413592592592593,
+      "score_std": 2.2557613802347105,
+      "target_match_rate": 1.0,
+      "observed_distribution": {
+        "medium": 27
+      }
+    },
+    "high": {
+      "completed_runs": 27,
+      "score_mean": 49.31533333333333,
+      "score_std": 11.194151072357796,
+      "target_match_rate": 0.2222222222222222,
+      "observed_distribution": {
+        "medium": 18,
+        "critical": 3,
+        "high": 6
+      }
+    },
+    "critical": {
+      "completed_runs": 27,
+      "score_mean": 56.77425925925927,
+      "score_std": 14.19760060062315,
+      "target_match_rate": 0.2222222222222222,
+      "observed_distribution": {
+        "medium": 12,
+        "high": 9,
+        "critical": 6
+      }
+    }
+  }
+}

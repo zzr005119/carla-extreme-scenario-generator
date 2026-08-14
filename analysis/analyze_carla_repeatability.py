@@ -281,9 +281,9 @@ def format_number(value, digits=3):
     return "-" if value is None else f"{value:.{digits}f}"
 
 
-def write_report(path, analysis):
+def write_report(path, analysis, title="CVAE CARLA 多种子重复性分析"):
     lines = [
-        "# CVAE CARLA 多种子重复性分析",
+        f"# {title}",
         "",
         f"- 仿真完成：`{analysis['completed_runs']}/{analysis['expected_run_count']}`",
         f"- 严格验收通过：`{analysis['accepted_runs']}/{analysis['expected_run_count']}`",
@@ -382,6 +382,7 @@ def write_analysis(
     expected_seeds,
     output_dir,
     route_lock_required=False,
+    report_title="CVAE CARLA 多种子重复性分析",
 ):
     analysis = analyze(rows, expected_seeds, route_lock_required)
     os.makedirs(output_dir, exist_ok=True)
@@ -410,5 +411,5 @@ def write_analysis(
         write_csv(scenario_csv, analysis["scenario_rows"], scenario_fields)
     if seed_fields:
         write_csv(seed_csv, analysis["seed_rows"], seed_fields)
-    write_report(report_path, analysis)
+    write_report(report_path, analysis, title=report_title)
     return analysis, summary_path, scenario_csv, seed_csv, report_path
