@@ -13,6 +13,7 @@ python -u tools/prepare_feedback_candidate_scoring.py \
   --bootstrap-models 50 \
   --n-estimators 300 \
   --select-per-channel 3 \
+  --min-per-target-channel 1 \
   --seed 20260815
 
 echo "[RESULT_DIR] $output_dir"

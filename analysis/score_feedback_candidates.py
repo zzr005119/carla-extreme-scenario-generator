@@ -60,6 +60,7 @@ def parse_args():
     parser.add_argument("--top-fraction", type=float, default=0.10)
     parser.add_argument("--robust-penalty", type=float, default=0.50)
     parser.add_argument("--select-per-channel", type=int, default=3)
+    parser.add_argument("--min-per-target-channel", type=int, default=1)
     parser.add_argument("--diversity-weight", type=float, default=0.20)
     parser.add_argument("--random-state", type=int, default=20260815)
     return parser.parse_args()
@@ -104,6 +105,8 @@ def validate_args(args):
         raise ValueError("--robust-penalty 不能小于 0")
     if args.select_per_channel < 1:
         raise ValueError("--select-per-channel 至少为 1")
+    if args.min_per_target_channel < 0:
+        raise ValueError("--min-per-target-channel 不能小于 0")
     if not 0.0 <= args.diversity_weight < 1.0:
         raise ValueError("--diversity-weight 必须位于 [0, 1)")
 
@@ -366,7 +369,13 @@ def greedy_select(
     return selections
 
 
-def select_channels(frame, features, per_channel, diversity_weight):
+def select_channels(
+    frame,
+    features,
+    per_channel,
+    min_per_target_channel,
+    diversity_weight,
+):
     channel_columns = {
         "stable_high_score": "stable_high_score_base",
         "high_uncertainty": "high_uncertainty_base",
@@ -375,19 +384,47 @@ def select_channels(frame, features, per_channel, diversity_weight):
     selected_rows = []
     for generator, generator_frame in frame.groupby("generator", sort=True):
         candidate_indices = generator_frame.index.to_list()
+        target_levels = sorted(generator_frame["target_risk_level"].unique())
+        minimum_required = min_per_target_channel * len(target_levels)
+        if minimum_required > per_channel:
+            raise ValueError(
+                f"{generator} 每通道至少需要 {minimum_required} 个名额才能覆盖目标档，"
+                f"当前 --select-per-channel={per_channel}"
+            )
         excluded = set()
         selected_features = []
         for channel in SELECTION_CHANNELS:
-            selections = greedy_select(
-                frame,
-                features,
-                candidate_indices,
-                channel_columns[channel],
-                per_channel,
-                diversity_weight,
-                excluded,
-                selected_features,
-            )
+            selections = []
+            for target_level in target_levels:
+                target_indices = generator_frame.index[
+                    generator_frame["target_risk_level"] == target_level
+                ].to_list()
+                selections.extend(
+                    greedy_select(
+                        frame,
+                        features,
+                        target_indices,
+                        channel_columns[channel],
+                        min_per_target_channel,
+                        diversity_weight,
+                        excluded,
+                        selected_features,
+                    )
+                )
+            remaining = per_channel - len(selections)
+            if remaining > 0:
+                selections.extend(
+                    greedy_select(
+                        frame,
+                        features,
+                        candidate_indices,
+                        channel_columns[channel],
+                        remaining,
+                        diversity_weight,
+                        excluded,
+                        selected_features,
+                    )
+                )
             if len(selections) != per_channel:
                 raise ValueError(
                     f"{generator} 的 {channel} 通道仅能选择 {len(selections)} 个候选"
@@ -532,6 +569,9 @@ def build_summary(
         "selection": {
             "channels": list(SELECTION_CHANNELS),
             "per_generator_channel": args.select_per_channel,
+            "minimum_per_target_level_per_generator_channel": (
+                args.min_per_target_channel
+            ),
             "diversity_weight": args.diversity_weight,
             "selected_count": len(selected),
             "counts_by_generator_channel": {
@@ -566,6 +606,7 @@ def build_report(summary, selected):
         "1. `stable_high_score`：优先选择稳健预测分高且重复 Top-K 入选频率高的候选。",
         "2. `high_uncertainty`：优先选择模型间预测分歧大、同时具有一定风险水平的候选。",
         "3. `collision_boundary`：优先选择靠近已知碰撞样本且接近碰撞/非碰撞邻域边界的候选。",
+        f"4. 每个生成器×通道至少保留每个目标档 `{summary['selection']['minimum_per_target_level_per_generator_channel']}` 个，避免短名单全部塌缩到单一目标档。",
         "",
         "## 选择结果",
         "",
@@ -640,6 +681,7 @@ def main():
         scored_frame,
         candidate_features,
         args.select_per_channel,
+        args.min_per_target_channel,
         args.diversity_weight,
     )
     selected = selected_frame(scored_frame, selections)

@@ -56,6 +56,7 @@ def parse_args():
     parser.add_argument("--bootstrap-models", type=int, default=50)
     parser.add_argument("--n-estimators", type=int, default=300)
     parser.add_argument("--select-per-channel", type=int, default=3)
+    parser.add_argument("--min-per-target-channel", type=int, default=1)
     parser.add_argument("--seed", type=int, default=20260815)
     return parser.parse_args()
 
@@ -144,6 +145,8 @@ def main():
         str(args.n_estimators),
         "--select-per-channel",
         str(args.select_per_channel),
+        "--min-per-target-channel",
+        str(args.min_per_target_channel),
         "--random-state",
         str(args.seed),
     ]
@@ -164,6 +167,9 @@ def main():
         "bootstrap_models": args.bootstrap_models,
         "n_estimators": args.n_estimators,
         "select_per_generator_channel": args.select_per_channel,
+        "minimum_per_target_level_per_generator_channel": (
+            args.min_per_target_channel
+        ),
         "random_seed": args.seed,
         "generation": generation_rows,
         "scoring_directory": str(score_dir),
