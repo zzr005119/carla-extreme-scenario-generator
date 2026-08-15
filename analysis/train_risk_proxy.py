@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -33,6 +34,7 @@ DEFAULT_DATASET = os.path.join(
     "dataset.csv",
 )
 DEFAULT_OUTPUT_DIR = os.path.dirname(DEFAULT_DATASET)
+DEFAULT_ARTIFACT_DIR = os.path.join(PROJECT_ROOT, "artifacts", "risk_proxy_v1")
 FEATURE_PREFIX = "feature_"
 TARGET_COLUMN = "observed_risk_score_mean"
 
@@ -41,8 +43,17 @@ def parse_args():
     parser = argparse.ArgumentParser(description="训练风险代理基线")
     parser.add_argument("--dataset", default=DEFAULT_DATASET)
     parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR)
+    parser.add_argument("--artifact-dir", default=DEFAULT_ARTIFACT_DIR)
+    parser.add_argument("--version-label", default="V1")
     parser.add_argument("--random-state", type=int, default=20260815)
     return parser.parse_args()
+
+
+def version_slug(version_label):
+    value = re.sub(r"[^a-zA-Z0-9]+", "_", version_label.strip()).strip("_")
+    if not value:
+        raise ValueError("--version-label 不能为空")
+    return value.lower()
 
 
 def write_json(path, value):
@@ -113,6 +124,8 @@ def write_csv(path, rows):
 
 def main():
     args = parse_args()
+    label = args.version_label.strip()
+    label_slug = version_slug(label)
     output_dir = Path(os.path.abspath(args.output_dir))
     output_dir.mkdir(parents=True, exist_ok=True)
     frame = pd.read_csv(os.path.abspath(args.dataset))
@@ -169,7 +182,7 @@ def main():
 
     final_model = make_models(args.random_state)[selected_model_name]
     final_model.fit(features, target)
-    artifact_dir = Path(PROJECT_ROOT) / "artifacts" / "risk_proxy_v1"
+    artifact_dir = Path(os.path.abspath(args.artifact_dir))
     artifact_dir.mkdir(parents=True, exist_ok=True)
     joblib.dump(final_model, artifact_dir / "selected_model.joblib")
 
@@ -206,7 +219,8 @@ def main():
         .reindex(["low", "medium", "high", "critical"])
     )
     summary = {
-        "format": "risk_proxy_baseline_v1",
+        "format": f"risk_proxy_baseline_{label_slug}",
+        "version_label": label,
         "dataset": os.path.abspath(args.dataset),
         "independent_scenario_count": len(frame),
         "feature_count": len(feature_columns),
@@ -238,7 +252,7 @@ def main():
     }
     write_json(output_dir / "proxy_summary.json", summary)
     report_lines = [
-        "# 风险代理基线 V1",
+        f"# 风险代理基线 {label}",
         "",
         f"- 独立场景：`{len(frame)}` 个。",
         "- 重复测量：每个场景的 3 个 Traffic Manager 种子先聚合为场景均值。",
@@ -251,11 +265,11 @@ def main():
         "",
         "## 解释边界",
         "",
-        "该基线用于对候选场景进行风险排序，不替代 CARLA 实测，也不证明生成器已经学会真实交通风险分布。由于独立场景只有 36 个，本结果只作工程基线和误差诊断，不作统计显著性结论。",
+        f"该基线用于对候选场景进行风险排序，不替代 CARLA 实测，也不证明生成器已经学会真实交通风险分布。当前独立场景为 {len(frame)} 个，本结果只作工程基线和误差诊断，不作统计显著性结论。",
         "",
         "## 输出文件",
         "",
-        "- `dataset.csv`：36 个独立场景的聚合特征和风险标签。",
+        f"- `dataset.csv`：{len(frame)} 个独立场景的聚合特征和风险标签。",
         "- `oof_predictions.csv`：交叉验证折外预测。",
         "- `model_comparison.csv`：均值基线、Ridge 和随机森林对照。",
         "- `target_summary.csv`：按生成器和目标档的实测/预测汇总。",

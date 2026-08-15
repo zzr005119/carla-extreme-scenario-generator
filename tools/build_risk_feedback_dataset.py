@@ -115,7 +115,7 @@ def aggregate_rows(rows, records_by_id, min_repeats):
                 f"样本 {sample_id} 只有 {len(repeated_rows)} 次重复测量，"
                 f"少于要求的 {min_repeats} 次"
             )
-        seeds = {row["traffic_manager_seed"] for row in repeated_rows}
+        seeds = {int(row["traffic_manager_seed"]) for row in repeated_rows}
         if len(seeds) != len(repeated_rows):
             raise ValueError(f"样本 {sample_id} 存在重复交通种子")
 
@@ -139,7 +139,9 @@ def aggregate_rows(rows, records_by_id, min_repeats):
             "target_risk_level": next(iter(target_levels)),
             "generator_target_cell": f"{next(iter(generators))}__{next(iter(target_levels))}",
             "repeat_count": len(repeated_rows),
-            "traffic_manager_seeds": ",".join(sorted(seeds)),
+            "traffic_manager_seeds": ",".join(
+                str(seed) for seed in sorted(seeds)
+            ),
             "observed_risk_score_mean": statistics.mean(scores),
             "observed_risk_score_std": statistics.stdev(scores)
             if len(scores) > 1

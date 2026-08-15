@@ -1,0 +1,51 @@
+{
+  "format": "risk_feedback_dataset_merge_v2",
+  "version_label": "V2",
+  "analysis_unit": "independent_scenario",
+  "traffic_seed_role": "repeated_measurement",
+  "feature_count": 15,
+  "base_dataset": {
+    "path": "D:\\Xx\\竞赛\\大创实施ing\\data\\scenarios\\risk_feedback_v1\\dataset.csv",
+    "sha256": "59dbd905b94ba26d5af76995d4e9dc42c06a5f3fede0d628cb8fea786ee39888",
+    "independent_scenario_count": 36
+  },
+  "addition_dataset": {
+    "source_path": "F:\\Carla\\project-cache\\feedback_candidate_validation_full_regression_20260815_2352\\feedback_dataset_addition.csv",
+    "source_sha256": "9f7d83cfc94eaddb202afa3feefa60dfb592d7ee11d36dd28e186fed4be8fba0",
+    "copied_path": "D:\\Xx\\竞赛\\大创实施ing\\data\\scenarios\\risk_feedback_v2\\external_validation_addition.csv",
+    "copied_sha256": "9f7d83cfc94eaddb202afa3feefa60dfb592d7ee11d36dd28e186fed4be8fba0",
+    "independent_scenario_count": 27
+  },
+  "merged_dataset": {
+    "path": "D:\\Xx\\竞赛\\大创实施ing\\data\\scenarios\\risk_feedback_v2\\dataset.csv",
+    "sha256": "30fb928236b146ef222de1afa76f23acec738c31ad334c8f4594ec484a3f0437",
+    "independent_scenario_count": 63
+  },
+  "generator_counts": {
+    "cvae": 21,
+    "gmm": 21,
+    "lhs": 21
+  },
+  "target_level_counts": {
+    "critical": 27,
+    "high": 18,
+    "low": 9,
+    "medium": 9
+  },
+  "generator_target_cell_counts": {
+    "cvae__critical": 9,
+    "cvae__high": 6,
+    "cvae__low": 3,
+    "cvae__medium": 3,
+    "gmm__critical": 9,
+    "gmm__high": 6,
+    "gmm__low": 3,
+    "gmm__medium": 3,
+    "lhs__critical": 9,
+    "lhs__high": 6,
+    "lhs__low": 3,
+    "lhs__medium": 3
+  },
+  "collision_scenario_count": 18,
+  "sample_id_overlap_count": 0
+}

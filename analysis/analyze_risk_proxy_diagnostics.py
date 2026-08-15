@@ -5,6 +5,7 @@ import hashlib
 import json
 import math
 import os
+import re
 from pathlib import Path
 
 import numpy as np
@@ -46,8 +47,16 @@ def parse_args():
     parser.add_argument("--repeats", type=int, default=50)
     parser.add_argument("--n-estimators", type=int, default=300)
     parser.add_argument("--top-k", type=int, default=None)
+    parser.add_argument("--version-label", default="V1")
     parser.add_argument("--random-state", type=int, default=20260815)
     return parser.parse_args()
+
+
+def version_slug(version_label):
+    value = re.sub(r"[^a-zA-Z0-9]+", "_", version_label.strip()).strip("_")
+    if not value:
+        raise ValueError("--version-label 不能为空")
+    return value.lower()
 
 
 def make_model(model_name, random_state, n_estimators):
@@ -429,6 +438,7 @@ def build_summary(
     top_k,
     random_state,
     n_estimators,
+    version_label,
 ):
     models = {}
     for model_name in MODEL_NAMES:
@@ -481,7 +491,8 @@ def build_summary(
             "collision_error": collision_error,
         }
     return {
-        "format": "risk_proxy_diagnostics_v1",
+        "format": f"risk_proxy_diagnostics_{version_slug(version_label)}",
+        "version_label": version_label,
         "dataset": dataset_path,
         "dataset_sha256": dataset_sha256,
         "independent_scenario_count": int(len(frame)),
@@ -504,7 +515,7 @@ def build_summary(
             "top_k_jaccard": metric_summary(agreement_frame["top_k_jaccard"]),
         },
         "interpretation_boundary": (
-            "36 个独立场景只支持工程误差诊断和候选排序稳定性评估，"
+            f"{len(frame)} 个独立场景只支持工程误差诊断和候选排序稳定性评估，"
             "不支持统计显著性结论；Traffic Manager 种子已先聚合为场景级重复测量。"
         ),
     }
@@ -529,7 +540,7 @@ def build_report(summary, group_frame, sample_frame):
     rf_metrics = random_forest["metrics"]
     collision_error = random_forest["collision_error"]
     lines = [
-        "# 风险代理误差与排序稳定性诊断 V1",
+        f"# 风险代理误差与排序稳定性诊断 {summary['version_label']}",
         "",
         "## 方法",
         "",
@@ -580,6 +591,8 @@ def write_json(path, value):
 
 def main():
     args = parse_args()
+    version_label = args.version_label.strip()
+    version_slug(version_label)
     if args.repeats < 2:
         raise ValueError("--repeats 必须至少为 2")
     if args.n_estimators <= 0:
@@ -631,6 +644,7 @@ def main():
         top_k=top_k,
         random_state=args.random_state,
         n_estimators=args.n_estimators,
+        version_label=version_label,
     )
 
     metric_frame.to_csv(
