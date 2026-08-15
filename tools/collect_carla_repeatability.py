@@ -15,6 +15,10 @@ if PROJECT_ROOT not in sys.path:
 from analysis.analyze_carla_repeatability import write_analysis  # noqa: E402
 
 
+ROUTE_VERIFICATION_FULL_RUN = "full_run"
+ROUTE_VERIFICATION_PRE_COLLISION = "pre_collision_for_collision_runs"
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="收集 CARLA 多种子复测结果")
     parser.add_argument("--manifest", required=True)
@@ -50,6 +54,76 @@ def matching_metadata(run_root, expected_seed):
     return path, metadata
 
 
+def parse_csv_bool(value):
+    normalized = str(value).strip().lower()
+    if normalized in {"true", "1", "yes"}:
+        return True
+    if normalized in {"false", "0", "no"}:
+        return False
+    return None
+
+
+def pre_collision_route_metrics(metadata_path):
+    telemetry_path = os.path.join(os.path.dirname(metadata_path), "telemetry.csv")
+    if not os.path.isfile(telemetry_path):
+        return None
+    with open(telemetry_path, "r", encoding="utf-8-sig", newline="") as file:
+        rows = list(csv.DictReader(file))
+    first_collision_index = None
+    for index, row in enumerate(rows):
+        try:
+            collision_count = int(float(row.get("collision_count") or 0))
+        except (TypeError, ValueError):
+            return None
+        if collision_count > 0:
+            first_collision_index = index
+            break
+    if first_collision_index is None or first_collision_index == 0:
+        return None
+    pre_collision_rows = rows[:first_collision_index]
+
+    def bool_rate(field):
+        values = [parse_csv_bool(row.get(field)) for row in pre_collision_rows]
+        if not values or any(value is None for value in values):
+            return None
+        return sum(values) / len(values)
+
+    def maximum(field):
+        values = []
+        for row in pre_collision_rows:
+            try:
+                values.append(float(row[field]))
+            except (KeyError, TypeError, ValueError):
+                return None
+        return max(values) if values else None
+
+    ego_rate = bool_rate("ego_on_planned_route")
+    lead_rate = bool_rate("lead_on_planned_route")
+    both_rate = (
+        None
+        if ego_rate is None or lead_rate is None
+        else sum(
+            parse_csv_bool(row.get("ego_on_planned_route")) is True
+            and parse_csv_bool(row.get("lead_on_planned_route")) is True
+            for row in pre_collision_rows
+        )
+        / len(pre_collision_rows)
+    )
+    try:
+        first_collision_seconds = float(rows[first_collision_index]["elapsed_seconds"])
+    except (KeyError, TypeError, ValueError):
+        first_collision_seconds = None
+    return {
+        "sample_count": len(pre_collision_rows),
+        "first_collision_elapsed_seconds": first_collision_seconds,
+        "ego_on_route_rate": ego_rate,
+        "lead_on_route_rate": lead_rate,
+        "both_on_route_rate": both_rate,
+        "maximum_ego_deviation_m": maximum("ego_route_deviation_m"),
+        "maximum_lead_deviation_m": maximum("lead_route_deviation_m"),
+    }
+
+
 def collect_row(
     run,
     route_lock_required=False,
@@ -68,6 +142,16 @@ def collect_row(
         "repeat_round": int(run["repeat_round"]),
         "source": run["source"],
     }
+    route_verification_scope = acceptance_requirements.get(
+        "route_verification_scope", ROUTE_VERIFICATION_FULL_RUN
+    )
+    if route_verification_scope not in {
+        ROUTE_VERIFICATION_FULL_RUN,
+        ROUTE_VERIFICATION_PRE_COLLISION,
+    }:
+        raise ValueError(
+            f"不支持的路线验收范围: {route_verification_scope}"
+        )
     if match is None:
         return {
             **base,
@@ -93,6 +177,21 @@ def collect_row(
             "route_both_on_route_rate": None,
             "route_maximum_ego_deviation_m": None,
             "route_maximum_lead_deviation_m": None,
+            "route_verification_scope": route_verification_scope,
+            "route_verification_window": None,
+            "route_verified_full_run": None,
+            "route_pre_collision_sample_count": None,
+            "route_first_collision_elapsed_seconds": None,
+            "route_pre_collision_ego_on_route_rate": None,
+            "route_pre_collision_lead_on_route_rate": None,
+            "route_pre_collision_both_on_route_rate": None,
+            "route_pre_collision_maximum_ego_deviation_m": None,
+            "route_pre_collision_maximum_lead_deviation_m": None,
+            "route_acceptance_ego_on_route_rate": None,
+            "route_acceptance_lead_on_route_rate": None,
+            "route_acceptance_both_on_route_rate": None,
+            "route_acceptance_maximum_ego_deviation_m": None,
+            "route_acceptance_maximum_lead_deviation_m": None,
             "route_verified": None,
             "rgb_frames": None,
             "run_dir": None,
@@ -125,6 +224,7 @@ def collect_row(
         else None
     )
     rgb_frames = int((metadata.get("frames") or {}).get("rgb") or 0)
+    collision_count = int(result.get("collision_count", 0))
     minimum_route_rate = float(
         acceptance_requirements.get("minimum_route_both_on_rate", 0.999)
     )
@@ -134,29 +234,96 @@ def collect_row(
     expected_route_mode = acceptance_requirements.get("route_control_mode")
     ego_deviation = route_control.get("maximum_ego_deviation_m")
     lead_deviation = route_control.get("maximum_lead_deviation_m")
-    route_deviation_verified = (
-        maximum_route_deviation is None
-        or (
-            ego_deviation is not None
-            and lead_deviation is not None
-            and float(ego_deviation) <= float(maximum_route_deviation)
-            and float(lead_deviation) <= float(maximum_route_deviation)
-        )
-    )
-    route_verified = (
+    route_configuration_verified = (
         route_control.get("enabled") is True
-        and route_control.get("status") == "completed"
-        and float(route_control.get("both_on_route_rate") or 0.0)
-        >= minimum_route_rate
         and route_control.get("auto_lane_change_enabled") is False
         and (
             expected_route_mode is None
             or route_control.get("mode") == expected_route_mode
         )
-        and route_deviation_verified
+    )
+
+    def verify_route_metrics(
+        both_rate,
+        ego_maximum,
+        lead_maximum,
+        require_completed_status,
+    ):
+        rate_verified = (
+            both_rate is not None and float(both_rate) >= minimum_route_rate
+        )
+        deviation_verified = (
+            maximum_route_deviation is None
+            or (
+                ego_maximum is not None
+                and lead_maximum is not None
+                and float(ego_maximum) <= float(maximum_route_deviation)
+                and float(lead_maximum) <= float(maximum_route_deviation)
+            )
+        )
+        status_verified = (
+            not require_completed_status
+            or route_control.get("status") == "completed"
+        )
+        return (
+            route_configuration_verified
+            and status_verified
+            and rate_verified
+            and deviation_verified
+        )
+
+    full_route_verified = (
+        verify_route_metrics(
+            route_control.get("both_on_route_rate"),
+            ego_deviation,
+            lead_deviation,
+            True,
+        )
         if route_lock_required
         else None
     )
+    pre_collision = (
+        pre_collision_route_metrics(metadata_path) if collision_count > 0 else None
+    )
+    use_pre_collision = (
+        route_verification_scope == ROUTE_VERIFICATION_PRE_COLLISION
+        and collision_count > 0
+    )
+    if use_pre_collision:
+        route_verification_window = "pre_collision"
+        acceptance_ego_rate = (
+            pre_collision.get("ego_on_route_rate") if pre_collision else None
+        )
+        acceptance_lead_rate = (
+            pre_collision.get("lead_on_route_rate") if pre_collision else None
+        )
+        acceptance_both_rate = (
+            pre_collision.get("both_on_route_rate") if pre_collision else None
+        )
+        acceptance_ego_deviation = (
+            pre_collision.get("maximum_ego_deviation_m") if pre_collision else None
+        )
+        acceptance_lead_deviation = (
+            pre_collision.get("maximum_lead_deviation_m") if pre_collision else None
+        )
+        route_verified = (
+            verify_route_metrics(
+                acceptance_both_rate,
+                acceptance_ego_deviation,
+                acceptance_lead_deviation,
+                False,
+            )
+            if route_lock_required
+            else None
+        )
+    else:
+        route_verification_window = "full_run"
+        acceptance_ego_rate = route_control.get("ego_on_route_rate")
+        acceptance_lead_rate = route_control.get("lead_on_route_rate")
+        acceptance_both_rate = route_control.get("both_on_route_rate")
+        acceptance_ego_deviation = ego_deviation
+        acceptance_lead_deviation = lead_deviation
+        route_verified = full_route_verified
     completed = (
         result.get("status") == "completed"
         and risk.get("method") is not None
@@ -212,7 +379,7 @@ def collect_row(
         "target_match": (
             observed_level == run["target_risk_level"] if completed else None
         ),
-        "collision_count": int(result.get("collision_count", 0)),
+        "collision_count": collision_count,
         "minimum_ttc_seconds": result.get("minimum_ttc_seconds"),
         "minimum_lead_gap_m": result.get("minimum_lead_gap_m"),
         "minimum_pedestrian_distance_m": result.get(
@@ -233,6 +400,37 @@ def collect_row(
         "route_maximum_lead_deviation_m": route_control.get(
             "maximum_lead_deviation_m"
         ),
+        "route_verification_scope": route_verification_scope,
+        "route_verification_window": route_verification_window,
+        "route_verified_full_run": full_route_verified,
+        "route_pre_collision_sample_count": (
+            pre_collision.get("sample_count") if pre_collision else None
+        ),
+        "route_first_collision_elapsed_seconds": (
+            pre_collision.get("first_collision_elapsed_seconds")
+            if pre_collision
+            else None
+        ),
+        "route_pre_collision_ego_on_route_rate": (
+            pre_collision.get("ego_on_route_rate") if pre_collision else None
+        ),
+        "route_pre_collision_lead_on_route_rate": (
+            pre_collision.get("lead_on_route_rate") if pre_collision else None
+        ),
+        "route_pre_collision_both_on_route_rate": (
+            pre_collision.get("both_on_route_rate") if pre_collision else None
+        ),
+        "route_pre_collision_maximum_ego_deviation_m": (
+            pre_collision.get("maximum_ego_deviation_m") if pre_collision else None
+        ),
+        "route_pre_collision_maximum_lead_deviation_m": (
+            pre_collision.get("maximum_lead_deviation_m") if pre_collision else None
+        ),
+        "route_acceptance_ego_on_route_rate": acceptance_ego_rate,
+        "route_acceptance_lead_on_route_rate": acceptance_lead_rate,
+        "route_acceptance_both_on_route_rate": acceptance_both_rate,
+        "route_acceptance_maximum_ego_deviation_m": acceptance_ego_deviation,
+        "route_acceptance_maximum_lead_deviation_m": acceptance_lead_deviation,
         "route_verified": route_verified,
         "rgb_frames": rgb_frames,
         "run_dir": os.path.dirname(metadata_path),

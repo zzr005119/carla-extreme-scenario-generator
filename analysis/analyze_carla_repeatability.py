@@ -138,31 +138,38 @@ def analyze(rows, expected_seeds, route_lock_required=False):
         else None
     )
     expected_sample_ids = {row["sample_id"] for row in rows}
-    route_ego_rates = [
-        float(row["route_ego_on_route_rate"])
-        for row in completed
-        if row.get("route_ego_on_route_rate") is not None
-    ]
-    route_lead_rates = [
-        float(row["route_lead_on_route_rate"])
-        for row in completed
-        if row.get("route_lead_on_route_rate") is not None
-    ]
-    route_both_rates = [
-        float(row["route_both_on_route_rate"])
-        for row in completed
-        if row.get("route_both_on_route_rate") is not None
-    ]
-    route_ego_deviations = [
-        float(row["route_maximum_ego_deviation_m"])
-        for row in completed
-        if row.get("route_maximum_ego_deviation_m") is not None
-    ]
-    route_lead_deviations = [
-        float(row["route_maximum_lead_deviation_m"])
-        for row in completed
-        if row.get("route_maximum_lead_deviation_m") is not None
-    ]
+    def acceptance_route_value(row, acceptance_field, full_run_field):
+        value = row.get(acceptance_field)
+        return value if value is not None else row.get(full_run_field)
+
+    def acceptance_route_values(acceptance_field, full_run_field):
+        values = []
+        for row in completed:
+            value = acceptance_route_value(row, acceptance_field, full_run_field)
+            if value is not None:
+                values.append(float(value))
+        return values
+
+    route_ego_rates = acceptance_route_values(
+        "route_acceptance_ego_on_route_rate",
+        "route_ego_on_route_rate",
+    )
+    route_lead_rates = acceptance_route_values(
+        "route_acceptance_lead_on_route_rate",
+        "route_lead_on_route_rate",
+    )
+    route_both_rates = acceptance_route_values(
+        "route_acceptance_both_on_route_rate",
+        "route_both_on_route_rate",
+    )
+    route_ego_deviations = acceptance_route_values(
+        "route_acceptance_maximum_ego_deviation_m",
+        "route_maximum_ego_deviation_m",
+    )
+    route_lead_deviations = acceptance_route_values(
+        "route_acceptance_maximum_lead_deviation_m",
+        "route_maximum_lead_deviation_m",
+    )
     return {
         "expected_run_count": len(expected_sample_ids) * len(expected_seeds),
         "total_manifest_runs": len(rows),

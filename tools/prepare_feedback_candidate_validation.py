@@ -402,6 +402,7 @@ def write_readme(path, manifest):
         "- 目标档：每个生成器均为 high 3 个、critical 6 个。",
         "- 调度：9 个随机化区组，每组 9 次并拆成 3 个小批次。",
         "- 控制器、传感器和严格验收均冻结为 waypoint_follower_v1。",
+        "- 非碰撞运行按全程路线验收；发生碰撞时按首次碰撞前路线验收，并保留全程路线指标。",
         "",
         "## 执行",
         "",
@@ -485,6 +486,9 @@ def main():
     route = control_profile["route"]
     acceptance = copy.deepcopy(control_profile["acceptance_requirements"])
     acceptance["carla_version"] = "0.9.16"
+    acceptance[
+        "route_verification_scope"
+    ] = "pre_collision_for_collision_runs"
     manifest = {
         "format": "feedback_candidate_validation_v1",
         "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),
