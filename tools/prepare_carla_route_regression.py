@@ -35,7 +35,8 @@ DEFAULT_CONTROL_PROFILE = os.path.join(
     "route_control_profiles",
     "waypoint_follower_v1.json",
 )
-DEFAULT_CARLA_ROOT = r"F:\Carla\test"
+DEFAULT_CARLA_ROOT = PROJECT_ROOT
+DEFAULT_RUNTIME_OUTPUT_BASE = r"F:\Carla\output-0.9.16"
 REPRESENTATIVE_SAMPLE_IDS = (
     "cvae_low_20260813_0001",
     "cvae_medium_20260813_0103",
@@ -50,6 +51,7 @@ def parse_args():
     parser.add_argument("--source-manifest", default=DEFAULT_SOURCE_MANIFEST)
     parser.add_argument("--output-dir")
     parser.add_argument("--carla-root", default=DEFAULT_CARLA_ROOT)
+    parser.add_argument("--runtime-output-root")
     parser.add_argument("--control-profile", default=DEFAULT_CONTROL_PROFILE)
     parser.add_argument(
         "--sample-set",
@@ -374,11 +376,13 @@ def main():
         "scenes",
         "scene_04_parameterized.py",
     )
-    runtime_output_root = os.path.join(
-        carla_root,
-        "output",
-        "model_generated_validation",
-        os.path.basename(output_dir),
+    runtime_output_root = os.path.abspath(
+        args.runtime_output_root
+        or os.path.join(
+            DEFAULT_RUNTIME_OUTPUT_BASE,
+            "model_generated_validation",
+            os.path.basename(output_dir),
+        )
     )
 
     runs = {}

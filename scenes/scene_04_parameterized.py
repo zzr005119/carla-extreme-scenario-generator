@@ -755,6 +755,11 @@ def main():
             "fixed_delta_seconds": fixed_delta_seconds,
             "traffic_manager_seed": traffic_manager_seed,
         },
+        "carla_versions": {
+            "client": None,
+            "server": None,
+            "match": None,
+        },
         "sensor_pipeline": {
             "status": "starting",
             "queue_size": writer_queue_size,
@@ -967,6 +972,17 @@ def main():
     try:
         client = carla.Client("localhost", 2000)
         client.set_timeout(20.0)
+        client_version = client.get_client_version()
+        server_version = client.get_server_version()
+        metadata["carla_versions"] = {
+            "client": client_version,
+            "server": server_version,
+            "match": client_version == server_version,
+        }
+        print(
+            f"[VERSION] client={client_version} | server={server_version}",
+            flush=True,
+        )
         world = client.get_world()
         original_settings = world.get_settings()
         original_weather = world.get_weather()

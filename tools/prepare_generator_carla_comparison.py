@@ -54,7 +54,10 @@ DEFAULT_CONTROL_PROFILE = os.path.join(
     "route_control_profiles",
     "waypoint_follower_v1.json",
 )
-DEFAULT_CARLA_ROOT = r"F:\Carla\test"
+DEFAULT_CARLA_ROOT = PROJECT_ROOT
+DEFAULT_RUNTIME_OUTPUT_ROOT = (
+    r"F:\Carla\output-0.9.16\generator_comparison_v1"
+)
 
 
 def parse_args():
@@ -64,6 +67,10 @@ def parse_args():
     parser.add_argument("--base-config", default=DEFAULT_BASE_CONFIG)
     parser.add_argument("--control-profile", default=DEFAULT_CONTROL_PROFILE)
     parser.add_argument("--carla-root", default=DEFAULT_CARLA_ROOT)
+    parser.add_argument(
+        "--runtime-output-root",
+        default=DEFAULT_RUNTIME_OUTPUT_ROOT,
+    )
     parser.add_argument("--per-level", type=int, default=3)
     parser.add_argument(
         "--selection", choices=("spread", "centroid"), default="spread"
@@ -467,9 +474,7 @@ def main():
     scene_runner = os.path.join(
         carla_root, "scenes", "scene_04_parameterized.py"
     )
-    runtime_output_root = os.path.join(
-        carla_root, "output", "generator_comparison_v1"
-    )
+    runtime_output_root = os.path.abspath(args.runtime_output_root)
     runs = make_runs(
         selected_by_cell,
         base_config,

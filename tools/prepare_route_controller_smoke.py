@@ -24,7 +24,7 @@ DEFAULT_OUTPUT_DIR = os.path.join(
     "route_controller_smoke_v1",
 )
 RUNTIME_OUTPUT_ROOT = (
-    r"F:\Carla\test\output\model_generated_validation\route_controller_smoke_v1"
+    r"F:\Carla\output-0.9.16\model_generated_validation\route_controller_smoke_v1"
 )
 RUN_ID = "cvae_medium_20260813_0103__route_controller_smoke"
 

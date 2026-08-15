@@ -84,6 +84,9 @@ def collect_row(
             "minimum_pedestrian_distance_m": None,
             "sensor_status": None,
             "server_status": None,
+            "carla_client_version": None,
+            "carla_server_version": None,
+            "carla_version_match": None,
             "route_status": None,
             "route_ego_on_route_rate": None,
             "route_lead_on_route_rate": None,
@@ -101,7 +104,26 @@ def collect_row(
     risk = result.get("risk_evaluation") or {}
     route_control = metadata.get("route_control") or {}
     sensor_status = (metadata.get("sensor_pipeline") or {}).get("status")
-    server_status = (metadata.get("server_health") or {}).get("status")
+    server_health = metadata.get("server_health") or {}
+    server_status = server_health.get("status")
+    carla_versions = metadata.get("carla_versions") or {}
+    carla_client_version = carla_versions.get("client")
+    carla_server_version = (
+        carla_versions.get("server") or server_health.get("server_version")
+    )
+    expected_carla_version = acceptance_requirements.get("carla_version")
+    carla_version_match = (
+        carla_client_version == carla_server_version
+        and (
+            expected_carla_version is None
+            or (
+                carla_client_version == expected_carla_version
+                and carla_server_version == expected_carla_version
+            )
+        )
+        if carla_client_version is not None and carla_server_version is not None
+        else None
+    )
     rgb_frames = int((metadata.get("frames") or {}).get("rgb") or 0)
     minimum_route_rate = float(
         acceptance_requirements.get("minimum_route_both_on_rate", 0.999)
@@ -156,6 +178,10 @@ def collect_row(
             required_server_status is None
             or server_status == required_server_status
         )
+        and (
+            expected_carla_version is None
+            or carla_version_match is True
+        )
         and rgb_frames >= minimum_rgb_frames
     )
     observed_level = risk.get("level") if completed else None
@@ -169,6 +195,8 @@ def collect_row(
         acceptance_failures.append("sensor_status")
     if required_server_status is not None and server_status != required_server_status:
         acceptance_failures.append("server_status")
+    if expected_carla_version is not None and carla_version_match is not True:
+        acceptance_failures.append("carla_version")
     if rgb_frames < minimum_rgb_frames:
         acceptance_failures.append("rgb_frames")
     if route_lock_required and not route_verified:
@@ -192,6 +220,9 @@ def collect_row(
         ),
         "sensor_status": sensor_status,
         "server_status": server_status,
+        "carla_client_version": carla_client_version,
+        "carla_server_version": carla_server_version,
+        "carla_version_match": carla_version_match,
         "route_status": route_control.get("status"),
         "route_ego_on_route_rate": route_control.get("ego_on_route_rate"),
         "route_lead_on_route_rate": route_control.get("lead_on_route_rate"),

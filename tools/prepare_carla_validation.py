@@ -54,7 +54,8 @@ DEFAULT_SCENE_RUNNER = os.path.join(
     "scenes",
     "scene_04_parameterized.py",
 )
-DEFAULT_CARLA_ROOT = r"F:\Carla\test"
+DEFAULT_CARLA_ROOT = PROJECT_ROOT
+DEFAULT_RUNTIME_OUTPUT_BASE = r"F:\Carla\output-0.9.16"
 
 
 def parse_args():
@@ -305,13 +306,13 @@ def write_readme(path, manifest_path, run_script_path, part_paths):
         "",
         "```cmd",
         "cd /d D:\\Xx\\竞赛\\大创实施ing",
-        "D:\\Anaconda\\envs\\Carla666\\python.exe "
+        "D:\\Anaconda\\envs\\Carla666-0916\\python.exe "
         "tools\\collect_carla_validation.py "
         f"--manifest \"{manifest_path}\"",
         "```",
         "",
         "`run_all.cmd` 使用当前系统 `python`，该解释器必须已安装 CARLA Python API；",
-        "结果回填使用 `Carla666`，避免与 CARLA 运行环境混用。",
+        "结果回填使用 `Carla666-0916`，与 CARLA 0.9.16 Python API 保持一致。",
         "",
         "每一批包含低、中、高、临界四档各 1 条，并共享同一个 Traffic Manager 种子；",
         "批内顺序固定随机化，用于控制交通随机性和连续运行顺序的干扰。",
@@ -348,8 +349,7 @@ def main():
     runtime_output_root = os.path.abspath(
         args.runtime_output_root
         or os.path.join(
-            carla_root,
-            "output",
+            DEFAULT_RUNTIME_OUTPUT_BASE,
             "model_generated_validation",
             os.path.basename(output_dir),
         )
@@ -482,7 +482,7 @@ def main():
     print(f"[PREPARE] 运行脚本: {run_script_path}")
     print(
         "[PREPARE] 结果回填: "
-        "D:\\Anaconda\\envs\\Carla666\\python.exe "
+        "D:\\Anaconda\\envs\\Carla666-0916\\python.exe "
         "tools\\collect_carla_validation.py "
         f'--manifest "{manifest_path}"'
     )

@@ -219,7 +219,11 @@ def analyze(rows, expected_seeds, route_lock_required=False):
         ),
         "target_score_ordinal_correlation": (
             float(np.corrcoef(target_indices, completed_scores)[0, 1])
-            if len(completed) > 1
+            if (
+                len(completed) > 1
+                and len(set(target_indices)) > 1
+                and len(set(completed_scores)) > 1
+            )
             else None
         ),
         "scenario_count": len(scenario_rows),

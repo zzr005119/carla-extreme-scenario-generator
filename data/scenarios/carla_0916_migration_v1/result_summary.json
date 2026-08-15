@@ -1,0 +1,47 @@
+{
+  "status": "accepted",
+  "run_date": "2026-08-15",
+  "source_config_sha256": "46FF0B24456085D945B635B8A4E5D21CE1F737CC3ACB21D92AF20F378F43AC23",
+  "output_metadata": "F:\\Carla\\output-0.9.16\\migration_v1\\cvae_medium_20260813_0103__carla_0916_migration_v1\\20260815_133937\\metadata.json",
+  "carla_versions": {
+    "client": "0.9.16",
+    "server": "0.9.16",
+    "match": true
+  },
+  "acceptance": {
+    "scenario_status": "completed",
+    "sensor_status": "completed",
+    "rgb_frames": 100,
+    "server_status": "healthy",
+    "route_control_mode": "waypoint_follower",
+    "both_on_route_rate": 1.0,
+    "maximum_ego_deviation_m": 0.995,
+    "maximum_lead_deviation_m": 0.999,
+    "collision_count": 0
+  },
+  "risk": {
+    "level": "medium",
+    "score": 26.837,
+    "minimum_ttc_seconds": 1.724,
+    "minimum_lead_gap_m": 4.655
+  },
+  "carla_0915_reference": {
+    "metadata": "F:\\Carla\\test\\output\\model_generated_validation\\route_controller_smoke_v1\\cvae_medium_20260813_0103__route_controller_smoke\\20260814_131916\\metadata.json",
+    "risk_level": "medium",
+    "risk_score": 27.744,
+    "minimum_ttc_seconds": 1.679,
+    "minimum_lead_gap_m": 4.382,
+    "maximum_ego_deviation_m": 0.996,
+    "maximum_lead_deviation_m": 0.996,
+    "collision_count": 0
+  },
+  "delta_from_0915": {
+    "risk_score": -0.907,
+    "risk_score_percent": -3.27,
+    "minimum_ttc_seconds": 0.045,
+    "minimum_lead_gap_m": 0.273,
+    "maximum_ego_deviation_m": -0.001,
+    "maximum_lead_deviation_m": 0.003
+  },
+  "conclusion": "single_scenario_strict_acceptance_passed_repeatability_pending"
+}

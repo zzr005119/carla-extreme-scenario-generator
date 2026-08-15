@@ -1,0 +1,2 @@
+﻿sample_id,target_risk_level,completed_runs,expected_runs,seeds,score_mean,score_std,score_min,score_max,score_range,modal_observed_level,level_consistency_rate,all_levels_equal,target_match_rate,collision_runs,collision_events
+cvae_medium_20260813_0103__carla_0916_migration_v1,medium,3,3,"20260821,20260822,20260823",27.49066666666667,0.5873264282605831,26.837,27.974,1.1370000000000005,medium,1.0,True,1.0,0,0

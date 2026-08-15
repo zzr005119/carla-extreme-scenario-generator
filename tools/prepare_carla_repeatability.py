@@ -34,7 +34,8 @@ DEFAULT_OUTPUT_DIR = os.path.join(
     "scenarios",
     "cvae_repeatability_v1",
 )
-DEFAULT_CARLA_ROOT = r"F:\Carla\test"
+DEFAULT_CARLA_ROOT = PROJECT_ROOT
+DEFAULT_RUNTIME_OUTPUT_BASE = r"F:\Carla\output-0.9.16"
 
 
 def parse_seeds(value):
@@ -51,6 +52,7 @@ def parse_args():
     parser.add_argument("--source-manifest", default=DEFAULT_SOURCE_MANIFEST)
     parser.add_argument("--output-dir", default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--carla-root", default=DEFAULT_CARLA_ROOT)
+    parser.add_argument("--runtime-output-root")
     parser.add_argument(
         "--traffic-seeds",
         type=parse_seeds,
@@ -176,7 +178,7 @@ def write_readme(path, manifest_path, part_paths):
         "",
         "```cmd",
         "cd /d D:\\Xx\\竞赛\\大创实施ing",
-        "D:\\Anaconda\\envs\\Carla666\\python.exe "
+        "D:\\Anaconda\\envs\\Carla666-0916\\python.exe "
         "tools\\collect_carla_repeatability.py "
         f'--manifest "{manifest_path}"',
         "```",
@@ -216,13 +218,19 @@ def main():
         raise ValueError("来源记录与来源清单的 sample_id 不一致")
 
     base_config = load_json(source_manifest["base_config"])
-    scene_runner = source_manifest["scene_runner"]
     carla_root = os.path.abspath(args.carla_root)
-    runtime_output_root = os.path.join(
+    scene_runner = os.path.join(
         carla_root,
-        "output",
-        "model_generated_validation",
-        os.path.basename(output_dir),
+        "scenes",
+        "scene_04_parameterized.py",
+    )
+    runtime_output_root = os.path.abspath(
+        args.runtime_output_root
+        or os.path.join(
+            DEFAULT_RUNTIME_OUTPUT_BASE,
+            "model_generated_validation",
+            os.path.basename(output_dir),
+        )
     )
 
     all_runs = []
