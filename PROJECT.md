@@ -125,6 +125,9 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 
 ## 技术栈
 - **当前验证基线**：CARLA 0.9.16 位于 `F:\Carla\carla-0.9.16`；独立 Conda 环境 `Carla666-0916` 使用 Python 3.12.13、CARLA Python API 0.9.16、NumPy 2.5.0、Pillow 11.1.0、PyTorch `2.12.1+cu126` 和 TorchVision `0.27.1+cu126`。RTX 4060 CUDA 张量测试通过，`pip check` 无依赖冲突。
+- **服务器运行基线**：实验室服务器 `factory22-srv` 已在 `/home/zhaozirong/software/envs/Carla666-0916` 建立 Python 3.12.13 环境；CARLA 0.9.16 位于 `/home/zhaozirong/software/carla-0.9.16`。CARLA PythonAPI、PyTorch CUDA、`Town10HD_Opt` 无桌面连接、项目单场景和完整项目批次均已在 GPU 1 通过。启动时必须使用 `CUDA_VISIBLE_DEVICES=1` 和 `-graphicsadapter=1`，避免占用运行 vLLM 的 GPU 0。
+- **服务器模型依赖**：NumPy 2.5.0、PyTorch `2.12.1+cu126`、TorchVision `0.27.1+cu126`、Pandas 3.0.3、SciPy 1.18.0、Scikit-learn 1.9.0 和 Joblib 1.5.3 已安装，`pip check` 无冲突；LHS、GMM、CVAE 各生成 `32/32` 条高风险候选并完成统一离线评估，风险代理复训结果为 MAE `5.515`、RMSE `10.138`。
+- **服务器批次验收**：`rainy_night_variants` 的 5 个变体 × 3 个交通种子已完成 `15/15`，传感器完整率和 CARLA 服务健康率均为 `100%`，RGB/Depth/SemSeg 共记录 `9000` 帧且无碰撞。`batch_runner.py` 支持 `--output-root` 和 `--traffic-manager-port`；服务器批次使用 TM 端口 `8100`，避开现有服务占用的 `8000/8001`。
 - **历史结果保留**：CARLA 0.9.15 的配置、清单、聚合结果和 `834` 个结构化运行文件仍保留；0.9.15 程序、Python 环境、压缩包和约 `14.24 GiB` 原始 PNG/NPY 帧已删除，不再作为可直接运行的复现环境。
 - **总体研究核心**：PyTorch、GAN/VAE/扩散模型、物理约束或 PyBullet、强化学习、OpenSCENARIO/CARLA 适配。
 - **平台工程计划**：结构化场景数据库、Matplotlib/Plotly；Streamlit 可作为 Demo 展示层，但不是当前优先级。
@@ -132,6 +135,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 ## 存储路径与缓存
 - 项目环境、CARLA、模型、运行输出和开发缓存默认使用 `F:\`；项目规则已写入根目录 `AGENTS.md`。
 - 当前 CARLA 运行时位于 `F:\Carla\carla-0.9.16`，项目输出位于 `F:\Carla\output-0.9.16`，Conda 根目录和 `Carla666-0916` 环境位于 `D:\ANACONDA`。
+- Ubuntu 服务器没有 `F:\`，其运行时例外放在 `/home/zhaozirong/software`；`/data` 当前无写权限，项目源码和结构化数据已同步到 `/home/zhaozirong/projects/carla-extreme-scenario-generator`。模型产物位于 `/home/zhaozirong/software/models/carla-extreme-scenario-generator`，批次与模型验证输出位于 `/home/zhaozirong/software/output/carla-0.9.16`。
 - 原 `C:\Users\z'z'r\AppData\Local\pip\cache` 仅为可再生成的 pip 下载缓存，已清理约 `15.94 GB`；后续 `PIP_CACHE_DIR` 指向 `F:\Carla\project-cache\pip`。
 - 原 `C:\Users\z'z'r\.cache\torch` 已迁移至 `F:\Carla\project-cache\torch`，原位置保留目录联接；`TORCH_HOME` 指向 F 盘。`HF_HOME` 和 `CONDA_PKGS_DIRS` 也已指向 `F:\Carla\project-cache` 下对应目录。
 - `C:\Users\z'z'r\.cache\codex-runtimes` 属于 Codex 运行时缓存，未迁移；`C:\Users\z'z'r\AppData\Local\Temp` 属于系统临时目录，未整体移动或删除。二者是当前明确记录的 C 盘例外。
@@ -154,7 +158,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - 风险反馈 V1 已将 108 次严格验收运行聚合为 36 个独立场景；15 维参数不含 `target_risk_level` 和 `generator` 输入。按 `generator × target_risk_level` 分层三折交叉验证，随机森林代理 MAE `5.515`、RMSE `10.138`、Spearman `0.902`，高及以上风险召回率 `75%`；该结果只支持候选排序基线，不代表真实交通风险预测能力。
 - 本轮唯一的初次路线失败在相同配置重跑后恢复为双车全程在途、路线偏差小于 `1.01 m`；当前按偶发运行状态处理，但后续批次仍保留路线严格验收，不能删除该质量门槛。
 - 按原计划，2026年7—8月应处于阶段三；截至2026年8月15日，阶段二已形成第一版可验证模型基线、受控重复性证据、三生成器 108/108 严格实测对照和风险代理基线，CARLA 0.9.16 三种子迁移回归已通过，当前进入代理误差诊断和反馈引导候选验证。
-- 服务器 `gpu03` 暂不可用；当前在 RTX 4060 笔记本执行 CARLA 调试与批次实验。
+- 实验室双 RTX 4090 服务器 `factory22-srv` 已完成 CARLA 0.9.16、Python 3.12.13、完整模型依赖、三生成器推理、风险代理复训和 15 次项目批次验证。后续完整模型训练和 CARLA 批量实验默认迁移到服务器 GPU 1，本地 RTX 4060 仅保留代码开发、快速静态校验和故障回退；GPU 0 继续保留给现有 vLLM 服务。
 - 长时间多传感器运行仍可能产生硬件压力，但帧完整性和服务健康检查已作为批次验收条件。
 - 0.9.15 历史清单中的 `metadata_path`、`run_dir` 和 CMD 仍保留实验发生时的原始绝对路径，仅用于来源追溯；当前活动工具默认使用项目仓库场景运行器和 `F:\Carla\output-0.9.16`，不得直接执行旧脚本污染历史结果。
 - CARLA 0.9.16 三种子迁移回归已严格验收 `3/3`：每次 RGB `100` 帧，传感器、服务健康和路线验收全部通过，双车同时在途率均为 `1.0`，最大路线偏差不超过 `1.000 m`，无碰撞，风险档均为 `medium`。同配置平均风险分由 0.9.15 的 `27.760` 变为 `27.491`（`-0.97%`）；0.9.16 风险分样本标准差为 `0.587`、极差为 `1.137`，相对波动增大但未影响工程验收。当前样本仅一个场景、三个种子，不作统计显著性结论。
@@ -162,6 +166,6 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 
 ## 下一步
 1. 对风险代理进行按生成器/目标档的误差诊断和候选排序稳定性分析。
-2. 比较 LHS 候选排序、GMM 高风险筛选和 CVAE 潜变量搜索三种反馈策略，继续使用冻结控制器和 CARLA 0.9.16 做小规模回归。
+2. 比较 LHS 候选排序、GMM 高风险筛选和 CVAE 潜变量搜索三种反馈策略，默认在服务器 GPU 1 上使用冻结控制器和 CARLA 0.9.16 做小规模回归。
 3. 增加新的实测风险反馈样本，检验代理模型在新场景上的外部验证误差，不把当前 36 个场景当作最终统计结论。
 4. 当成功实测记录和高风险样本达到调研报告中的切换门槛后，再加入潜空间条件 Flow；不在当前数据条件下直接实现完整轨迹扩散或世界模型。

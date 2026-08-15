@@ -1,0 +1,18 @@
+2026-08-15T19:30:57+08:00
+factory22-srv
+Python 3.12.13
+carla==0.9.16
+joblib==1.5.3
+numpy==2.5.0
+pandas==3.0.3
+pillow==11.1.0
+scikit-learn==1.9.0
+scipy==1.18.0
+torch==2.12.1+cu126
+torchvision==0.27.1+cu126
+No broken requirements found.
+0, NVIDIA GeForce RTX 4090, 49140 MiB
+1, NVIDIA GeForce RTX 4090, 49140 MiB
+96d8edf012b286cda3345b3e8ef6f051ec9785f021d9b14fd15c492a939c9aba  /home/zhaozirong/software/models/carla-extreme-scenario-generator/artifacts/cvae/final_seed_v1/best.pt
+7f5311e63b4b9e0e7c2c3658479b60697f28541ac7acdc2ff27d374e14ffa95e  /home/zhaozirong/software/models/carla-extreme-scenario-generator/artifacts/gmm/seed_v1.json
+4701520f26734bfea24b70f9b971392fb98773b8190177982ebe034b562d48bf  /home/zhaozirong/software/models/carla-extreme-scenario-generator/artifacts/risk_proxy_v1/selected_model.joblib

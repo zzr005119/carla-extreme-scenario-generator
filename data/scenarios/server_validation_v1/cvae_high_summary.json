@@ -1,0 +1,17 @@
+{
+  "model": "cvae",
+  "artifact": "/home/zhaozirong/projects/carla-extreme-scenario-generator/artifacts/cvae/final_seed_v1/best.pt",
+  "target_risk_level": "high",
+  "requested_weather_tags": [],
+  "requested_count": 32,
+  "accepted_count": 32,
+  "attempted_count": 32,
+  "acceptance_rate": 1.0,
+  "complete": true,
+  "rejection_reasons": {},
+  "random_seed": 20260815,
+  "created_at": "2026-08-15T19:27:37+08:00",
+  "output": "/home/zhaozirong/software/output/carla-0.9.16/model_validation_20260815/generated/cvae_high.jsonl",
+  "elapsed_seconds": 1.7563788150437176,
+  "accepted_sample_latency_ms": 54.886837970116176
+}

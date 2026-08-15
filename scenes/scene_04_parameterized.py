@@ -53,6 +53,17 @@ def parse_args():
         action="store_true",
         help="仅校验配置，不连接 CARLA",
     )
+    parser.add_argument(
+        "--output-root",
+        default=None,
+        help="覆盖配置中的输出根目录，适配不同操作系统",
+    )
+    parser.add_argument(
+        "--traffic-manager-port",
+        type=int,
+        default=None,
+        help="覆盖配置中的 Traffic Manager 端口，避免端口冲突",
+    )
     return parser.parse_args()
 
 
@@ -693,6 +704,16 @@ def configure_camera_blueprint(blueprint, camera_config):
 def main():
     args = parse_args()
     config_path, config = load_config(args.config)
+    if args.output_root or args.traffic_manager_port is not None:
+        config = dict(config)
+        config["output"] = dict(config["output"])
+        config["scenario"] = dict(config["scenario"])
+        if args.output_root:
+            config["output"]["root"] = os.path.abspath(args.output_root)
+        if args.traffic_manager_port is not None:
+            if args.traffic_manager_port <= 0 or args.traffic_manager_port > 65535:
+                raise ValueError("Traffic Manager 端口必须位于 1 到 65535")
+            config["scenario"]["traffic_manager_port"] = args.traffic_manager_port
     print(f"[CONFIG] 校验通过: {config_path}")
     if args.validate_only:
         print("[CONFIG] validate-only 完成，未连接 CARLA")

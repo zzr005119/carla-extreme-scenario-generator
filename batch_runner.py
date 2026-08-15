@@ -76,6 +76,17 @@ def parse_args():
         default=None,
         help="覆盖配置中的重复次数",
     )
+    parser.add_argument(
+        "--output-root",
+        default=None,
+        help="覆盖所有场景的输出根目录",
+    )
+    parser.add_argument(
+        "--traffic-manager-port",
+        type=int,
+        default=None,
+        help="覆盖所有场景的 Traffic Manager 端口",
+    )
     return parser.parse_args()
 
 
@@ -467,8 +478,19 @@ def main():
         raise ValueError("--limit 必须大于 0")
     if args.repeat is not None and args.repeat <= 0:
         raise ValueError("--repeat 必须大于 0")
+    if (
+        args.traffic_manager_port is not None
+        and not 1 <= args.traffic_manager_port <= 65535
+    ):
+        raise ValueError("--traffic-manager-port 必须在 1 到 65535 之间")
     batch_path = os.path.abspath(args.config)
     batch_path, batch_config, base_path, base_config = load_batch_definition(batch_path)
+    if args.output_root:
+        base_config["output"]["root"] = os.path.abspath(args.output_root)
+    if args.traffic_manager_port is not None:
+        base_config["scenario"]["traffic_manager_port"] = (
+            args.traffic_manager_port
+        )
     if not os.path.isfile(SCENE_RUNNER):
         raise FileNotFoundError(f"找不到场景运行器: {SCENE_RUNNER}")
 

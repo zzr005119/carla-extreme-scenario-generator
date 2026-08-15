@@ -1,0 +1,122 @@
+[
+  {
+    "run_order": 1,
+    "variant_name": "baseline",
+    "repeat_index": 1,
+    "traffic_manager_seed": 20260806,
+    "config_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/generated_configs/baseline_repeat_01_seed_20260806.json",
+    "log_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/logs/baseline_repeat_01_seed_20260806.log"
+  },
+  {
+    "run_order": 2,
+    "variant_name": "dense_fog",
+    "repeat_index": 1,
+    "traffic_manager_seed": 20260806,
+    "config_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/generated_configs/dense_fog_repeat_01_seed_20260806.json",
+    "log_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/logs/dense_fog_repeat_01_seed_20260806.log"
+  },
+  {
+    "run_order": 3,
+    "variant_name": "late_braking",
+    "repeat_index": 1,
+    "traffic_manager_seed": 20260806,
+    "config_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/generated_configs/late_braking_repeat_01_seed_20260806.json",
+    "log_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/logs/late_braking_repeat_01_seed_20260806.log"
+  },
+  {
+    "run_order": 4,
+    "variant_name": "fast_pedestrian",
+    "repeat_index": 1,
+    "traffic_manager_seed": 20260806,
+    "config_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/generated_configs/fast_pedestrian_repeat_01_seed_20260806.json",
+    "log_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/logs/fast_pedestrian_repeat_01_seed_20260806.log"
+  },
+  {
+    "run_order": 5,
+    "variant_name": "short_headway",
+    "repeat_index": 1,
+    "traffic_manager_seed": 20260806,
+    "config_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/generated_configs/short_headway_repeat_01_seed_20260806.json",
+    "log_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/logs/short_headway_repeat_01_seed_20260806.log"
+  },
+  {
+    "run_order": 6,
+    "variant_name": "dense_fog",
+    "repeat_index": 2,
+    "traffic_manager_seed": 20260807,
+    "config_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/generated_configs/dense_fog_repeat_02_seed_20260807.json",
+    "log_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/logs/dense_fog_repeat_02_seed_20260807.log"
+  },
+  {
+    "run_order": 7,
+    "variant_name": "late_braking",
+    "repeat_index": 2,
+    "traffic_manager_seed": 20260807,
+    "config_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/generated_configs/late_braking_repeat_02_seed_20260807.json",
+    "log_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/logs/late_braking_repeat_02_seed_20260807.log"
+  },
+  {
+    "run_order": 8,
+    "variant_name": "fast_pedestrian",
+    "repeat_index": 2,
+    "traffic_manager_seed": 20260807,
+    "config_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/generated_configs/fast_pedestrian_repeat_02_seed_20260807.json",
+    "log_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/logs/fast_pedestrian_repeat_02_seed_20260807.log"
+  },
+  {
+    "run_order": 9,
+    "variant_name": "short_headway",
+    "repeat_index": 2,
+    "traffic_manager_seed": 20260807,
+    "config_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/generated_configs/short_headway_repeat_02_seed_20260807.json",
+    "log_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/logs/short_headway_repeat_02_seed_20260807.log"
+  },
+  {
+    "run_order": 10,
+    "variant_name": "baseline",
+    "repeat_index": 2,
+    "traffic_manager_seed": 20260807,
+    "config_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/generated_configs/baseline_repeat_02_seed_20260807.json",
+    "log_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/logs/baseline_repeat_02_seed_20260807.log"
+  },
+  {
+    "run_order": 11,
+    "variant_name": "late_braking",
+    "repeat_index": 3,
+    "traffic_manager_seed": 20260808,
+    "config_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/generated_configs/late_braking_repeat_03_seed_20260808.json",
+    "log_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/logs/late_braking_repeat_03_seed_20260808.log"
+  },
+  {
+    "run_order": 12,
+    "variant_name": "fast_pedestrian",
+    "repeat_index": 3,
+    "traffic_manager_seed": 20260808,
+    "config_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/generated_configs/fast_pedestrian_repeat_03_seed_20260808.json",
+    "log_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/logs/fast_pedestrian_repeat_03_seed_20260808.log"
+  },
+  {
+    "run_order": 13,
+    "variant_name": "short_headway",
+    "repeat_index": 3,
+    "traffic_manager_seed": 20260808,
+    "config_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/generated_configs/short_headway_repeat_03_seed_20260808.json",
+    "log_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/logs/short_headway_repeat_03_seed_20260808.log"
+  },
+  {
+    "run_order": 14,
+    "variant_name": "baseline",
+    "repeat_index": 3,
+    "traffic_manager_seed": 20260808,
+    "config_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/generated_configs/baseline_repeat_03_seed_20260808.json",
+    "log_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/logs/baseline_repeat_03_seed_20260808.log"
+  },
+  {
+    "run_order": 15,
+    "variant_name": "dense_fog",
+    "repeat_index": 3,
+    "traffic_manager_seed": 20260808,
+    "config_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/generated_configs/dense_fog_repeat_03_seed_20260808.json",
+    "log_path": "/home/zhaozirong/software/output/carla-0.9.16/server_batches/batches/rainy_night_variants/20260815_191419/logs/dense_fog_repeat_03_seed_20260808.log"
+  }
+]

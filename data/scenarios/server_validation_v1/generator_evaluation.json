@@ -1,0 +1,146 @@
+[
+  {
+    "name": "lhs_high",
+    "path": "/home/zhaozirong/software/output/carla-0.9.16/model_validation_20260815/generated/lhs_high.jsonl",
+    "records": 32,
+    "risk_levels": [
+      "high"
+    ],
+    "schema_valid_rate": 1.0,
+    "warning_count": 0,
+    "unique_rate": 1.0,
+    "training_exact_duplicate_rate": 0.0,
+    "feature_std_mean": 0.1003090743612591,
+    "pairwise_distance_mean": 0.5686884524980912,
+    "pairwise_distance_minimum": 0.32718324419008293,
+    "nearest_same_level_train_mean": 0.4171453419338439,
+    "nearest_same_level_train_minimum": 0.2903029812006732,
+    "correlation_rmse": 0.3312818641881641,
+    "design_range_consistency": {
+      "record_rate": 1.0,
+      "field_rate": 1.0
+    },
+    "weather_tag_distribution": {
+      "heavy_rain": 28,
+      "fog": 20,
+      "night": 32,
+      "wet_road": 32,
+      "strong_wind": 18,
+      "dense_fog": 12,
+      "rain": 4
+    },
+    "generation": {
+      "model": "lhs",
+      "artifact": null,
+      "target_risk_level": "high",
+      "requested_weather_tags": [],
+      "requested_count": 32,
+      "accepted_count": 32,
+      "attempted_count": 32,
+      "acceptance_rate": 1.0,
+      "complete": true,
+      "rejection_reasons": {},
+      "random_seed": 20260815,
+      "created_at": "2026-08-15T19:27:35+08:00",
+      "output": "/home/zhaozirong/software/output/carla-0.9.16/model_validation_20260815/generated/lhs_high.jsonl",
+      "elapsed_seconds": 0.04586641304194927,
+      "accepted_sample_latency_ms": 1.4333254075609148
+    }
+  },
+  {
+    "name": "gmm_high",
+    "path": "/home/zhaozirong/software/output/carla-0.9.16/model_validation_20260815/generated/gmm_high.jsonl",
+    "records": 32,
+    "risk_levels": [
+      "high"
+    ],
+    "schema_valid_rate": 1.0,
+    "warning_count": 0,
+    "unique_rate": 1.0,
+    "training_exact_duplicate_rate": 0.0,
+    "feature_std_mean": 0.09113771144797783,
+    "pairwise_distance_mean": 0.5099231247318176,
+    "pairwise_distance_minimum": 0.3118850956421441,
+    "nearest_same_level_train_mean": 0.39528054616228947,
+    "nearest_same_level_train_minimum": 0.25489220532405926,
+    "correlation_rmse": 0.3662486756411694,
+    "design_range_consistency": {
+      "record_rate": 0.3125,
+      "field_rate": 0.9395833333333333
+    },
+    "weather_tag_distribution": {
+      "heavy_rain": 25,
+      "fog": 22,
+      "night": 31,
+      "wet_road": 32,
+      "rain": 7,
+      "dense_fog": 10,
+      "strong_wind": 18,
+      "day": 1
+    },
+    "generation": {
+      "model": "gmm",
+      "artifact": "/home/zhaozirong/projects/carla-extreme-scenario-generator/artifacts/gmm/seed_v1.json",
+      "target_risk_level": "high",
+      "requested_weather_tags": [],
+      "requested_count": 32,
+      "accepted_count": 32,
+      "attempted_count": 32,
+      "acceptance_rate": 1.0,
+      "complete": true,
+      "rejection_reasons": {},
+      "random_seed": 20260815,
+      "created_at": "2026-08-15T19:27:35+08:00",
+      "output": "/home/zhaozirong/software/output/carla-0.9.16/model_validation_20260815/generated/gmm_high.jsonl",
+      "elapsed_seconds": 0.04971791594289243,
+      "accepted_sample_latency_ms": 1.5536848732153885
+    }
+  },
+  {
+    "name": "cvae_high",
+    "path": "/home/zhaozirong/software/output/carla-0.9.16/model_validation_20260815/generated/cvae_high.jsonl",
+    "records": 32,
+    "risk_levels": [
+      "high"
+    ],
+    "schema_valid_rate": 1.0,
+    "warning_count": 0,
+    "unique_rate": 1.0,
+    "training_exact_duplicate_rate": 0.0,
+    "feature_std_mean": 0.054971126395635034,
+    "pairwise_distance_mean": 0.3234447595684156,
+    "pairwise_distance_minimum": 0.053985967882991065,
+    "nearest_same_level_train_mean": 0.6188325798626532,
+    "nearest_same_level_train_minimum": 0.48364302589824537,
+    "correlation_rmse": 0.5309562658146694,
+    "design_range_consistency": {
+      "record_rate": 0.0,
+      "field_rate": 0.6416666666666667
+    },
+    "weather_tag_distribution": {
+      "rain": 29,
+      "fog": 32,
+      "night": 31,
+      "wet_road": 32,
+      "heavy_rain": 3,
+      "day": 1
+    },
+    "generation": {
+      "model": "cvae",
+      "artifact": "/home/zhaozirong/projects/carla-extreme-scenario-generator/artifacts/cvae/final_seed_v1/best.pt",
+      "target_risk_level": "high",
+      "requested_weather_tags": [],
+      "requested_count": 32,
+      "accepted_count": 32,
+      "attempted_count": 32,
+      "acceptance_rate": 1.0,
+      "complete": true,
+      "rejection_reasons": {},
+      "random_seed": 20260815,
+      "created_at": "2026-08-15T19:27:37+08:00",
+      "output": "/home/zhaozirong/software/output/carla-0.9.16/model_validation_20260815/generated/cvae_high.jsonl",
+      "elapsed_seconds": 1.7563788150437176,
+      "accepted_sample_latency_ms": 54.886837970116176
+    }
+  }
+]

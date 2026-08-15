@@ -1,0 +1,65 @@
+{
+  "format": "risk_proxy_baseline_v1",
+  "dataset": "/home/zhaozirong/projects/carla-extreme-scenario-generator/data/scenarios/risk_feedback_v1/dataset.csv",
+  "independent_scenario_count": 36,
+  "feature_count": 15,
+  "target_column": "observed_risk_score_mean",
+  "target_risk_level_used_as_input": false,
+  "generator_used_as_input": false,
+  "cv": {
+    "method": "StratifiedKFold",
+    "n_splits": 3,
+    "strata": "generator__target_risk_level",
+    "random_state": 20260815
+  },
+  "selected_model": "random_forest",
+  "selected_model_metrics": {
+    "model": "random_forest",
+    "mae": 5.514563957280032,
+    "rmse": 10.13757933790541,
+    "r2": 0.6015753016948462,
+    "spearman": 0.9024453024453025,
+    "high_or_critical_recall": 0.75
+  },
+  "all_model_metrics": [
+    {
+      "model": "random_forest",
+      "mae": 5.514563957280032,
+      "rmse": 10.13757933790541,
+      "r2": 0.6015753016948462,
+      "spearman": 0.9024453024453025,
+      "high_or_critical_recall": 0.75
+    },
+    {
+      "model": "ridge",
+      "mae": 9.439609215760829,
+      "rmse": 13.136621166349427,
+      "r2": 0.33097080148866476,
+      "spearman": 0.7976833976833978,
+      "high_or_critical_recall": 0.375
+    },
+    {
+      "model": "dummy_mean",
+      "mae": 13.007571759259259,
+      "rmse": 16.206030050733357,
+      "r2": -0.018195093858635047,
+      "spearman": 0.022924343513512562,
+      "high_or_critical_recall": 0.0
+    }
+  ],
+  "observed_score_mean_by_target": {
+    "low": 24.761481481481482,
+    "medium": 29.413592592592593,
+    "high": 49.315333333333335,
+    "critical": 56.77425925925926
+  },
+  "oof_predicted_score_mean_by_target": {
+    "low": 25.215256011806794,
+    "medium": 30.123430358465594,
+    "high": 48.486480088820294,
+    "critical": 56.971675116647084
+  },
+  "target_ordering_is_strict_for_observed_mean": true,
+  "target_ordering_is_strict_for_oof_prediction_mean": true,
+  "artifact": "/home/zhaozirong/projects/carla-extreme-scenario-generator/artifacts/risk_proxy_v1/selected_model.joblib"
+}
