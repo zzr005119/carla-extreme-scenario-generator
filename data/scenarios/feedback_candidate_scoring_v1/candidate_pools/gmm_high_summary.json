@@ -1,0 +1,33 @@
+{
+  "model": "gmm",
+  "artifact": "/home/zhaozirong/software/models/carla-extreme-scenario-generator/artifacts/gmm/seed_v1.json",
+  "target_risk_level": "high",
+  "requested_weather_tags": [
+    "heavy_rain",
+    "fog",
+    "night",
+    "wet_road"
+  ],
+  "requested_count": 256,
+  "accepted_count": 256,
+  "attempted_count": 304,
+  "acceptance_rate": 0.8421052631578947,
+  "complete": true,
+  "rejection_reasons": {
+    "生成天气 ['rain', 'fog', 'night', 'wet_road', 'strong_wind'] 不满足请求 ['heavy_rain', 'fog', 'night', 'wet_road']": 14,
+    "生成天气 ['rain', 'dense_fog', 'night', 'wet_road', 'strong_wind'] 不满足请求 ['heavy_rain', 'fog', 'night', 'wet_road']": 8,
+    "生成天气 ['rain', 'fog', 'night', 'wet_road'] 不满足请求 ['heavy_rain', 'fog', 'night', 'wet_road']": 7,
+    "生成天气 ['rain', 'dense_fog', 'night', 'wet_road'] 不满足请求 ['heavy_rain', 'fog', 'night', 'wet_road']": 6,
+    "生成天气 ['rain', 'fog', 'day', 'wet_road'] 不满足请求 ['heavy_rain', 'fog', 'night', 'wet_road']": 4,
+    "生成天气 ['heavy_rain', 'fog', 'day', 'wet_road', 'strong_wind'] 不满足请求 ['heavy_rain', 'fog', 'night', 'wet_road']": 3,
+    "生成天气 ['heavy_rain', 'fog', 'day', 'wet_road'] 不满足请求 ['heavy_rain', 'fog', 'night', 'wet_road']": 2,
+    "生成天气 ['rain', 'fog', 'day', 'wet_road', 'strong_wind'] 不满足请求 ['heavy_rain', 'fog', 'night', 'wet_road']": 2,
+    "生成天气 ['heavy_rain', 'dense_fog', 'day', 'wet_road', 'strong_wind'] 不满足请求 ['heavy_rain', 'fog', 'night', 'wet_road']": 1,
+    "生成天气 ['heavy_rain', 'dense_fog', 'day', 'wet_road'] 不满足请求 ['heavy_rain', 'fog', 'night', 'wet_road']": 1
+  },
+  "random_seed": 20260815,
+  "created_at": "2026-08-15T21:44:11+08:00",
+  "output": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_214410/candidate_pools/gmm_high.jsonl",
+  "elapsed_seconds": 0.16146844904869795,
+  "accepted_sample_latency_ms": 0.6307361290964764
+}

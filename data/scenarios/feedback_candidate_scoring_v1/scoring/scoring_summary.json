@@ -1,0 +1,177 @@
+{
+  "format": "feedback_candidate_scoring_v1",
+  "created_at": "2026-08-15T21:45:23+08:00",
+  "dataset": {
+    "path": "/home/zhaozirong/projects/carla-extreme-scenario-generator/data/scenarios/risk_feedback_v1/dataset.csv",
+    "sha256": "59dbd905b94ba26d5af76995d4e9dc42c06a5f3fede0d628cb8fea786ee39888",
+    "independent_scenario_count": 36,
+    "collision_scenario_count": 3,
+    "non_collision_scenario_count": 33
+  },
+  "candidate_sources": [
+    {
+      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_214410/candidate_pools/lhs_high.jsonl",
+      "sha256": "b6a8f5a1fa0970ebda0f56094a8c235758b3f9b3131e3fc563ba6e737dad122e",
+      "record_count": 256
+    },
+    {
+      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_214410/candidate_pools/gmm_high.jsonl",
+      "sha256": "a37b2548e11855acd269f12c04e8c2ccb9a02f366c93bc35fe3fdeb51bf6e29d",
+      "record_count": 256
+    },
+    {
+      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_214410/candidate_pools/cvae_high.jsonl",
+      "sha256": "9f23c00c0f2ca20cf4a3f5385c065ef8285f0d94d14be347bbe92d2bc8090387",
+      "record_count": 256
+    },
+    {
+      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_214410/candidate_pools/lhs_critical.jsonl",
+      "sha256": "2c1ef81f15afb81c734851594780ca696f84db6201d9cab916b7f9d03354183e",
+      "record_count": 256
+    },
+    {
+      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_214410/candidate_pools/gmm_critical.jsonl",
+      "sha256": "10e9342769f2240df560e813be0c37519a0950babb07482f7c36a96719e8016b",
+      "record_count": 256
+    },
+    {
+      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_214410/candidate_pools/cvae_critical.jsonl",
+      "sha256": "d20d73809bf972fa647541bed0b289245c601355f495f8c60021afae18bc4f07",
+      "record_count": 256
+    }
+  ],
+  "candidate_count": 1536,
+  "candidate_count_by_generator_target": {
+    "cvae__critical": 256,
+    "cvae__high": 256,
+    "gmm__critical": 256,
+    "gmm__high": 256,
+    "lhs__critical": 256,
+    "lhs__high": 256
+  },
+  "bootstrap": {
+    "method": "generator_target_stratified_bootstrap_random_forest",
+    "model_count": 50,
+    "n_estimators_per_model": 300,
+    "min_samples_leaf": 2,
+    "max_features": 0.7,
+    "random_state": 20260815,
+    "seeds": [
+      20260815,
+      20365544,
+      20470273,
+      20575002,
+      20679731,
+      20784460,
+      20889189,
+      20993918,
+      21098647,
+      21203376,
+      21308105,
+      21412834,
+      21517563,
+      21622292,
+      21727021,
+      21831750,
+      21936479,
+      22041208,
+      22145937,
+      22250666,
+      22355395,
+      22460124,
+      22564853,
+      22669582,
+      22774311,
+      22879040,
+      22983769,
+      23088498,
+      23193227,
+      23297956,
+      23402685,
+      23507414,
+      23612143,
+      23716872,
+      23821601,
+      23926330,
+      24031059,
+      24135788,
+      24240517,
+      24345246,
+      24449975,
+      24554704,
+      24659433,
+      24764162,
+      24868891,
+      24973620,
+      25078349,
+      25183078,
+      25287807,
+      25392536
+    ]
+  },
+  "scoring": {
+    "robust_score": "predicted_mean - 0.5 * predicted_std",
+    "top_fraction_per_generator_target_cell": 0.1,
+    "top_count_by_cell": {
+      "cvae__critical": 26,
+      "cvae__high": 26,
+      "gmm__critical": 26,
+      "gmm__high": 26,
+      "lhs__critical": 26,
+      "lhs__high": 26
+    },
+    "distance_metric": "normalized_euclidean_divided_by_sqrt_15",
+    "collision_boundary": {
+      "definition": "sqrt(exp(-d_collision/scale_collision) * exp(-abs(d_non_collision-d_collision)/scale_margin))",
+      "collision_distance_scale": 0.1057817375677144,
+      "collision_margin_scale": 0.027990740570360766
+    }
+  },
+  "selection": {
+    "channels": [
+      "stable_high_score",
+      "high_uncertainty",
+      "collision_boundary"
+    ],
+    "per_generator_channel": 3,
+    "minimum_per_target_level_per_generator_channel": 1,
+    "diversity_weight": 0.2,
+    "selected_count": 27,
+    "counts_by_generator_channel": {
+      "cvae": {
+        "stable_high_score": 3,
+        "high_uncertainty": 3,
+        "collision_boundary": 3
+      },
+      "gmm": {
+        "stable_high_score": 3,
+        "high_uncertainty": 3,
+        "collision_boundary": 3
+      },
+      "lhs": {
+        "stable_high_score": 3,
+        "high_uncertainty": 3,
+        "collision_boundary": 3
+      }
+    },
+    "target_counts_by_generator": {
+      "cvae": {
+        "critical": 6,
+        "high": 3
+      },
+      "gmm": {
+        "critical": 6,
+        "high": 3
+      },
+      "lhs": {
+        "critical": 6,
+        "high": 3
+      }
+    }
+  },
+  "interpretation_limits": [
+    "预测分数仅用于候选预排序，不能替代 CARLA 实测 observed_risk。",
+    "碰撞边界通道仅由 3 个已知碰撞场景提供邻域线索，不是碰撞概率模型。",
+    "三种生成器使用相同评分、Top-K 和多样性规则。"
+  ]
+}

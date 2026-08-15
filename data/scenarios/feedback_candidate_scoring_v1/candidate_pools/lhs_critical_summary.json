@@ -1,0 +1,23 @@
+{
+  "model": "lhs",
+  "artifact": null,
+  "target_risk_level": "critical",
+  "requested_weather_tags": [
+    "heavy_rain",
+    "dense_fog",
+    "night",
+    "wet_road",
+    "strong_wind"
+  ],
+  "requested_count": 256,
+  "accepted_count": 256,
+  "attempted_count": 256,
+  "acceptance_rate": 1.0,
+  "complete": true,
+  "rejection_reasons": {},
+  "random_seed": 20260816,
+  "created_at": "2026-08-15T21:44:14+08:00",
+  "output": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_214410/candidate_pools/lhs_critical.jsonl",
+  "elapsed_seconds": 0.19230781984515488,
+  "accepted_sample_latency_ms": 0.7512024212701363
+}

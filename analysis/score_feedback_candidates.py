@@ -472,7 +472,7 @@ def augmented_records(records, scored_frame, selections):
         "collision_boundary_score",
     )
     for index, source in enumerate(records):
-        record = json.loads(json.dumps(source, ensure_ascii=False))
+        scenario_record = json.loads(json.dumps(source, ensure_ascii=False))
         scoring = {
             "format": "feedback_candidate_score_v1",
             **{
@@ -491,10 +491,15 @@ def augmented_records(records, scored_frame, selections):
             )
         else:
             scoring["selected"] = False
-        record["candidate_scoring"] = scoring
-        scored_records.append(record)
+        scored_records.append(
+            {
+                "format": "feedback_candidate_scored_record_v1",
+                "scenario_record": scenario_record,
+                "candidate_scoring": scoring,
+            }
+        )
         if scoring["selected"]:
-            selected_records.append(record)
+            selected_records.append(scenario_record)
     return scored_records, selected_records
 
 

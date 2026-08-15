@@ -1,0 +1,26 @@
+{
+  "model": "gmm",
+  "artifact": "/home/zhaozirong/software/models/carla-extreme-scenario-generator/artifacts/gmm/seed_v1.json",
+  "target_risk_level": "critical",
+  "requested_weather_tags": [
+    "heavy_rain",
+    "dense_fog",
+    "night",
+    "wet_road",
+    "strong_wind"
+  ],
+  "requested_count": 256,
+  "accepted_count": 256,
+  "attempted_count": 280,
+  "acceptance_rate": 0.9142857142857143,
+  "complete": true,
+  "rejection_reasons": {
+    "生成天气 ['heavy_rain', 'dense_fog', 'night', 'wet_road'] 不满足请求 ['heavy_rain', 'dense_fog', 'night', 'wet_road', 'strong_wind']": 23,
+    "生成天气 ['heavy_rain', 'dense_fog', 'day', 'wet_road'] 不满足请求 ['heavy_rain', 'dense_fog', 'night', 'wet_road', 'strong_wind']": 1
+  },
+  "random_seed": 20260816,
+  "created_at": "2026-08-15T21:44:14+08:00",
+  "output": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_214410/candidate_pools/gmm_critical.jsonl",
+  "elapsed_seconds": 0.16111260605975986,
+  "accepted_sample_latency_ms": 0.6293461174209369
+}
