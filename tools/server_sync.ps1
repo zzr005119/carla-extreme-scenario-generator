@@ -51,7 +51,7 @@ fi
 "@
     Invoke-ServerScript -Context $context -Script $initializeScript
 
-    $remoteNames = @(Get-LocalGitValue -Arguments @("remote") -split "`n")
+    $remoteNames = @((Get-LocalGitValue -Arguments @("remote")) -split "`n")
     if ($remoteNames -contains $remoteName) {
         Invoke-CheckedCommand -Command "git" -Arguments @(
             "remote", "set-url", $remoteName, $remoteUrl
