@@ -1,0 +1,27 @@
+{
+  "ssh": {
+    "host": "192.168.110.170",
+    "user": "zhaozirong",
+    "identity_file": "%USERPROFILE%\\.ssh\\id_ed25519_lab4090"
+  },
+  "git": {
+    "remote_name": "lab",
+    "branch": "main",
+    "bare_repository": "/home/zhaozirong/git/carla-extreme-scenario-generator.git",
+    "project_directory": "/home/zhaozirong/projects/carla-extreme-scenario-generator"
+  },
+  "runtime": {
+    "python_environment": "/home/zhaozirong/software/envs/Carla666-0916",
+    "carla_root": "/home/zhaozirong/software/carla-0.9.16",
+    "output_root": "/home/zhaozirong/software/output/carla-0.9.16",
+    "model_root": "/home/zhaozirong/software/models/carla-extreme-scenario-generator",
+    "gpu_lock": "/home/zhaozirong/software/output/carla-0.9.16/.workflow_gpu1.lock",
+    "gpu": 1,
+    "carla_rpc_port": 2000,
+    "traffic_manager_port": 8100,
+    "carla_tmux_session": "carla0916"
+  },
+  "local": {
+    "transfer_root": "F:\\Carla\\project-transfer"
+  }
+}

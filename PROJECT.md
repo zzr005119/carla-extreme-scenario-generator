@@ -10,6 +10,8 @@
 - **源码仓库**：`D:\Xx\竞赛\大创实施ing`
 - **CARLA 0.9.16 当前验证基线**：`F:\Carla\carla-0.9.16`
 - **CARLA 运行输出**：`F:\Carla\output-0.9.16`
+- **服务器运行仓库**：`/home/zhaozirong/projects/carla-extreme-scenario-generator`
+- **内网 Git 远端**：`lab` → `zhaozirong@192.168.110.170:/home/zhaozirong/git/carla-extreme-scenario-generator.git`
 - **CARLA 0.9.15 历史证据**：`artifacts/carla_0915_runtime_evidence/`（本地忽略目录）
 - **最后更新**：2026-08-15
 
@@ -122,12 +124,19 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - `data/scenarios/carla_0916_migration_v1/`：CARLA 0.9.16 独立迁移配置、三交通种子严格验收结果和 0.9.15 同配置对照记录。
 - `data/scenarios/carla_0915_runtime_evidence.md`：0.9.15 历史结构化运行证据的迁移范围、完整性校验和保留边界。
 - `tools/collect_carla_repeatability.py`、`analysis/analyze_carla_repeatability.py`：区分仿真完成与严格验收，汇总路线、传感器和服务状态。
+- `configs/server_workflow.json`：笔记本与服务器之间的 SSH、Git、Python、CARLA、GPU、端口和存储路径统一配置。
+- `tools/server_sync.cmd`：将已提交代码通过内网裸 Git 仓库同步到服务器运行工作区，不推送 GitHub。
+- `tools/server_carla.cmd`：启动、检查和停止服务器 CARLA；固定使用 GPU 1、RPC 端口 2000 和项目 GPU 互斥锁。
+- `tools/server_carla_smoke.sh`：服务器 CARLA Python API 与当前地图连接冒烟检查，由后台任务入口执行。
+- `tools/server_run.cmd`、`tools/server_job_status.cmd`：同步后使用 `tmux` 后台运行模型或 CARLA 客户端任务，并查询日志与退出码。
+- `tools/server_fetch_results.cmd`：只回收指定服务器输出目录中的 CSV、JSON、Markdown、文本和日志；默认跳过大于 20 MB 的文件及原始传感器帧。
 
 ## 技术栈
 - **当前验证基线**：CARLA 0.9.16 位于 `F:\Carla\carla-0.9.16`；独立 Conda 环境 `Carla666-0916` 使用 Python 3.12.13、CARLA Python API 0.9.16、NumPy 2.5.0、Pillow 11.1.0、PyTorch `2.12.1+cu126` 和 TorchVision `0.27.1+cu126`。RTX 4060 CUDA 张量测试通过，`pip check` 无依赖冲突。
 - **服务器运行基线**：实验室服务器 `factory22-srv` 已在 `/home/zhaozirong/software/envs/Carla666-0916` 建立 Python 3.12.13 环境；CARLA 0.9.16 位于 `/home/zhaozirong/software/carla-0.9.16`。CARLA PythonAPI、PyTorch CUDA、`Town10HD_Opt` 无桌面连接、项目单场景和完整项目批次均已在 GPU 1 通过。启动时必须使用 `CUDA_VISIBLE_DEVICES=1` 和 `-graphicsadapter=1`，避免占用运行 vLLM 的 GPU 0。
 - **服务器模型依赖**：NumPy 2.5.0、PyTorch `2.12.1+cu126`、TorchVision `0.27.1+cu126`、Pandas 3.0.3、SciPy 1.18.0、Scikit-learn 1.9.0 和 Joblib 1.5.3 已安装，`pip check` 无冲突；LHS、GMM、CVAE 各生成 `32/32` 条高风险候选并完成统一离线评估，风险代理复训结果为 MAE `5.515`、RMSE `10.138`。
 - **服务器批次验收**：`rainy_night_variants` 的 5 个变体 × 3 个交通种子已完成 `15/15`，传感器完整率和 CARLA 服务健康率均为 `100%`，RGB/Depth/SemSeg 共记录 `9000` 帧且无碰撞。`batch_runner.py` 支持 `--output-root` 和 `--traffic-manager-port`；服务器批次使用 TM 端口 `8100`，避开现有服务占用的 `8000/8001`。
+- **双端开发基线**：笔记本作为代码、配置、测试和 Git 提交端；服务器作为模型训练、候选生成、风险分析、CARLA 仿真和批量实验执行端。日常代码通过内网 `lab` 远端同步，形成实质且已验证的阶段进展时同步推送 GitHub `origin`；服务器运行工作区禁止直接修改代码。
 - **历史结果保留**：CARLA 0.9.15 的配置、清单、聚合结果和 `834` 个结构化运行文件仍保留；0.9.15 程序、Python 环境、压缩包和约 `14.24 GiB` 原始 PNG/NPY 帧已删除，不再作为可直接运行的复现环境。
 - **总体研究核心**：PyTorch、GAN/VAE/扩散模型、物理约束或 PyBullet、强化学习、OpenSCENARIO/CARLA 适配。
 - **平台工程计划**：结构化场景数据库、Matplotlib/Plotly；Streamlit 可作为 Demo 展示层，但不是当前优先级。
@@ -136,6 +145,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - 项目环境、CARLA、模型、运行输出和开发缓存默认使用 `F:\`；项目规则已写入根目录 `AGENTS.md`。
 - 当前 CARLA 运行时位于 `F:\Carla\carla-0.9.16`，项目输出位于 `F:\Carla\output-0.9.16`，Conda 根目录和 `Carla666-0916` 环境位于 `D:\ANACONDA`。
 - Ubuntu 服务器没有 `F:\`，其运行时例外放在 `/home/zhaozirong/software`；`/data` 当前无写权限，项目源码和结构化数据已同步到 `/home/zhaozirong/projects/carla-extreme-scenario-generator`。模型产物位于 `/home/zhaozirong/software/models/carla-extreme-scenario-generator`，批次与模型验证输出位于 `/home/zhaozirong/software/output/carla-0.9.16`。
+- 笔记本与服务器的临时交换目录为 `F:\Carla\project-transfer`。服务器模型权重、原始 RGB/Depth/SemSeg 和完整运行输出不回传；只将经过筛选的结构化汇总和少量示例图回收到笔记本，再决定是否纳入 Git。
 - 原 `C:\Users\z'z'r\AppData\Local\pip\cache` 仅为可再生成的 pip 下载缓存，已清理约 `15.94 GB`；后续 `PIP_CACHE_DIR` 指向 `F:\Carla\project-cache\pip`。
 - 原 `C:\Users\z'z'r\.cache\torch` 已迁移至 `F:\Carla\project-cache\torch`，原位置保留目录联接；`TORCH_HOME` 指向 F 盘。`HF_HOME` 和 `CONDA_PKGS_DIRS` 也已指向 `F:\Carla\project-cache` 下对应目录。
 - `C:\Users\z'z'r\.cache\codex-runtimes` 属于 Codex 运行时缓存，未迁移；`C:\Users\z'z'r\AppData\Local\Temp` 属于系统临时目录，未整体移动或删除。二者是当前明确记录的 C 盘例外。
@@ -159,10 +169,21 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - 本轮唯一的初次路线失败在相同配置重跑后恢复为双车全程在途、路线偏差小于 `1.01 m`；当前按偶发运行状态处理，但后续批次仍保留路线严格验收，不能删除该质量门槛。
 - 按原计划，2026年7—8月应处于阶段三；截至2026年8月15日，阶段二已形成第一版可验证模型基线、受控重复性证据、三生成器 108/108 严格实测对照和风险代理基线，CARLA 0.9.16 三种子迁移回归已通过，当前进入代理误差诊断和反馈引导候选验证。
 - 实验室双 RTX 4090 服务器 `factory22-srv` 已完成 CARLA 0.9.16、Python 3.12.13、完整模型依赖、三生成器推理、风险代理复训和 15 次项目批次验证。后续完整模型训练和 CARLA 批量实验默认迁移到服务器 GPU 1，本地 RTX 4060 仅保留代码开发、快速静态校验和故障回退；GPU 0 继续保留给现有 vLLM 服务。
+- GPU 1 还存在一个由 root 管理的 TensorRT 推理服务，当前显存占用约 `896 MiB`，项目不得终止或修改该服务。项目工作流使用 `/home/zhaozirong/software/output/carla-0.9.16/.workflow_gpu1.lock` 防止自身的模型任务与 CARLA 相互并发，但该锁无法约束外部服务；重型实验前必须先运行服务器状态检查并确认剩余显存。
 - 长时间多传感器运行仍可能产生硬件压力，但帧完整性和服务健康检查已作为批次验收条件。
 - 0.9.15 历史清单中的 `metadata_path`、`run_dir` 和 CMD 仍保留实验发生时的原始绝对路径，仅用于来源追溯；当前活动工具默认使用项目仓库场景运行器和 `F:\Carla\output-0.9.16`，不得直接执行旧脚本污染历史结果。
 - CARLA 0.9.16 三种子迁移回归已严格验收 `3/3`：每次 RGB `100` 帧，传感器、服务健康和路线验收全部通过，双车同时在途率均为 `1.0`，最大路线偏差不超过 `1.000 m`，无碰撞，风险档均为 `medium`。同配置平均风险分由 0.9.15 的 `27.760` 变为 `27.491`（`-0.97%`）；0.9.16 风险分样本标准差为 `0.587`、极差为 `1.137`，相对波动增大但未影响工程验收。当前样本仅一个场景、三个种子，不作统计显著性结论。
-- V4 及此前生成模型、实测和分析代码已在提交 `095bf6d` 推送 GitHub；三生成器对照已提交为本地提交 `71f46ff`，但因当前网络无法连接 GitHub 443 端口尚未推送。`项目进度文档.md` 已由用户主动删除，后续以 `PROJECT.md` 维护项目当前状态。
+- 项目代码统一由本地 `main` 管理；完成实质且已验证的任务后自动提交，形成阶段性进展且远端可用时自动推送 GitHub `origin`，随后通过内网 `lab` 同步服务器运行工作区。`项目进度文档.md` 已由用户主动删除，后续以 `PROJECT.md` 维护项目当前状态。
+
+## 笔记本—服务器工作流
+当前内网裸仓库、服务器运行工作区和本地 `lab` 远端已经建立；服务器工作区由同步脚本保持与当前已提交版本一致。代码同步底层流程、Python 后台任务、轻量结果回收、CARLA 启停、GPU 互斥锁和 CARLA Python API 地图连接均已实测通过。
+
+1. **笔记本开发与校验**：只在 `D:\Xx\竞赛\大创实施ing` 修改代码、配置和测试；先完成静态检查或轻量测试，再创建 Git 提交。PowerShell 执行策略由 `.cmd` 入口以单进程 `Bypass` 处理，不修改系统全局策略。
+2. **内网同步代码**：在工作区干净且位于 `main` 分支时运行 `tools\server_sync.cmd`。脚本把当前提交推送到服务器裸仓库 `lab`，随后对服务器运行工作区执行 `git merge --ff-only`；不会自动推送 GitHub，也不会覆盖服务器未提交改动。
+3. **管理 CARLA**：运行 `tools\server_carla.cmd -Action Start|Status|Stop`。CARLA 固定使用 GPU 1、RPC 端口 `2000`、`-RenderOffScreen` 和 `-graphicsadapter=1`；启动和停止均已在服务器实测通过。
+4. **提交后台任务**：简单命令运行 `tools\server_run.cmd -Name <job-name> -Command "<Linux command>" [-RequiresCarla] [-Wait]`；包含 Python `-c`、多层引号或多行逻辑时，优先写入本地 UTF-8 命令文件并使用 `-CommandFile <path>`，避免 Windows CMD 引号破坏。脚本默认先同步代码，再在服务器 `tmux` 中执行；非 CARLA GPU 任务持有项目 GPU 锁，CARLA 客户端任务用 `-RequiresCarla` 检查 RPC 服务后运行。任务目录固定为 `/home/zhaozirong/software/output/carla-0.9.16/remote_jobs/<job-id>`，并保存提交哈希、起止时间、日志和退出码。
+5. **查询与回收结果**：使用 `tools\server_job_status.cmd [-JobId <job-id>]` 查看任务；使用 `tools\server_fetch_results.cmd -RemotePath <server-output-directory>` 将轻量汇总回收到 `F:\Carla\project-transfer\server-results`。默认不下载模型权重、NPY 和原始传感器帧；只有明确指定 `-IncludeSampleImages` 时才回收小于阈值的示例图。
+6. **版本与数据边界**：服务器运行结果必须能够追溯到 Git 提交、配置、随机种子和输出目录。服务器工作区不直接编辑；发现问题后回笔记本修改、提交并重新同步。GitHub `origin` 用于阶段备份和对外同步，内网 `lab` 用于高频开发部署；两者均只接收已验证且不含大文件或敏感信息的提交。
 
 ## 下一步
 1. 对风险代理进行按生成器/目标档的误差诊断和候选排序稳定性分析。
