@@ -173,6 +173,8 @@ def validate_frame(frame):
         "target_risk_level",
         TARGET_COLUMN,
         "observed_risk_score_std",
+        "collision_event_total",
+        "collision_run_rate",
     }
     missing = sorted(required - set(frame.columns))
     if missing:
@@ -312,6 +314,13 @@ def build_sample_diagnostics(frame, prediction_matrices, top_sets, top_k):
                     "simulation_score_std": float(
                         source["observed_risk_score_std"]
                     ),
+                    "collision_status": (
+                        "collision"
+                        if int(source["collision_event_total"]) > 0
+                        else "no_collision"
+                    ),
+                    "collision_event_total": int(source["collision_event_total"]),
+                    "collision_run_rate": float(source["collision_run_rate"]),
                     "predicted_score_mean": float(np.mean(predictions)),
                     "predicted_score_std": float(
                         np.std(predictions, ddof=1)
@@ -347,6 +356,7 @@ def build_group_summary(sample_frame):
     grouping_sets = [
         ("generator",),
         ("target_risk_level",),
+        ("collision_status",),
         ("generator", "target_risk_level"),
     ]
     for model_name in MODEL_NAMES:
@@ -361,6 +371,7 @@ def build_group_summary(sample_frame):
                     "grouping": "__".join(grouping),
                     "generator": "all",
                     "target_risk_level": "all",
+                    "collision_status": "all",
                     "sample_count": int(len(group)),
                     "observed_score_mean": float(
                         group["observed_risk_score"].mean()
@@ -424,6 +435,17 @@ def build_summary(
         current_metrics = metric_frame[metric_frame["model"] == model_name]
         current_samples = sample_frame[sample_frame["model"] == model_name]
         jaccards = pairwise_jaccard(top_sets[model_name])
+        collision_error = {}
+        for collision_status, group in current_samples.groupby(
+            "collision_status", sort=True
+        ):
+            collision_error[collision_status] = {
+                "sample_count": int(len(group)),
+                "observed_score_mean": float(group["observed_risk_score"].mean()),
+                "predicted_score_mean": float(group["predicted_score_mean"].mean()),
+                "mean_bias": float(group["mean_error"].mean()),
+                "mae": float(group["mean_absolute_error"].mean()),
+            }
         models[model_name] = {
             "metrics": {
                 column: metric_summary(current_metrics[column])
@@ -456,6 +478,7 @@ def build_summary(
                     np.sum(current_samples["top_k_selection_frequency"] == 0.0)
                 ),
             },
+            "collision_error": collision_error,
         }
     return {
         "format": "risk_proxy_diagnostics_v1",
@@ -504,6 +527,7 @@ def build_report(summary, group_frame, sample_frame):
     worst_sample = rf_samples.iloc[0]
     unstable_sample = unstable_samples.iloc[0]
     rf_metrics = random_forest["metrics"]
+    collision_error = random_forest["collision_error"]
     lines = [
         "# 风险代理误差与排序稳定性诊断 V1",
         "",
@@ -521,6 +545,7 @@ def build_report(summary, group_frame, sample_frame):
         f"- 随机森林 Top-{summary['top_k']} 两两 Jaccard：均值 `{random_forest['ranking_stability']['pairwise_top_k_jaccard']['mean']:.3f}`；稳定入选率至少 80% 的样本有 `{random_forest['ranking_stability']['stable_top_k_sample_count']}` 个。",
         f"- 随机森林目标档均值严格递增比例：`{random_forest['target_mean_ordering_strict_rate']:.1%}`；Ridge 为 `{ridge['target_mean_ordering_strict_rate']:.1%}`。",
         f"- 两模型预测排序 Spearman 均值：`{summary['model_agreement']['prediction_spearman']['mean']:.3f}`；Top-{summary['top_k']} Jaccard 均值：`{summary['model_agreement']['top_k_jaccard']['mean']:.3f}`。",
+        f"- 随机森林在 `{collision_error['collision']['sample_count']}` 个碰撞场景上的 MAE 为 `{collision_error['collision']['mae']:.3f}`、平均偏差 `{collision_error['collision']['mean_bias']:.3f}`；其余 `{collision_error['no_collision']['sample_count']}` 个非碰撞场景 MAE 为 `{collision_error['no_collision']['mae']:.3f}`。",
         f"- 随机森林误差最大的分组：`{worst_group['generator']} × {worst_group['target_risk_level']}`，MAE `{worst_group['mae']:.3f}`，平均偏差 `{worst_group['mean_bias']:.3f}`。",
         f"- 随机森林误差最大的场景：`{worst_sample['sample_id']}`，实测 `{worst_sample['observed_risk_score']:.3f}`，重复 OOF 预测均值 `{worst_sample['predicted_score_mean']:.3f}`，平均绝对误差 `{worst_sample['mean_absolute_error']:.3f}`。",
         f"- 排名最不稳定场景：`{unstable_sample['sample_id']}`，排名标准差 `{unstable_sample['predicted_rank_std']:.3f}`，Top-{summary['top_k']} 入选频率 `{unstable_sample['top_k_selection_frequency']:.1%}`。",
@@ -528,6 +553,7 @@ def build_report(summary, group_frame, sample_frame):
         "## 工程结论",
         "",
         "- 随机森林仍可作为候选预排序器，但单次三折结果不足以代表稳定性能；后续候选应同时保存预测均值、重复预测标准差和 Top-K 入选频率。",
+        "- 当前主要误差来自碰撞带来的风险分数离散跃迁；在碰撞样本增加前，不训练独立碰撞分类器，而是把碰撞边界作为主动补样通道，与连续风险分数排序分开管理。",
         "- 优先实测预测分高且排名稳定的候选，同时保留少量高不确定性候选用于主动补样，不能只按单个模型的一次预测分数排序。",
         "- 分组系统偏差和最差样本应作为下一轮外部验证的定向补样依据；本轮不修改实测标签，也不通过弱化控制器提高风险命中率。",
         "",
