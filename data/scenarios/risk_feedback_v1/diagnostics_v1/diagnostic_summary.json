@@ -1,0 +1,272 @@
+{
+  "format": "risk_proxy_diagnostics_v1",
+  "dataset": "/home/zhaozirong/projects/carla-extreme-scenario-generator/data/scenarios/risk_feedback_v1/dataset.csv",
+  "dataset_sha256": "59dbd905b94ba26d5af76995d4e9dc42c06a5f3fede0d628cb8fea786ee39888",
+  "independent_scenario_count": 36,
+  "feature_columns": [
+    "feature_01_weather_cloudiness",
+    "feature_02_weather_precipitation",
+    "feature_03_weather_precipitation_deposits",
+    "feature_04_weather_wind_intensity",
+    "feature_05_weather_fog_density",
+    "feature_06_weather_fog_distance",
+    "feature_07_weather_sun_altitude_angle",
+    "feature_08_weather_wetness",
+    "feature_09_lead_vehicle_initial_distance_m",
+    "feature_10_lead_vehicle_brake_trigger_seconds",
+    "feature_11_lead_vehicle_brake_intensity",
+    "feature_12_pedestrian_forward_distance_m",
+    "feature_13_pedestrian_roadside_offset_m",
+    "feature_14_pedestrian_trigger_seconds",
+    "feature_15_pedestrian_speed_mps"
+  ],
+  "analysis_unit": "independent_scenario",
+  "repeated_measurements_are_preaggregated": true,
+  "repeated_stratified_oof": {
+    "repeats": 50,
+    "folds": 3,
+    "strata": "generator__target_risk_level",
+    "random_state": 20260815
+  },
+  "random_forest_n_estimators": 300,
+  "top_k": 9,
+  "models": {
+    "random_forest": {
+      "metrics": {
+        "mae": {
+          "mean": 5.686047239263779,
+          "std": 0.2894819347287884,
+          "p05": 5.259923093901875,
+          "median": 5.719682573707756,
+          "p95": 6.1565643211868455,
+          "minimum": 5.077728511186612,
+          "maximum": 6.362660409324725
+        },
+        "rmse": {
+          "mean": 10.124373250530773,
+          "std": 0.3676465861105212,
+          "p05": 9.392686750781557,
+          "median": 10.153870221908077,
+          "p95": 10.689815274495471,
+          "minimum": 9.344861309144687,
+          "maximum": 10.94297489148224
+        },
+        "r2": {
+          "mean": 0.6020991416153697,
+          "std": 0.02874127214504438,
+          "p05": 0.556975499415884,
+          "median": 0.6002937500652967,
+          "p95": 0.6579726175724572,
+          "minimum": 0.5357536202008284,
+          "maximum": 0.661449514640521
+        },
+        "spearman": {
+          "mean": 0.8982599742599743,
+          "std": 0.01585765424692011,
+          "p05": 0.8716216216216217,
+          "median": 0.9005148005148007,
+          "p95": 0.9198712998712999,
+          "minimum": 0.8553410553410553,
+          "maximum": 0.9305019305019305
+        },
+        "mean_bias": {
+          "mean": 0.20726319859905995,
+          "std": 0.24720063294945954,
+          "p05": -0.16377793053585607,
+          "median": 0.16108523863635613,
+          "p95": 0.6120697004272174,
+          "minimum": -0.22486447476974203,
+          "maximum": 0.7550287518861447
+        },
+        "high_or_critical_recall": {
+          "mean": 0.7325,
+          "std": 0.08379548719035762,
+          "p05": 0.625,
+          "median": 0.75,
+          "p95": 0.875,
+          "minimum": 0.375,
+          "maximum": 0.875
+        },
+        "high_or_critical_precision": {
+          "mean": 0.49949955599955603,
+          "std": 0.04755972088084945,
+          "p05": 0.4166666666666667,
+          "median": 0.5,
+          "p95": 0.5924999999999999,
+          "minimum": 0.375,
+          "maximum": 0.6
+        },
+        "top_k_observed_recall": {
+          "mean": 0.5688888888888889,
+          "std": 0.06969682031777824,
+          "p05": 0.4444444444444444,
+          "median": 0.5555555555555556,
+          "p95": 0.6666666666666666,
+          "minimum": 0.4444444444444444,
+          "maximum": 0.6666666666666666
+        }
+      },
+      "target_mean_ordering_strict_rate": 1.0,
+      "ranking_stability": {
+        "pairwise_top_k_jaccard": {
+          "mean": 0.7080422434708149,
+          "std": 0.12842824633881122,
+          "p05": 0.5,
+          "median": 0.6363636363636364,
+          "p95": 1.0,
+          "minimum": 0.38461538461538464,
+          "maximum": 1.0
+        },
+        "mean_sample_rank_std": 1.8327594772055937,
+        "maximum_sample_rank_std": 4.571830339487811,
+        "stable_top_k_sample_count": 6,
+        "never_top_k_sample_count": 21
+      },
+      "collision_error": {
+        "collision": {
+          "sample_count": 3,
+          "observed_score_mean": 81.24866666666667,
+          "predicted_score_mean": 51.103264618022536,
+          "mean_bias": -30.145402048644126,
+          "mae": 30.145402048644126
+        },
+        "no_collision": {
+          "sample_count": 33,
+          "observed_score_mean": 36.322303030303026,
+          "predicted_score_mean": 39.28889943319693,
+          "mean_bias": 2.966596402893895,
+          "mae": 3.4624695293201113
+        }
+      }
+    },
+    "ridge": {
+      "metrics": {
+        "mae": {
+          "mean": 9.351439626365275,
+          "std": 0.8381804644503981,
+          "p05": 7.9814736899355045,
+          "median": 9.39242060917734,
+          "p95": 10.523429033525195,
+          "minimum": 7.542733958891871,
+          "maximum": 11.645952986268087
+        },
+        "rmse": {
+          "mean": 13.170578672685151,
+          "std": 0.8435880729387425,
+          "p05": 11.81758088654429,
+          "median": 13.11999423741277,
+          "p95": 14.48259121622632,
+          "minimum": 11.572161837876356,
+          "maximum": 15.123198334288121
+        },
+        "r2": {
+          "mean": 0.3248037789363185,
+          "std": 0.0866834619248264,
+          "p05": 0.18683536568175432,
+          "median": 0.33266328568923564,
+          "p95": 0.458576091525182,
+          "minimum": 0.11332387246855125,
+          "maximum": 0.4808334325046062
+        },
+        "spearman": {
+          "mean": 0.8113307593307593,
+          "std": 0.03381825468044333,
+          "p05": 0.754967824967825,
+          "median": 0.8137709137709138,
+          "p95": 0.8626898326898328,
+          "minimum": 0.745945945945946,
+          "maximum": 0.8808236808236809
+        },
+        "mean_bias": {
+          "mean": -0.713323931670987,
+          "std": 0.9107882815093961,
+          "p05": -2.105593870432033,
+          "median": -0.5741471330552484,
+          "p95": 0.7087003550534838,
+          "minimum": -3.231199862478177,
+          "maximum": 1.2215136876818598
+        },
+        "high_or_critical_recall": {
+          "mean": 0.4025,
+          "std": 0.11091571538049669,
+          "p05": 0.25,
+          "median": 0.375,
+          "p95": 0.5687499999999996,
+          "minimum": 0.125,
+          "maximum": 0.625
+        },
+        "high_or_critical_precision": {
+          "mean": 0.33839610389610386,
+          "std": 0.08325984114176406,
+          "p05": 0.21,
+          "median": 0.3333333333333333,
+          "p95": 0.45454545454545453,
+          "minimum": 0.125,
+          "maximum": 0.5
+        },
+        "top_k_observed_recall": {
+          "mean": 0.43777777777777777,
+          "std": 0.08521311448552096,
+          "p05": 0.3333333333333333,
+          "median": 0.4444444444444444,
+          "p95": 0.5555555555555556,
+          "minimum": 0.2222222222222222,
+          "maximum": 0.5555555555555556
+        }
+      },
+      "target_mean_ordering_strict_rate": 1.0,
+      "ranking_stability": {
+        "pairwise_top_k_jaccard": {
+          "mean": 0.6711756814613957,
+          "std": 0.1245715266637831,
+          "p05": 0.5,
+          "median": 0.6363636363636364,
+          "p95": 0.8,
+          "minimum": 0.38461538461538464,
+          "maximum": 1.0
+        },
+        "mean_sample_rank_std": 2.8546470171552625,
+        "maximum_sample_rank_std": 7.750734000791177,
+        "stable_top_k_sample_count": 6,
+        "never_top_k_sample_count": 20
+      },
+      "collision_error": {
+        "collision": {
+          "sample_count": 3,
+          "observed_score_mean": 81.24866666666667,
+          "predicted_score_mean": 46.34633181747285,
+          "mean_bias": -34.90233484919381,
+          "mae": 34.90233484919381
+        },
+        "no_collision": {
+          "sample_count": 33,
+          "observed_score_mean": 36.322303030303026,
+          "predicted_score_mean": 38.71707100022502,
+          "mean_bias": 2.3947679699219964,
+          "mae": 7.0286309697444995
+        }
+      }
+    }
+  },
+  "model_agreement": {
+    "prediction_spearman": {
+      "mean": 0.909842985842986,
+      "std": 0.023642926169767032,
+      "p05": 0.8731402831402832,
+      "median": 0.9105534105534108,
+      "p95": 0.9503732303732304,
+      "minimum": 0.8676962676962677,
+      "maximum": 0.9639639639639641
+    },
+    "top_k_jaccard": {
+      "mean": 0.6781818181818181,
+      "std": 0.12184282419048227,
+      "p05": 0.5,
+      "median": 0.6363636363636364,
+      "p95": 0.8,
+      "minimum": 0.5,
+      "maximum": 1.0
+    }
+  },
+  "interpretation_boundary": "36 个独立场景只支持工程误差诊断和候选排序稳定性评估，不支持统计显著性结论；Traffic Manager 种子已先聚合为场景级重复测量。"
+}
