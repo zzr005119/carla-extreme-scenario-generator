@@ -1,6 +1,6 @@
 {
   "format": "feedback_candidate_scoring_v1",
-  "created_at": "2026-08-15T21:45:23+08:00",
+  "created_at": "2026-08-15T21:52:36+08:00",
   "dataset": {
     "path": "/home/zhaozirong/projects/carla-extreme-scenario-generator/data/scenarios/risk_feedback_v1/dataset.csv",
     "sha256": "59dbd905b94ba26d5af76995d4e9dc42c06a5f3fede0d628cb8fea786ee39888",
@@ -10,33 +10,33 @@
   },
   "candidate_sources": [
     {
-      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_214410/candidate_pools/lhs_high.jsonl",
-      "sha256": "b6a8f5a1fa0970ebda0f56094a8c235758b3f9b3131e3fc563ba6e737dad122e",
+      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_215124/candidate_pools/lhs_high.jsonl",
+      "sha256": "fd44b23cd6ab26b38c5a6b2d641f3bd29111029a139657002f1b037e02284636",
       "record_count": 256
     },
     {
-      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_214410/candidate_pools/gmm_high.jsonl",
-      "sha256": "a37b2548e11855acd269f12c04e8c2ccb9a02f366c93bc35fe3fdeb51bf6e29d",
+      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_215124/candidate_pools/gmm_high.jsonl",
+      "sha256": "164990bc1d02db0a8075c813d1476f29db225c3239ac200c00fcff49b2eac18a",
       "record_count": 256
     },
     {
-      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_214410/candidate_pools/cvae_high.jsonl",
-      "sha256": "9f23c00c0f2ca20cf4a3f5385c065ef8285f0d94d14be347bbe92d2bc8090387",
+      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_215124/candidate_pools/cvae_high.jsonl",
+      "sha256": "4251f0f34fdc25330cdd03eb27ea03c83aa2e3cc7cf3ef8156055d65e91bfee6",
       "record_count": 256
     },
     {
-      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_214410/candidate_pools/lhs_critical.jsonl",
-      "sha256": "2c1ef81f15afb81c734851594780ca696f84db6201d9cab916b7f9d03354183e",
+      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_215124/candidate_pools/lhs_critical.jsonl",
+      "sha256": "91f2892b8803b6a111b84998ce7fbe64ce274b51aedef5596f5b54663b0c6904",
       "record_count": 256
     },
     {
-      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_214410/candidate_pools/gmm_critical.jsonl",
-      "sha256": "10e9342769f2240df560e813be0c37519a0950babb07482f7c36a96719e8016b",
+      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_215124/candidate_pools/gmm_critical.jsonl",
+      "sha256": "346e91930feabb022d867b4f250736b0a52f7b3edef6fbcb8ae181afc10c7980",
       "record_count": 256
     },
     {
-      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_214410/candidate_pools/cvae_critical.jsonl",
-      "sha256": "d20d73809bf972fa647541bed0b289245c601355f495f8c60021afae18bc4f07",
+      "path": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_215124/candidate_pools/cvae_critical.jsonl",
+      "sha256": "0850b6e17b2355fe900a460d1e69e0721ce7fdc54019544e85c1c5ef49b4817e",
       "record_count": 256
     }
   ],

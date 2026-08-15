@@ -20,8 +20,8 @@
     "生成天气 ['rain', 'fog', 'night', 'wet_road'] 不满足请求 ['heavy_rain', 'fog', 'night', 'wet_road']": 12
   },
   "random_seed": 20260815,
-  "created_at": "2026-08-15T21:44:10+08:00",
-  "output": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_214410/candidate_pools/lhs_high.jsonl",
-  "elapsed_seconds": 0.19590596412308514,
-  "accepted_sample_latency_ms": 0.7652576723558013
+  "created_at": "2026-08-15T21:51:25+08:00",
+  "output": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_215124/candidate_pools/lhs_high.jsonl",
+  "elapsed_seconds": 0.196209428133443,
+  "accepted_sample_latency_ms": 0.7664430786462617
 }

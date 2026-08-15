@@ -16,8 +16,8 @@
   "complete": true,
   "rejection_reasons": {},
   "random_seed": 20260816,
-  "created_at": "2026-08-15T21:44:16+08:00",
-  "output": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_214410/candidate_pools/cvae_critical.jsonl",
-  "elapsed_seconds": 1.9313414448406547,
-  "accepted_sample_latency_ms": 7.5443025189088075
+  "created_at": "2026-08-15T21:51:31+08:00",
+  "output": "/home/zhaozirong/software/output/carla-0.9.16/feedback_candidate_scoring_v1/20260815_215124/candidate_pools/cvae_critical.jsonl",
+  "elapsed_seconds": 1.9273004760034382,
+  "accepted_sample_latency_ms": 7.528517484388431
 }
