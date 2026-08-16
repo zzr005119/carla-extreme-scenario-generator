@@ -253,7 +253,6 @@ def build_runs(
     runs = []
     for row in selected_rows:
         record = copy.deepcopy(records_by_id[row["sample_id"]])
-        record["candidate_scoring_v3"] = scoring_metadata(row)
         for traffic_seed in TRAFFIC_SEEDS:
             run_id = (
                 f"{row['sample_id']}__tm_{traffic_seed}"
@@ -462,7 +461,6 @@ def main():
     selected_records = []
     for row in selected_rows:
         record = copy.deepcopy(records_by_id[row["sample_id"]])
-        record["candidate_scoring_v3"] = scoring_metadata(row)
         selected_records.append(record)
     selected_records.sort(key=lambda row: row["sample_id"])
 
