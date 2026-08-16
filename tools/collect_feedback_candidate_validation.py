@@ -61,7 +61,7 @@ def augment_row(row, run):
         "block_traffic_manager_seed",
     )
     for field in fields:
-        row[field] = run[field]
+        row[field] = run.get(field)
     return row
 
 
