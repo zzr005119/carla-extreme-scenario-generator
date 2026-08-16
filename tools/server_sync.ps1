@@ -103,9 +103,7 @@ fi
 git fetch "`$remote_name" "`$branch"
 git checkout "`$branch"
 git merge --ff-only "`$remote_name/`$branch"
-while IFS= read -r -d '' shell_script; do
-    git cat-file blob "HEAD:`$shell_script" > "`$shell_script"
-done < <(git ls-files -z -- '*.sh')
+git reset --hard HEAD
 actual_commit="`$(git rev-parse HEAD)"
 if [ "`$actual_commit" != '$commit' ]; then
     echo "[SYNC] Commit mismatch: expected $commit, got `$actual_commit" >&2
