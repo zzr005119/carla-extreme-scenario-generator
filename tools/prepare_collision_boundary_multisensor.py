@@ -253,7 +253,7 @@ def build_runs(
     runs = []
     for row in selected_rows:
         record = copy.deepcopy(records_by_id[row["sample_id"]])
-        for traffic_seed in TRAFFIC_SEEDS:
+        for repeat_round, traffic_seed in enumerate(TRAFFIC_SEEDS, 1):
             run_id = (
                 f"{row['sample_id']}__tm_{traffic_seed}"
                 "__collision_boundary_multisensor_v1"
@@ -288,6 +288,8 @@ def build_runs(
                     "collision_boundary_score": row.get("collision_boundary_score"),
                     "high_uncertainty_base": row.get("high_uncertainty_base"),
                     "run_id": run_id,
+                    "repeat_round": repeat_round,
+                    "source": "collision_boundary_multisensor_v1",
                     "traffic_manager_seed": traffic_seed,
                     "config_path": config_path,
                     "expected_run_root": os.path.join(runtime_output_root, run_id),
