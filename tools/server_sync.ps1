@@ -87,6 +87,7 @@ if [ ! -d "`$project_directory/.git" ]; then
 fi
 
 cd "`$project_directory"
+git config core.autocrlf false
 if [ -n "`$(git status --porcelain)" ]; then
     echo '[SYNC] Server working tree is dirty:' >&2
     git status --short >&2
@@ -102,6 +103,9 @@ fi
 git fetch "`$remote_name" "`$branch"
 git checkout "`$branch"
 git merge --ff-only "`$remote_name/`$branch"
+while IFS= read -r -d '' shell_script; do
+    git cat-file blob "HEAD:`$shell_script" > "`$shell_script"
+done < <(git ls-files -z -- '*.sh')
 actual_commit="`$(git rev-parse HEAD)"
 if [ "`$actual_commit" != '$commit' ]; then
     echo "[SYNC] Commit mismatch: expected $commit, got `$actual_commit" >&2

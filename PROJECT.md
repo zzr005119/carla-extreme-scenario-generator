@@ -220,7 +220,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 当前内网裸仓库、服务器运行工作区和本地 `lab` 远端已经建立；服务器工作区由同步脚本保持与当前已提交版本一致。代码同步底层流程、Python 后台任务、轻量结果回收、CARLA 启停、GPU 互斥锁和 CARLA Python API 地图连接均已实测通过。
 
 1. **笔记本开发与校验**：只在 `D:\Xx\竞赛\大创实施ing` 修改代码、配置和测试；先完成静态检查或轻量测试，再创建 Git 提交。PowerShell 执行策略由 `.cmd` 入口以单进程 `Bypass` 处理，不修改系统全局策略；`.gitattributes` 强制服务器 Bash 脚本使用 LF 行尾。
-2. **内网同步代码**：在工作区干净且位于 `main` 分支时运行 `tools\server_sync.cmd`。脚本把当前提交推送到服务器裸仓库 `lab`，随后对服务器运行工作区执行 `git merge --ff-only`；不会自动推送 GitHub，也不会覆盖服务器未提交改动。
+2. **内网同步代码**：在工作区干净且位于 `main` 分支时运行 `tools\server_sync.cmd`。脚本把当前提交推送到服务器裸仓库 `lab`，随后对服务器运行工作区执行 `git merge --ff-only`；服务器仓库固定 `core.autocrlf=false`，同步后从 Git 对象恢复全部 `.sh` 的 LF 行尾；不会自动推送 GitHub，也不会覆盖服务器未提交改动。
 3. **管理 CARLA**：运行 `tools\server_carla.cmd -Action Start|Status|Stop`。CARLA 固定使用 GPU 1、RPC 端口 `2000`、`-RenderOffScreen` 和 `-graphicsadapter=1`；启动和停止均已在服务器实测通过。
 4. **提交后台任务**：简单命令运行 `tools\server_run.cmd -Name <job-name> -Command "<Linux command>" [-RequiresCarla] [-Wait]`；包含 Python `-c`、多层引号或多行逻辑时，优先写入本地 UTF-8 命令文件并使用 `-CommandFile <path>`，避免 Windows CMD 引号破坏。脚本默认先同步代码，再在服务器 `tmux` 中执行；非 CARLA GPU 任务持有项目 GPU 锁，CARLA 客户端任务用 `-RequiresCarla` 检查 RPC 服务后运行。任务目录固定为 `/home/zhaozirong/software/output/carla-0.9.16/remote_jobs/<job-id>`，并保存提交哈希、起止时间、日志和退出码。
 5. **查询与回收结果**：使用 `tools\server_job_status.cmd [-JobId <job-id>]` 查看任务；使用 `tools\server_fetch_results.cmd -RemotePath <server-output-directory>` 将轻量汇总回收到 `F:\Carla\project-transfer\server-results`。默认不下载模型权重、NPY 和原始传感器帧；只有明确指定 `-IncludeSampleImages` 时才回收小于阈值的示例图。
