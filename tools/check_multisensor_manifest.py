@@ -27,12 +27,27 @@ def main():
     completed = 0
     failures = []
     for run in runs:
-        metadata_path = os.path.join(run["expected_run_root"], "metadata.json")
-        if not os.path.isfile(metadata_path):
+        matches = []
+        for root, _, files in os.walk(run["expected_run_root"]):
+            if "metadata.json" not in files:
+                continue
+            metadata_path = os.path.join(root, "metadata.json")
+            try:
+                with open(metadata_path, "r", encoding="utf-8") as file:
+                    metadata = json.load(file)
+            except (OSError, json.JSONDecodeError):
+                continue
+            actual_seed = (metadata.get("simulation") or {}).get(
+                "traffic_manager_seed"
+            )
+            if actual_seed is not None and int(actual_seed) == int(
+                run["traffic_manager_seed"]
+            ):
+                matches.append((os.path.getmtime(metadata_path), metadata_path, metadata))
+        if not matches:
             failures.append((run["run_id"], "metadata_missing"))
             continue
-        with open(metadata_path, "r", encoding="utf-8") as file:
-            metadata = json.load(file)
+        _, metadata_path, metadata = max(matches, key=lambda item: item[0])
         frames = metadata.get("frames", {})
         status = (metadata.get("sensor_pipeline") or {}).get("status")
         missing = [
