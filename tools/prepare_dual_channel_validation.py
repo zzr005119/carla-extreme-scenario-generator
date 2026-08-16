@@ -170,8 +170,8 @@ def validate_comparison(single_records, single_rows, dual_records, dual_rows):
             counts[key] = counts.get(key, 0) + 1
         return counts
 
-    single_counts = cell_counts(single_rows, single_only)
-    dual_counts = cell_counts(dual_rows, dual_only)
+    single_counts = cell_counts(single_rows.values(), single_only)
+    dual_counts = cell_counts(dual_rows.values(), dual_only)
     if single_counts != dual_counts:
         raise ValueError(
             f"两侧独有样本的生成器×目标档分布不一致: {single_counts} != {dual_counts}"
