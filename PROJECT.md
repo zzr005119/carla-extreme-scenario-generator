@@ -134,6 +134,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - `tools/server_sync.cmd`：将已提交代码通过内网裸 Git 仓库同步到服务器运行工作区，不推送 GitHub。
 - `tools/server_carla.cmd`：启动、检查和停止服务器 CARLA；固定使用 GPU 1、RPC 端口 2000 和项目 GPU 互斥锁。
 - `tools/server_carla_smoke.sh`：服务器 CARLA Python API 与当前地图连接冒烟检查，由后台任务入口执行。
+- `tools/server_jobs/dual_channel_validation_smoke_v1.sh`：自动定位服务器最新双通道配对计划，只运行一个样本进行 CARLA 冒烟验证。
 - `tools/server_run.cmd`、`tools/server_job_status.cmd`：同步后使用 `tmux` 后台运行模型或 CARLA 客户端任务，并查询日志与退出码。
 - `tools/server_fetch_results.cmd`：只回收指定服务器输出目录中的 CSV、JSON、Markdown、文本和日志；默认跳过大于 20 MB 的文件及原始传感器帧。
 
