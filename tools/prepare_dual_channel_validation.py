@@ -123,13 +123,18 @@ def load_selection(path):
 def load_arm(records_path, selection_path, arm):
     records = load_jsonl(os.path.abspath(records_path))
     rows = load_selection(os.path.abspath(selection_path))
-    record_by_id = {record["sample_id"]: record for record in records}
+    clean_records = []
+    for record in records:
+        scenario_record = copy.deepcopy(record)
+        scenario_record.pop("candidate_scoring_v2", None)
+        clean_records.append(scenario_record)
+    record_by_id = {record["sample_id"]: record for record in clean_records}
     row_by_id = {row["sample_id"]: row for row in rows}
     if len(record_by_id) != len(records) or len(row_by_id) != len(rows):
         raise ValueError(f"{arm} 存在重复 sample_id")
     if set(record_by_id) != set(row_by_id):
         raise ValueError(f"{arm} 的 JSONL 与选择清单 sample_id 不一致")
-    for record in records:
+    for record in clean_records:
         require_valid_scenario(record)
         row = row_by_id[record["sample_id"]]
         if record["provenance"]["generator"].split("_")[0] not in {
