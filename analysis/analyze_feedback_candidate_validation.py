@@ -145,6 +145,82 @@ def summarize_group(rows, fields):
     return summaries
 
 
+def build_paired_comparison(scenarios):
+    grouped = defaultdict(dict)
+    for row in scenarios:
+        key = (
+            row["generator"],
+            row["target_risk_level"],
+            int(row["selection_order"]),
+        )
+        grouped[key][row["selection_channel"]] = row
+
+    pair_rows = []
+    for key in sorted(grouped):
+        channels = grouped[key]
+        if "single_only" not in channels or "dual_only" not in channels:
+            continue
+        single = channels["single_only"]
+        dual = channels["dual_only"]
+        pair_rows.append(
+            {
+                "generator": key[0],
+                "target_risk_level": key[1],
+                "pair_order": key[2],
+                "single_sample_id": single["sample_id"],
+                "dual_sample_id": dual["sample_id"],
+                "single_predicted_risk_mean": float(single["predicted_risk_mean"]),
+                "dual_predicted_risk_mean": float(dual["predicted_risk_mean"]),
+                "single_observed_risk_mean": float(
+                    single["observed_risk_score_mean"]
+                ),
+                "dual_observed_risk_mean": float(dual["observed_risk_score_mean"]),
+                "observed_risk_delta_dual_minus_single": float(
+                    dual["observed_risk_score_mean"]
+                    - single["observed_risk_score_mean"]
+                ),
+                "single_collision_observed": bool(single["collision_observed"]),
+                "dual_collision_observed": bool(dual["collision_observed"]),
+                "single_high_or_critical_observed": bool(
+                    single["high_or_critical_observed"]
+                ),
+                "dual_high_or_critical_observed": bool(
+                    dual["high_or_critical_observed"]
+                ),
+            }
+        )
+
+    observed_deltas = [
+        row["observed_risk_delta_dual_minus_single"] for row in pair_rows
+    ]
+    dual_collision_count = sum(row["dual_collision_observed"] for row in pair_rows)
+    single_collision_count = sum(
+        row["single_collision_observed"] for row in pair_rows
+    )
+    return {
+        "pair_count": len(pair_rows),
+        "complete_pair_count": len(pair_rows),
+        "observed_risk_delta_dual_minus_single_mean": (
+            float(np.mean(observed_deltas)) if observed_deltas else None
+        ),
+        "observed_risk_delta_dual_minus_single_median": (
+            float(np.median(observed_deltas)) if observed_deltas else None
+        ),
+        "dual_higher_observed_count": sum(delta > 0 for delta in observed_deltas),
+        "single_higher_observed_count": sum(delta < 0 for delta in observed_deltas),
+        "tie_observed_count": sum(delta == 0 for delta in observed_deltas),
+        "dual_collision_scenario_count": dual_collision_count,
+        "single_collision_scenario_count": single_collision_count,
+        "collision_count_delta_dual_minus_single": (
+            dual_collision_count - single_collision_count
+        ),
+        "collision_discordant_pair_count": sum(
+            row["dual_collision_observed"] != row["single_collision_observed"]
+            for row in pair_rows
+        ),
+    }, pair_rows
+
+
 def analyze(rows, planned_scenario_count, top_k=DEFAULT_TOP_K):
     scenarios = aggregate_scenarios(rows)
     predicted = [float(row["predicted_risk_mean"]) for row in scenarios]
@@ -159,6 +235,7 @@ def analyze(rows, planned_scenario_count, top_k=DEFAULT_TOP_K):
     )
     union = predicted_top | observed_top
     intersection = predicted_top & observed_top
+    paired_comparison, paired_rows = build_paired_comparison(scenarios)
     return {
         "format": "feedback_candidate_external_validation_v1",
         "planned_scenario_count": planned_scenario_count,
@@ -218,7 +295,9 @@ def analyze(rows, planned_scenario_count, top_k=DEFAULT_TOP_K):
             scenarios, ("generator", "selection_channel")
         ),
         "by_target": summarize_group(scenarios, ("target_risk_level",)),
+        "paired_comparison": paired_comparison,
         "scenario_rows": scenarios,
+        "paired_rows": paired_rows,
     }
 
 
@@ -279,12 +358,20 @@ def write_report(path, result):
         result["by_generator_channel"],
         ("generator", "selection_channel"),
     )
+    paired = result["paired_comparison"]
     lines.extend(
         [
+            "## 配对比较",
+            "",
+            f"- 完整配对：`{paired['complete_pair_count']}/{paired['pair_count']}`。",
+            f"- 实测风险差值（双通道独有 - 单通道独有）均值：`{format_number(paired['observed_risk_delta_dual_minus_single_mean'])}`；中位数：`{format_number(paired['observed_risk_delta_dual_minus_single_median'])}`。",
+            f"- 配对中双通道实测更高：`{paired['dual_higher_observed_count']}`；单通道更高：`{paired['single_higher_observed_count']}`；相同：`{paired['tie_observed_count']}`。",
+            f"- 碰撞场景数：双通道 `{paired['dual_collision_scenario_count']}`，单通道 `{paired['single_collision_scenario_count']}`；不一致配对：`{paired['collision_discordant_pair_count']}`。",
+            "",
             "## 解释边界",
             "",
-            "- 27 个场景是由旧风险代理主动筛选的外部验证短名单，不代表原始生成器总体分布。",
-            "- 每个场景的三个 Traffic Manager 种子是重复测量，独立样本量仍为 27。",
+            f"- `{result['accepted_scenario_count']}` 个场景是由旧风险代理主动筛选的外部验证短名单，不代表原始生成器总体分布。",
+            f"- 每个场景的三个 Traffic Manager 种子是重复测量，独立样本量仍为 `{result['accepted_scenario_count']}`。",
             "- 各生成器和通道只有 9 个独立场景，本轮仅作工程描述，不进行显著性检验。",
             "- `target_risk_level` 是生成条件，所有危险性结论必须以 CARLA 实测 `observed_risk` 为准。",
             "",
@@ -301,13 +388,18 @@ def write_analysis(rows, planned_scenario_count, output_dir, top_k=DEFAULT_TOP_K
     scenario_path = os.path.join(output_dir, "external_validation_by_scenario.csv")
     generator_path = os.path.join(output_dir, "external_validation_by_generator.csv")
     channel_path = os.path.join(output_dir, "external_validation_by_channel.csv")
+    paired_path = os.path.join(output_dir, "external_validation_paired.csv")
     generator_channel_path = os.path.join(
         output_dir, "external_validation_by_generator_channel.csv"
     )
     report_path = os.path.join(output_dir, "external_validation_report.md")
     with open(summary_path, "w", encoding="utf-8") as file:
         json.dump(
-            {key: value for key, value in result.items() if key != "scenario_rows"},
+            {
+                key: value
+                for key, value in result.items()
+                if key not in {"scenario_rows", "paired_rows"}
+            },
             file,
             ensure_ascii=False,
             indent=2,
@@ -316,6 +408,7 @@ def write_analysis(rows, planned_scenario_count, output_dir, top_k=DEFAULT_TOP_K
     write_csv(scenario_path, result["scenario_rows"])
     write_csv(generator_path, result["by_generator"])
     write_csv(channel_path, result["by_channel"])
+    write_csv(paired_path, result["paired_rows"])
     write_csv(generator_channel_path, result["by_generator_channel"])
     write_report(report_path, result)
     return result, summary_path, scenario_path, report_path

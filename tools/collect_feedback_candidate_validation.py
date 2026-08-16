@@ -161,6 +161,10 @@ def main():
     print(f"[COLLECT] repeatability_report={repeatability_report}")
     print(f"[COLLECT] external_validation={external_path}")
     print(f"[COLLECT] external_scenarios={external_scenario_csv}")
+    print(
+        f"[COLLECT] external_pairs="
+        f"{os.path.join(output_dir, 'external_validation_paired.csv')}"
+    )
     print(f"[COLLECT] external_report={external_report}")
     if dataset_paths:
         print(f"[COLLECT] feedback_addition={dataset_paths[0]}")
