@@ -197,7 +197,7 @@ def main():
         "",
         "## 文件",
         "",
-        "- `external_validation_addition.csv`：27 个外部验证新增场景。",
+        f"- `external_validation_addition.csv`：{len(addition_rows)} 个外部验证新增场景。",
         "- `dataset.csv`：合并后的场景级训练数据。",
         "- `dataset.jsonl`：与 CSV 等价的逐行 JSON。",
         "- `merge_summary.json`：来源哈希、计数和合并校验。",
