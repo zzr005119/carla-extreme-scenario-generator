@@ -27,6 +27,12 @@ def safe_spearman(left, right):
     return None if np.isnan(value) else float(value)
 
 
+def optional_float(value):
+    if value in (None, ""):
+        return None
+    return float(value)
+
+
 def ranked_sample_ids(rows, score_key, top_k):
     ordered = sorted(
         rows,
@@ -63,17 +69,17 @@ def aggregate_scenarios(rows):
                 "robust_predicted_risk_score": float(
                     source["robust_predicted_risk_score"]
                 ),
-                "bootstrap_top_k_frequency": float(
-                    source["bootstrap_top_k_frequency"]
+                "bootstrap_top_k_frequency": optional_float(
+                    source.get("bootstrap_top_k_frequency")
                 ),
-                "nearest_collision_distance": float(
-                    source["nearest_collision_distance"]
+                "nearest_collision_distance": optional_float(
+                    source.get("nearest_collision_distance")
                 ),
-                "collision_boundary_score": float(
-                    source["collision_boundary_score"]
+                "collision_boundary_score": optional_float(
+                    source.get("collision_boundary_score")
                 ),
-                "selection_diversity_distance": float(
-                    source["selection_diversity_distance"]
+                "selection_diversity_distance": optional_float(
+                    source.get("selection_diversity_distance")
                 ),
                 "observed_risk_score_mean": float(np.mean(scores)),
                 "observed_risk_score_std": safe_std(scores),
