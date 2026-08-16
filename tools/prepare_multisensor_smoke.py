@@ -31,6 +31,7 @@ def main():
         config = copy.deepcopy(json.load(file))
 
     config["scenario"]["name"] = "cvae_medium_20260813_0103__multisensor_smoke"
+    config["scenario"]["traffic_manager_port"] = 8100
     config["sensors"]["camera"].update(
         {
             "width": 640,
