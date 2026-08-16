@@ -198,7 +198,7 @@ def build_records(single_records, dual_records, single_rows, dual_rows, single_o
     for arm, (records, rows, selected_ids) in rows_by_arm.items():
         for sample_id in sorted(selected_ids):
             record = copy.deepcopy(records[sample_id])
-            row = dict(next(item for item in rows if item["sample_id"] == sample_id))
+            row = dict(rows[sample_id])
             row["comparison_arm"] = arm
             row["original_selection_channel"] = row["selection_channel"]
             row["selection_channel"] = arm
