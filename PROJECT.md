@@ -139,6 +139,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - `tools/server_jobs/dual_channel_validation_collect_v1.sh`：自动定位最新双通道配对计划并收集 54 次运行结果，生成严格验收和通道比较报告。
 - `tools/server_risk_feedback_v3.cmd`、`tools/server_jobs/risk_feedback_v3.sh`：将双通道配对验证新增数据并入 V2 数据集，生成 V3 风险反馈数据、代理和重复诊断。
 - `tools/server_dual_candidate_scoring_v3.cmd`、`tools/server_jobs/dual_candidate_scoring_v3.sh`：使用 V3 风险反馈数据对同口径 1536 个 LHS/GMM/CVAE 候选重新评分。
+- `tools/server_multisensor_smoke_v1.cmd`、`tools/server_jobs/multisensor_smoke_v1.sh`：在不改变 RGB 基线的前提下，以低频 640×360 配置验证 RGB、Depth、Semantic 和 Collision 的实际写盘代价。
 - `tools/server_run.cmd`、`tools/server_job_status.cmd`：同步后使用 `tmux` 后台运行模型或 CARLA 客户端任务，并查询日志与退出码。
 - `tools/server_fetch_results.cmd`：只回收指定服务器输出目录中的 CSV、JSON、Markdown、文本和日志；默认跳过大于 20 MB 的文件及原始传感器帧。
 
