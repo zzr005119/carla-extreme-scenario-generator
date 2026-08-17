@@ -1,8 +1,20 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-timestamp="$(date +%Y%m%d_%H%M%S)"
-result_dir="$PROJECT_OUTPUT_ROOT/risk_feedback_v5/$timestamp"
+result_root="$PROJECT_OUTPUT_ROOT/risk_feedback_v5"
+mkdir -p "$result_root"
+latest_result="$(find "$result_root" -mindepth 1 -maxdepth 1 -type d | sort | tail -n 1)"
+if [[ -n "$latest_result" \
+  && -f "$latest_result/dataset/dataset.csv" \
+  && ! -f "$latest_result/physical_feature_v5/physical_feature_summary.json" ]]; then
+  result_dir="$latest_result"
+  echo "[V5] 恢复未完成目录: $result_dir"
+else
+  timestamp="$(date +%Y%m%d_%H%M%S)"
+  result_dir="$result_root/$timestamp"
+fi
+
+timestamp="$(basename "$result_dir")"
 dataset_dir="$result_dir/dataset"
 proxy_dir="$result_dir/proxy"
 diagnostics_dir="$result_dir/diagnostics_v5_top9"
@@ -23,51 +35,63 @@ if [[ -z "$addition_dataset" || ! -f "$addition_dataset" ]]; then
   exit 2
 fi
 
-python -u tools/merge_risk_feedback_datasets.py \
-  --base-dataset "$base_dataset" \
-  --addition-dataset "$addition_dataset" \
-  --output-dir "$dataset_dir" \
-  --version-label V5
+if [[ ! -f "$dataset_dir/dataset.csv" ]]; then
+  python -u tools/merge_risk_feedback_datasets.py \
+    --base-dataset "$base_dataset" \
+    --addition-dataset "$addition_dataset" \
+    --output-dir "$dataset_dir" \
+    --version-label V5
+fi
 
-python -u analysis/analyze_risk_proxy_diagnostics.py \
-  --dataset "$base_dataset" \
-  --output-dir "$baseline_dir" \
-  --version-label V4_top9 \
-  --top-k 9 \
-  --repeats 50 \
-  --n-estimators 300 \
-  --random-state 20260817
+if [[ ! -f "$baseline_dir/diagnostic_summary.json" ]]; then
+  python -u analysis/analyze_risk_proxy_diagnostics.py \
+    --dataset "$base_dataset" \
+    --output-dir "$baseline_dir" \
+    --version-label V4_top9 \
+    --top-k 9 \
+    --repeats 50 \
+    --n-estimators 300 \
+    --random-state 20260817
+fi
 
-python -u analysis/train_risk_proxy.py \
-  --dataset "$dataset_dir/dataset.csv" \
-  --output-dir "$proxy_dir" \
-  --artifact-dir "$artifact_dir" \
-  --version-label V5 \
-  --random-state 20260817
+if [[ ! -f "$proxy_dir/proxy_summary.json" ]]; then
+  python -u analysis/train_risk_proxy.py \
+    --dataset "$dataset_dir/dataset.csv" \
+    --output-dir "$proxy_dir" \
+    --artifact-dir "$artifact_dir" \
+    --version-label V5 \
+    --random-state 20260817
+fi
 
-python -u analysis/analyze_risk_proxy_diagnostics.py \
-  --dataset "$dataset_dir/dataset.csv" \
-  --output-dir "$diagnostics_dir" \
-  --version-label V5 \
-  --top-k 9 \
-  --repeats 50 \
-  --n-estimators 300 \
-  --random-state 20260817
+if [[ ! -f "$diagnostics_dir/diagnostic_summary.json" ]]; then
+  python -u analysis/analyze_risk_proxy_diagnostics.py \
+    --dataset "$dataset_dir/dataset.csv" \
+    --output-dir "$diagnostics_dir" \
+    --version-label V5 \
+    --top-k 9 \
+    --repeats 50 \
+    --n-estimators 300 \
+    --random-state 20260817
+fi
 
-python -u analysis/analyze_physical_feature_enhancement.py \
-  --dataset "$dataset_dir/dataset.csv" \
-  --output-dir "$physical_dir" \
-  --repeats 50 \
-  --n-estimators 300 \
-  --top-k 9 \
-  --random-state 20260817
+if [[ ! -f "$physical_dir/physical_feature_summary.json" ]]; then
+  python -u -m analysis.analyze_physical_feature_enhancement \
+    --dataset "$dataset_dir/dataset.csv" \
+    --output-dir "$physical_dir" \
+    --repeats 50 \
+    --n-estimators 300 \
+    --top-k 9 \
+    --random-state 20260817
+fi
 
-python -u analysis/compare_risk_proxy_versions_generic.py \
-  --before-summary "$baseline_dir/diagnostic_summary.json" \
-  --after-summary "$diagnostics_dir/diagnostic_summary.json" \
-  --before-label V4 \
-  --after-label V5 \
-  --output-dir "$comparison_dir"
+if [[ ! -f "$comparison_dir/risk_proxy_version_comparison.json" ]]; then
+  python -u analysis/compare_risk_proxy_versions_generic.py \
+    --before-summary "$baseline_dir/diagnostic_summary.json" \
+    --after-summary "$diagnostics_dir/diagnostic_summary.json" \
+    --before-label V4 \
+    --after-label V5 \
+    --output-dir "$comparison_dir"
+fi
 
 echo "[V5] base=$base_dataset"
 echo "[V5] addition=$addition_dataset"
