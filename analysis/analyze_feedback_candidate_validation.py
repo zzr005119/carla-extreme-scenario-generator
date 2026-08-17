@@ -1,5 +1,6 @@
 """分析反馈候选短名单的 CARLA 外部验证结果。"""
 
+import argparse
 import csv
 import json
 import math
@@ -7,8 +8,6 @@ import os
 from collections import defaultdict
 
 import numpy as np
-from scipy.stats import spearmanr
-from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 
 HIGH_RISK_THRESHOLD = 50.0
@@ -22,9 +21,33 @@ def safe_std(values):
 def safe_spearman(left, right):
     if len(left) < 2 or len(set(left)) < 2 or len(set(right)) < 2:
         return None
-    result = spearmanr(left, right)
-    value = getattr(result, "statistic", result[0])
+
+    def average_ranks(values):
+        values = np.asarray(values, dtype=float)
+        order = np.argsort(values, kind="mergesort")
+        ranks = np.empty(len(values), dtype=float)
+        start = 0
+        while start < len(values):
+            end = start + 1
+            while end < len(values) and values[order[end]] == values[order[start]]:
+                end += 1
+            ranks[order[start:end]] = (start + end + 1) / 2.0
+            start = end
+        return ranks
+
+    value = np.corrcoef(average_ranks(left), average_ranks(right))[0, 1]
     return None if np.isnan(value) else float(value)
+
+
+def mean_absolute_error(actual, predicted):
+    return float(
+        np.mean(np.abs(np.asarray(actual, dtype=float) - np.asarray(predicted, dtype=float)))
+    )
+
+
+def root_mean_squared_error(actual, predicted):
+    residuals = np.asarray(actual, dtype=float) - np.asarray(predicted, dtype=float)
+    return float(np.sqrt(np.mean(np.square(residuals))))
 
 
 def optional_float(value):
@@ -58,6 +81,20 @@ def aggregate_scenarios(rows):
                 "sample_id": sample_id,
                 "generator": source["generator"],
                 "selection_channel": source["selection_channel"],
+                "comparison_arm": source.get("comparison_arm"),
+                "feature_space": source.get("feature_space"),
+                "pair_id": source.get("pair_id"),
+                "pair_index": (
+                    int(source["pair_index"])
+                    if source.get("pair_index") not in (None, "")
+                    else None
+                ),
+                "paired_sample_id": source.get("paired_sample_id"),
+                "slot_order": (
+                    int(source["slot_order"])
+                    if source.get("slot_order") not in (None, "")
+                    else None
+                ),
                 "selection_order": int(source["selection_order"]),
                 "target_risk_level": source["target_risk_level"],
                 "accepted_runs": len(repeated_rows),
@@ -154,74 +191,115 @@ def summarize_group(rows, fields):
 def build_paired_comparison(scenarios):
     grouped = defaultdict(dict)
     for row in scenarios:
+        pair_id = row.get("pair_id")
+        arm = row.get("comparison_arm") or row.get("feature_space")
+        if pair_id and arm:
+            grouped[("pair_id", pair_id)][arm] = row
+            continue
         key = (
             row["generator"],
             row["target_risk_level"],
             int(row["selection_order"]),
         )
-        grouped[key][row["selection_channel"]] = row
+        grouped[("legacy", key)][row["selection_channel"]] = row
 
     pair_rows = []
+    baseline_arm = None
+    comparison_arm = None
     for key in sorted(grouped):
         channels = grouped[key]
-        if "single_only" not in channels or "dual_only" not in channels:
+        if "raw_15d" in channels and "physical_enhanced" in channels:
+            current_baseline_arm = "raw_15d"
+            current_comparison_arm = "physical_enhanced"
+        elif "single_only" in channels and "dual_only" in channels:
+            current_baseline_arm = "single_only"
+            current_comparison_arm = "dual_only"
+        else:
             continue
-        single = channels["single_only"]
-        dual = channels["dual_only"]
+
+        baseline_arm = baseline_arm or current_baseline_arm
+        comparison_arm = comparison_arm or current_comparison_arm
+        baseline = channels[current_baseline_arm]
+        comparison = channels[current_comparison_arm]
         pair_rows.append(
             {
-                "generator": key[0],
-                "target_risk_level": key[1],
-                "pair_order": key[2],
-                "single_sample_id": single["sample_id"],
-                "dual_sample_id": dual["sample_id"],
-                "single_predicted_risk_mean": float(single["predicted_risk_mean"]),
-                "dual_predicted_risk_mean": float(dual["predicted_risk_mean"]),
-                "single_observed_risk_mean": float(
-                    single["observed_risk_score_mean"]
+                "pair_id": (
+                    key[1] if key[0] == "pair_id" else baseline.get("pair_id")
                 ),
-                "dual_observed_risk_mean": float(dual["observed_risk_score_mean"]),
-                "observed_risk_delta_dual_minus_single": float(
-                    dual["observed_risk_score_mean"]
-                    - single["observed_risk_score_mean"]
+                "generator": baseline["generator"],
+                "target_risk_level": baseline["target_risk_level"],
+                "pair_order": baseline.get("pair_index") or baseline["selection_order"],
+                "baseline_arm": current_baseline_arm,
+                "comparison_arm": current_comparison_arm,
+                "baseline_sample_id": baseline["sample_id"],
+                "comparison_sample_id": comparison["sample_id"],
+                "baseline_predicted_risk_mean": float(
+                    baseline["predicted_risk_mean"]
                 ),
-                "single_collision_observed": bool(single["collision_observed"]),
-                "dual_collision_observed": bool(dual["collision_observed"]),
-                "single_high_or_critical_observed": bool(
-                    single["high_or_critical_observed"]
+                "comparison_predicted_risk_mean": float(
+                    comparison["predicted_risk_mean"]
                 ),
-                "dual_high_or_critical_observed": bool(
-                    dual["high_or_critical_observed"]
+                "baseline_observed_risk_mean": float(
+                    baseline["observed_risk_score_mean"]
+                ),
+                "comparison_observed_risk_mean": float(
+                    comparison["observed_risk_score_mean"]
+                ),
+                "observed_risk_delta_comparison_minus_baseline": float(
+                    comparison["observed_risk_score_mean"]
+                    - baseline["observed_risk_score_mean"]
+                ),
+                "baseline_collision_observed": bool(
+                    baseline["collision_observed"]
+                ),
+                "comparison_collision_observed": bool(
+                    comparison["collision_observed"]
+                ),
+                "baseline_high_or_critical_observed": bool(
+                    baseline["high_or_critical_observed"]
+                ),
+                "comparison_high_or_critical_observed": bool(
+                    comparison["high_or_critical_observed"]
                 ),
             }
         )
 
     observed_deltas = [
-        row["observed_risk_delta_dual_minus_single"] for row in pair_rows
+        row["observed_risk_delta_comparison_minus_baseline"]
+        for row in pair_rows
     ]
-    dual_collision_count = sum(row["dual_collision_observed"] for row in pair_rows)
-    single_collision_count = sum(
-        row["single_collision_observed"] for row in pair_rows
+    comparison_collision_count = sum(
+        row["comparison_collision_observed"] for row in pair_rows
+    )
+    baseline_collision_count = sum(
+        row["baseline_collision_observed"] for row in pair_rows
     )
     return {
         "pair_count": len(pair_rows),
         "complete_pair_count": len(pair_rows),
-        "observed_risk_delta_dual_minus_single_mean": (
+        "baseline_arm": baseline_arm,
+        "comparison_arm": comparison_arm,
+        "observed_risk_delta_comparison_minus_baseline_mean": (
             float(np.mean(observed_deltas)) if observed_deltas else None
         ),
-        "observed_risk_delta_dual_minus_single_median": (
+        "observed_risk_delta_comparison_minus_baseline_median": (
             float(np.median(observed_deltas)) if observed_deltas else None
         ),
-        "dual_higher_observed_count": sum(delta > 0 for delta in observed_deltas),
-        "single_higher_observed_count": sum(delta < 0 for delta in observed_deltas),
+        "comparison_higher_observed_count": sum(
+            delta > 0 for delta in observed_deltas
+        ),
+        "baseline_higher_observed_count": sum(
+            delta < 0 for delta in observed_deltas
+        ),
         "tie_observed_count": sum(delta == 0 for delta in observed_deltas),
-        "dual_collision_scenario_count": dual_collision_count,
-        "single_collision_scenario_count": single_collision_count,
-        "collision_count_delta_dual_minus_single": (
-            dual_collision_count - single_collision_count
+        "comparison_collision_scenario_count": comparison_collision_count,
+        "baseline_collision_scenario_count": baseline_collision_count,
+        "collision_count_delta_comparison_minus_baseline": (
+            comparison_collision_count - baseline_collision_count
         ),
         "collision_discordant_pair_count": sum(
-            row["dual_collision_observed"] != row["single_collision_observed"]
+            row["comparison_collision_observed"]
+            != row["baseline_collision_observed"]
             for row in pair_rows
         ),
     }, pair_rows
@@ -229,6 +307,9 @@ def build_paired_comparison(scenarios):
 
 def analyze(rows, planned_scenario_count, top_k=DEFAULT_TOP_K):
     scenarios = aggregate_scenarios(rows)
+    comparison_scenarios = [
+        row for row in scenarios if row.get("comparison_arm")
+    ]
     predicted = [float(row["predicted_risk_mean"]) for row in scenarios]
     robust = [float(row["robust_predicted_risk_score"]) for row in scenarios]
     observed = [float(row["observed_risk_score_mean"]) for row in scenarios]
@@ -253,9 +334,7 @@ def analyze(rows, planned_scenario_count, top_k=DEFAULT_TOP_K):
                 float(mean_absolute_error(observed, predicted)) if scenarios else None
             ),
             "rmse": (
-                float(mean_squared_error(observed, predicted) ** 0.5)
-                if scenarios
-                else None
+                root_mean_squared_error(observed, predicted) if scenarios else None
             ),
             "predicted_mean_spearman": safe_spearman(predicted, observed),
             "robust_score_spearman": safe_spearman(robust, observed),
@@ -297,6 +376,9 @@ def analyze(rows, planned_scenario_count, top_k=DEFAULT_TOP_K):
         },
         "by_generator": summarize_group(scenarios, ("generator",)),
         "by_channel": summarize_group(scenarios, ("selection_channel",)),
+        "by_comparison_arm": summarize_group(
+            comparison_scenarios, ("comparison_arm",)
+        ),
         "by_generator_channel": summarize_group(
             scenarios, ("generator", "selection_channel")
         ),
@@ -358,6 +440,13 @@ def write_report(path, result):
     ]
     report_table(lines, "按生成器", result["by_generator"], ("generator",))
     report_table(lines, "按选择通道", result["by_channel"], ("selection_channel",))
+    if result["by_comparison_arm"]:
+        report_table(
+            lines,
+            "按比较实验臂",
+            result["by_comparison_arm"],
+            ("comparison_arm",),
+        )
     report_table(
         lines,
         "按生成器与选择通道",
@@ -370,15 +459,16 @@ def write_report(path, result):
             "## 配对比较",
             "",
             f"- 完整配对：`{paired['complete_pair_count']}/{paired['pair_count']}`。",
-            f"- 实测风险差值（双通道独有 - 单通道独有）均值：`{format_number(paired['observed_risk_delta_dual_minus_single_mean'])}`；中位数：`{format_number(paired['observed_risk_delta_dual_minus_single_median'])}`。",
-            f"- 配对中双通道实测更高：`{paired['dual_higher_observed_count']}`；单通道更高：`{paired['single_higher_observed_count']}`；相同：`{paired['tie_observed_count']}`。",
-            f"- 碰撞场景数：双通道 `{paired['dual_collision_scenario_count']}`，单通道 `{paired['single_collision_scenario_count']}`；不一致配对：`{paired['collision_discordant_pair_count']}`。",
+            f"- 比较对象：`{paired['comparison_arm'] or '-'}` - 基线：`{paired['baseline_arm'] or '-'}`。",
+            f"- 实测风险差值（比较对象 - 基线）均值：`{format_number(paired['observed_risk_delta_comparison_minus_baseline_mean'])}`；中位数：`{format_number(paired['observed_risk_delta_comparison_minus_baseline_median'])}`。",
+            f"- 比较对象实测更高：`{paired['comparison_higher_observed_count']}`；基线更高：`{paired['baseline_higher_observed_count']}`；相同：`{paired['tie_observed_count']}`。",
+            f"- 碰撞场景数：比较对象 `{paired['comparison_collision_scenario_count']}`，基线 `{paired['baseline_collision_scenario_count']}`；不一致配对：`{paired['collision_discordant_pair_count']}`。",
             "",
             "## 解释边界",
             "",
             f"- `{result['accepted_scenario_count']}` 个场景是由旧风险代理主动筛选的外部验证短名单，不代表原始生成器总体分布。",
             f"- 每个场景的三个 Traffic Manager 种子是重复测量，独立样本量仍为 `{result['accepted_scenario_count']}`。",
-            "- 各生成器和通道只有 9 个独立场景，本轮仅作工程描述，不进行显著性检验。",
+            "- 每个配对只包含一个独立候选，本轮用于工程比较，不进行显著性检验。",
             "- `target_risk_level` 是生成条件，所有危险性结论必须以 CARLA 实测 `observed_risk` 为准。",
             "",
         ]
@@ -418,3 +508,36 @@ def write_analysis(rows, planned_scenario_count, output_dir, top_k=DEFAULT_TOP_K
     write_csv(generator_channel_path, result["by_generator_channel"])
     write_report(report_path, result)
     return result, summary_path, scenario_path, report_path
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description="离线分析反馈候选 CARLA 验证结果")
+    parser.add_argument("--run-results", required=True)
+    parser.add_argument("--planned-scenario-count", type=int, required=True)
+    parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--top-k", type=int, default=DEFAULT_TOP_K)
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    with open(args.run_results, "r", encoding="utf-8-sig", newline="") as file:
+        rows = list(csv.DictReader(file))
+    result, summary_path, scenario_path, report_path = write_analysis(
+        rows,
+        args.planned_scenario_count,
+        args.output_dir,
+        top_k=args.top_k,
+    )
+    print(
+        f"[ANALYZE] scenarios={result['accepted_scenario_count']}"
+        f"/{result['planned_scenario_count']} | pairs="
+        f"{result['paired_comparison']['complete_pair_count']}"
+    )
+    print(f"[ANALYZE] summary={summary_path}")
+    print(f"[ANALYZE] scenarios={scenario_path}")
+    print(f"[ANALYZE] report={report_path}")
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
