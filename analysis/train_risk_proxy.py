@@ -25,6 +25,12 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+from core.physical_features import (  # noqa: E402
+    PHYSICAL_FEATURE_VERSION,
+    physical_feature_matrix,
+    physical_feature_names,
+)
+
 
 DEFAULT_DATASET = os.path.join(
     PROJECT_ROOT,
@@ -46,6 +52,11 @@ def parse_args():
     parser.add_argument("--artifact-dir", default=DEFAULT_ARTIFACT_DIR)
     parser.add_argument("--version-label", default="V1")
     parser.add_argument("--random-state", type=int, default=20260815)
+    parser.add_argument(
+        "--feature-space",
+        choices=("baseline", "physical_enhanced"),
+        default="baseline",
+    )
     return parser.parse_args()
 
 
@@ -140,6 +151,14 @@ def main():
         raise ValueError("模型输入特征存在缺失值")
 
     features = frame[feature_columns].to_numpy(dtype=float)
+    model_feature_names = list(feature_columns)
+    derived_feature_count = 0
+    if args.feature_space == "physical_enhanced":
+        derived = physical_feature_matrix(features)
+        features = np.column_stack((features, derived))
+        derived_names = list(physical_feature_names())
+        model_feature_names.extend(derived_names)
+        derived_feature_count = len(derived_names)
     target = frame[TARGET_COLUMN].to_numpy(dtype=float)
     strata = (
         frame["generator"].astype(str)
@@ -194,7 +213,7 @@ def main():
         importance = final_model.feature_importances_
         importance_type = "random_forest_feature_importance"
     else:
-        importance = np.zeros(len(feature_columns))
+        importance = np.zeros(len(model_feature_names))
         importance_type = "not_applicable"
     importance_rows = [
         {
@@ -203,7 +222,9 @@ def main():
             "importance_type": importance_type,
         }
         for feature, value in sorted(
-            zip(feature_columns, importance), key=lambda item: item[1], reverse=True
+            zip(model_feature_names, importance),
+            key=lambda item: item[1],
+            reverse=True,
         )
     ]
     write_csv(output_dir / "feature_importance.csv", importance_rows)
@@ -219,11 +240,19 @@ def main():
         .reindex(["low", "medium", "high", "critical"])
     )
     summary = {
-        "format": f"risk_proxy_baseline_{label_slug}",
+        "format": f"risk_proxy_{args.feature_space}_{label_slug}",
         "version_label": label,
+        "feature_space": args.feature_space,
+        "physical_feature_version": (
+            PHYSICAL_FEATURE_VERSION
+            if args.feature_space == "physical_enhanced"
+            else None
+        ),
         "dataset": os.path.abspath(args.dataset),
         "independent_scenario_count": len(frame),
-        "feature_count": len(feature_columns),
+        "feature_count": len(model_feature_names),
+        "baseline_feature_count": len(feature_columns),
+        "derived_feature_count": derived_feature_count,
         "target_column": TARGET_COLUMN,
         "target_risk_level_used_as_input": False,
         "generator_used_as_input": False,
@@ -256,7 +285,11 @@ def main():
         "",
         f"- 独立场景：`{len(frame)}` 个。",
         "- 重复测量：每个场景的 3 个 Traffic Manager 种子先聚合为场景均值。",
-        "- 输入：15 维归一化场景参数；`target_risk_level` 和 `generator` 不作为模型输入。",
+        (
+            "- 输入：15 维归一化场景参数；`target_risk_level` 和 `generator` 不作为模型输入。"
+            if args.feature_space == "baseline"
+            else f"- 输入：15 维归一化场景参数 + {derived_feature_count} 个生成前物理交互派生特征；`target_risk_level` 和 `generator` 不作为模型输入。"
+        ),
         "- 目标：场景级 `observed_risk_score_mean`。",
         "- 交叉验证：按 `generator × target_risk_level` 分层的 3 折交叉验证。",
         f"- 当前选择模型：`{selected_model_name}`。",
