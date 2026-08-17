@@ -1,0 +1,47 @@
+{
+  "format": "scenario_library_v1_summary",
+  "library_version": "v1",
+  "build_date": "2026-08-17",
+  "input_record_count": 36,
+  "excluded_record_count": 0,
+  "duplicate_record_count": 0,
+  "source_count": 1,
+  "entry_count": 36,
+  "accepted_run_evidence_count": 108,
+  "generator_counts": {
+    "cvae": 12,
+    "gmm": 12,
+    "lhs": 12
+  },
+  "target_risk_level_counts": {
+    "critical": 9,
+    "high": 9,
+    "low": 9,
+    "medium": 9
+  },
+  "observed_risk_level_counts": {
+    "critical": 3,
+    "high": 5,
+    "low": 7,
+    "medium": 21
+  },
+  "verification_level_counts": {
+    "strictly_accepted": 36
+  },
+  "quality_tier_counts": {
+    "silver": 36
+  },
+  "collision_scene_count": 3,
+  "high_or_critical_scene_count": 8,
+  "mean_risk_score": 40.06616666666667,
+  "mean_operational_quality": 0.9115159079364941,
+  "mean_diversity_score": 0.6086846579662661,
+  "quality_scope": {
+    "executability": "assessed_from_strict_acceptance",
+    "evidence_completeness": "assessed_from_run_result_fields",
+    "repeatability": "assessed_from_three_seed_risk_score_std",
+    "dangerousness": "assessed_from_heuristic_v2_mean_score",
+    "diversity": "assessed_within_current_library_in_normalized_15d_space",
+    "realism": "not_assessed_without_real_world_reference_distribution"
+  }
+}

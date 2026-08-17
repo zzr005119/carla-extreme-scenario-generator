@@ -1,0 +1,19 @@
+{
+  "format": "scenario_library_sources_v1",
+  "library_version": "v1",
+  "build_date": "2026-08-17",
+  "quality": {
+    "repeatability_score_std_reference": 10.0,
+    "diversity_reference_distance": 0.15
+  },
+  "sources": [
+    {
+      "source_id": "generator_comparison_v1",
+      "selected_records": "data/scenarios/generator_comparison_v1/selected_records.jsonl",
+      "manifest": "data/scenarios/generator_comparison_v1/manifest.json",
+      "run_results": "data/scenarios/generator_comparison_v1/run_results.csv",
+      "strict_only": true,
+      "risk_method": "heuristic_v2"
+    }
+  ]
+}

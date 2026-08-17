@@ -1,0 +1,24 @@
+{
+  "format": "scenario_library_v1_manifest",
+  "library_version": "v1",
+  "build_date": "2026-08-17",
+  "schema": {
+    "path": "schemas/scenario_library_entry.schema.json",
+    "sha256": "77036d5ca57a42ee6258cf1ded3b37ab3ec688c36214a88685e4cf9477ca143c"
+  },
+  "source_config": {
+    "path": "configs/scenario_library_sources_v1.json",
+    "sha256": "bae02d5f027472841b2fd03d0a5375fc4679770505edfc945f9b58bb39a24c9d"
+  },
+  "source_ids": [
+    "generator_comparison_v1"
+  ],
+  "entry_count": 36,
+  "accepted_run_evidence_count": 108,
+  "outputs": {
+    "entries.jsonl": "635fd8a7e8c4d3ec862b546a6582542cc18418b85e37a94b0a4dac9274a8ef20",
+    "index.csv": "68b57a2801a66e57989dad0177ff663f62a3dca91ecd6c14ef8a0ef3c5e4b884",
+    "summary.json": "5a25f0d16fd21986ecc53b9c05b3c575b717585dd664eac0d52b29fef0bd1046",
+    "README.md": "209f9fe3c76da7a57e4b22ecb2a65fefd0f593ff13f8ed46cdcfd1eaf1fc3242"
+  }
+}

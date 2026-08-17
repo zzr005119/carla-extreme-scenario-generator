@@ -126,6 +126,13 @@ def _validate_schema_node(value, schema, path, errors):
             errors.append(f"{path}: 不能大于 {schema['maximum']}")
 
 
+def validate_schema_value(value, schema, path="$"):
+    """使用项目支持的 JSON Schema 子集校验任意值。"""
+    errors = []
+    _validate_schema_node(value, schema, path, errors)
+    return errors
+
+
 def _semantic_validation(record):
     errors = []
     warnings = []
@@ -198,8 +205,7 @@ def _semantic_validation(record):
 def validate_scenario_record(record, schema=None, schema_path=DEFAULT_SCHEMA_PATH):
     if schema is None:
         schema = load_json(schema_path)
-    errors = []
-    _validate_schema_node(record, schema, "$", errors)
+    errors = validate_schema_value(record, schema)
     warnings = []
     if not errors:
         semantic_errors, warnings = _semantic_validation(record)
