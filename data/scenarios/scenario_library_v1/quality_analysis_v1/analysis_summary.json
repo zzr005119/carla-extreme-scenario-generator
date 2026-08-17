@@ -1,0 +1,1697 @@
+{
+  "format": "scenario_library_quality_analysis_v1",
+  "analysis_date": "2026-08-17",
+  "entry_count": 117,
+  "accepted_run_evidence_count": 351,
+  "generator_counts": {
+    "cvae": 39,
+    "gmm": 39,
+    "lhs": 39
+  },
+  "target_risk_level_counts": {
+    "low": 9,
+    "medium": 9,
+    "high": 39,
+    "critical": 60
+  },
+  "observed_risk_level_counts": {
+    "low": 7,
+    "medium": 38,
+    "high": 35,
+    "critical": 37
+  },
+  "collision_scene_count": 39,
+  "collision_scene_rate": 0.3333333333333333,
+  "high_or_critical_scene_count": 72,
+  "high_or_critical_scene_rate": 0.6153846153846154,
+  "target_match_count": 50,
+  "target_match_rate": 0.42735042735042733,
+  "target_score_spearman": 0.7076735248028573,
+  "target_observed_level_spearman": 0.6299391618970727,
+  "risk_score": {
+    "mean": 57.68506837606837,
+    "std": 20.035503877396135,
+    "quantiles": {
+      "p10": 28.414333333333335,
+      "p25": 46.531000000000006,
+      "median": 53.001666666666665,
+      "p75": 79.28133333333334,
+      "p90": 85.45033333333332
+    }
+  },
+  "operational_quality": {
+    "mean": 0.8852598252106331,
+    "std": 0.03469561319861963,
+    "quantiles": {
+      "p10": 0.8576758255951813,
+      "p25": 0.8858925330775493,
+      "median": 0.8880555555555555,
+      "p75": 0.8966403524329104,
+      "p90": 0.9220541846934622
+    }
+  },
+  "diversity": {
+    "mean": 0.39267593789681393,
+    "std": 0.2052223900812624,
+    "quantiles": {
+      "p10": 0.11584784607601951,
+      "p25": 0.22424150704434515,
+      "median": 0.38648761937595333,
+      "p75": 0.5202427425257417,
+      "p90": 0.6834466887798953
+    },
+    "low_relative_diversity_count": 30
+  },
+  "repeatability_risk_score_std": {
+    "mean": 0.4507522522280138,
+    "maximum": 5.514564926930624,
+    "quantiles": {
+      "p10": 0.011015141094571239,
+      "p25": 0.027682726262659368,
+      "median": 0.08491368166163953,
+      "p75": 0.49665581643629264,
+      "p90": 1.1606590144112898
+    }
+  },
+  "evidence_granularity_counts": {
+    "aggregate": 81,
+    "run_level": 36
+  },
+  "quality_tier_counts": {
+    "bronze": 81,
+    "silver": 36
+  },
+  "carla_version_counts": {},
+  "carla_version_unknown_count": 117,
+  "realism_not_assessed_count": 117,
+  "quality_flag_counts": {
+    "aggregate_evidence_only": 81,
+    "carla_version_not_recorded": 117,
+    "collision_observed": 39,
+    "historical_runtime_paths": 36,
+    "low_relative_diversity": 30,
+    "realism_not_assessed": 117,
+    "run_level_evidence_not_embedded": 81,
+    "target_condition_mismatch": 67
+  },
+  "generator_summaries": [
+    {
+      "generator": "cvae",
+      "scene_count": 39,
+      "risk_score_mean": 56.46141025641027,
+      "risk_score_std": 19.41564099142861,
+      "risk_score_min": 23.761666666666667,
+      "risk_score_max": 89.45966666666668,
+      "high_or_critical_count": 24,
+      "high_or_critical_rate": 0.6153846153846154,
+      "collision_scene_count": 12,
+      "collision_scene_rate": 0.3076923076923077,
+      "target_match_count": 16,
+      "target_match_rate": 0.41025641025641024,
+      "operational_quality_mean": 0.8778189555299503,
+      "diversity_score_mean": 0.2119204454836607,
+      "low_diversity_count": 28,
+      "run_level_count": 12,
+      "aggregate_count": 27
+    },
+    {
+      "generator": "gmm",
+      "scene_count": 39,
+      "risk_score_mean": 59.64689743589744,
+      "risk_score_std": 21.475423665516175,
+      "risk_score_min": 24.410666666666668,
+      "risk_score_max": 97.04,
+      "high_or_critical_count": 24,
+      "high_or_critical_rate": 0.6153846153846154,
+      "collision_scene_count": 15,
+      "collision_scene_rate": 0.38461538461538464,
+      "target_match_count": 17,
+      "target_match_rate": 0.4358974358974359,
+      "operational_quality_mean": 0.8899314886034807,
+      "diversity_score_mean": 0.46716288342863804,
+      "low_diversity_count": 1,
+      "run_level_count": 12,
+      "aggregate_count": 27
+    },
+    {
+      "generator": "lhs",
+      "scene_count": 39,
+      "risk_score_mean": 56.94689743589743,
+      "risk_score_std": 18.979259768265567,
+      "risk_score_min": 24.474333333333334,
+      "risk_score_max": 90.919,
+      "high_or_critical_count": 24,
+      "high_or_critical_rate": 0.6153846153846154,
+      "collision_scene_count": 12,
+      "collision_scene_rate": 0.3076923076923077,
+      "target_match_count": 17,
+      "target_match_rate": 0.4358974358974359,
+      "operational_quality_mean": 0.8880290314984682,
+      "diversity_score_mean": 0.49894448477814307,
+      "low_diversity_count": 1,
+      "run_level_count": 12,
+      "aggregate_count": 27
+    }
+  ],
+  "target_observed_matrix": {
+    "low": {
+      "low": 7,
+      "medium": 2,
+      "high": 0,
+      "critical": 0
+    },
+    "medium": {
+      "low": 0,
+      "medium": 9,
+      "high": 0,
+      "critical": 0
+    },
+    "high": {
+      "low": 0,
+      "medium": 22,
+      "high": 7,
+      "critical": 10
+    },
+    "critical": {
+      "low": 0,
+      "medium": 5,
+      "high": 28,
+      "critical": 27
+    }
+  },
+  "top_dangerous": [
+    {
+      "library_id": "slv1_1f553436da16dfd3",
+      "sample_id": "gmm_critical_20260816_0165",
+      "scenario_hash": "1f553436da16dfd3c97f121149de21a1639945a9607b1d0a713a3568086f91a5",
+      "generators": [
+        "gmm"
+      ],
+      "generator": "gmm",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 97.04,
+      "risk_score_std": 0.0,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8888888888888888,
+      "diversity_score": 0.25120193082599623,
+      "nearest_neighbor_distance": 0.03768028962389943,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_7384b1555ec55aa3",
+      "sample_id": "gmm_critical_20260816_0070",
+      "scenario_hash": "7384b1555ec55aa3caff6ebb05ccbe09a6d375f79e3e5bc49d5024c164f2e95d",
+      "generators": [
+        "gmm"
+      ],
+      "generator": "gmm",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 95.849,
+      "risk_score_std": 2.0031173205781054,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8221183115362853,
+      "diversity_score": 0.35252109343320037,
+      "nearest_neighbor_distance": 0.05287816401498006,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_a165c4fa0e85b553",
+      "sample_id": "gmm_critical_20260816_0243",
+      "scenario_hash": "a165c4fa0e85b553618b8df9fb3272198cccd1e19d94947d65dd9f5a015eb978",
+      "generators": [
+        "gmm"
+      ],
+      "generator": "gmm",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 90.93266666666666,
+      "risk_score_std": 0.02797022226106349,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8879565481468535,
+      "diversity_score": 0.3299207892603419,
+      "nearest_neighbor_distance": 0.04948811838905128,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_b8f17894eafe6bd6",
+      "sample_id": "lhs_critical_20260818_0046",
+      "scenario_hash": "b8f17894eafe6bd62b929c93b144208f059247073813acaa4f97b61a459ce6ab",
+      "generators": [
+        "lhs"
+      ],
+      "generator": "lhs",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 90.919,
+      "risk_score_std": 4.666969359230888,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.7333232435811926,
+      "diversity_score": 0.43891762981199567,
+      "nearest_neighbor_distance": 0.06583764447179935,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_657b91e046ab470e",
+      "sample_id": "cvae_critical_20260818_0165",
+      "scenario_hash": "657b91e046ab470e87c073b4dc8080dc6b0f6d08ad4e116a872892869c9b39de",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 89.45966666666668,
+      "risk_score_std": 0.035529330606319846,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8877045778686782,
+      "diversity_score": 0.17603256670419973,
+      "nearest_neighbor_distance": 0.026404885005629958,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_11ea4a16da25a0c3",
+      "sample_id": "gmm_critical_20260818_0250",
+      "scenario_hash": "11ea4a16da25a0c3d23b971358457c7c9e37076e4d114c2843bba78b3b088df6",
+      "generators": [
+        "gmm"
+      ],
+      "generator": "gmm",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 88.10966666666667,
+      "risk_score_std": 0.016743157806505253,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.888330783628672,
+      "diversity_score": 0.586988511455586,
+      "nearest_neighbor_distance": 0.08804827671833788,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_62aa02f743035d61",
+      "sample_id": "cvae_high_20260815_0159",
+      "scenario_hash": "62aa02f743035d61770c1296d8cf5f19a088a447b514374a5507fe5912d05558",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "high"
+      ],
+      "target_risk": "high",
+      "target_index": 2.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 1.0,
+      "target_match": false,
+      "risk_score_mean": 87.86666666666666,
+      "risk_score_std": 5.514564926930624,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.7050700579912014,
+      "diversity_score": 0.1977836538102834,
+      "nearest_neighbor_distance": 0.02966754807154251,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_422e122508be1e0c",
+      "sample_id": "lhs_critical_20260816_0065",
+      "scenario_hash": "422e122508be1e0c5efcb562f027d9012489befc13bcf830a5b04cf45195bfaf",
+      "generators": [
+        "lhs"
+      ],
+      "generator": "lhs",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 87.396,
+      "risk_score_std": 0.7136056333858342,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8651020344426944,
+      "diversity_score": 0.43891762981199567,
+      "nearest_neighbor_distance": 0.06583764447179935,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_aeae617a61a3b7a0",
+      "sample_id": "lhs_critical_20260816_0224",
+      "scenario_hash": "aeae617a61a3b7a0ea9a45cd7b5d37e08939623601a22553279e8f8ffc8a78df",
+      "generators": [
+        "lhs"
+      ],
+      "generator": "lhs",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 86.47266666666667,
+      "risk_score_std": 0.001154700538384765,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8888503988709427,
+      "diversity_score": 0.3838734321306727,
+      "nearest_neighbor_distance": 0.0575810148196009,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_9c60c9f768c4886d",
+      "sample_id": "gmm_critical_20260816_0112",
+      "scenario_hash": "9c60c9f768c4886d272292fc42d8148145d3f72ecb6f0a3634382b392f778e6f",
+      "generators": [
+        "gmm"
+      ],
+      "generator": "gmm",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 85.76533333333333,
+      "risk_score_std": 0.012503332889005127,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.888472111125922,
+      "diversity_score": 0.2795612873786049,
+      "nearest_neighbor_distance": 0.04193419310679074,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;realism_not_assessed;run_level_evidence_not_embedded"
+    }
+  ],
+  "lowest_diversity": [
+    {
+      "library_id": "slv1_05820741b96d57ae",
+      "sample_id": "cvae_critical_20260816_0052",
+      "scenario_hash": "05820741b96d57ae6445d911846382193bf798c6fd7827ec8a2c63a040ebd69b",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "high",
+      "observed_index": 2,
+      "risk_gap": -1.0,
+      "target_match": false,
+      "risk_score_mean": 53.14666666666667,
+      "risk_score_std": 0.05513921774321292,
+      "collision_observed": false,
+      "collision_run_count": 0,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8870509149641151,
+      "diversity_score": 0.057497550586431564,
+      "nearest_neighbor_distance": 0.008624632587964734,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_f744e1269c3081e3",
+      "sample_id": "cvae_critical_20260816_0062",
+      "scenario_hash": "f744e1269c3081e3a52b38180a2fe02991d2d1057d7da41e66702afceb2b466f",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "high",
+      "observed_index": 2,
+      "risk_gap": -1.0,
+      "target_match": false,
+      "risk_score_mean": 53.853,
+      "risk_score_std": 0.014798648586949303,
+      "collision_observed": false,
+      "collision_run_count": 0,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8883956006026573,
+      "diversity_score": 0.057497550586431564,
+      "nearest_neighbor_distance": 0.008624632587964734,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_cd080502d1fa96fa",
+      "sample_id": "cvae_critical_20260816_0044",
+      "scenario_hash": "cd080502d1fa96fa3a2d8202d9799475cd0a07552e03b731399967ab208d6eac",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 81.95433333333334,
+      "risk_score_std": 0.0898906743401867,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8858925330775493,
+      "diversity_score": 0.06794130493496946,
+      "nearest_neighbor_distance": 0.010191195740245419,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_beed49a31c6c9a4f",
+      "sample_id": "cvae_critical_20260817_0185",
+      "scenario_hash": "beed49a31c6c9a4f163cdcdc1d45f90e3e72568e467f031ff1f9d019ee4f00f3",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "high",
+      "observed_index": 2,
+      "risk_gap": -1.0,
+      "target_match": false,
+      "risk_score_mean": 53.803666666666665,
+      "risk_score_std": 0.3517020519322172,
+      "collision_observed": false,
+      "collision_run_count": 0,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8771654871578151,
+      "diversity_score": 0.06794130493496946,
+      "nearest_neighbor_distance": 0.010191195740245419,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_883d996d33a65a8a",
+      "sample_id": "cvae_critical_20260817_0225",
+      "scenario_hash": "883d996d33a65a8aeb5a5ad599da4e6709965eaa878a172f00c9928ac6fd32bd",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 82.11333333333333,
+      "risk_score_std": 4.119394170667983,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.7515757498666228,
+      "diversity_score": 0.07129776056055238,
+      "nearest_neighbor_distance": 0.010694664084082857,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_c6510fc19b95025a",
+      "sample_id": "cvae_critical_20260818_0125",
+      "scenario_hash": "c6510fc19b95025ab80f290549f289d97384138b5b3f9501628198a558dd1e86",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 82.86766666666666,
+      "risk_score_std": 0.18355471482185476,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8827703983948271,
+      "diversity_score": 0.07129776056055238,
+      "nearest_neighbor_distance": 0.010694664084082857,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_a64f9ec9144cdad7",
+      "sample_id": "cvae_critical_20260816_0182",
+      "scenario_hash": "a64f9ec9144cdad70929123788a9d172ed40e56b091a60de0f57c7556f360fab",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "high",
+      "observed_index": 2,
+      "risk_gap": -1.0,
+      "target_match": false,
+      "risk_score_mean": 53.26566666666667,
+      "risk_score_std": 0.03608785575970787,
+      "collision_observed": false,
+      "collision_run_count": 0,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8876859603635653,
+      "diversity_score": 0.08622510918070826,
+      "nearest_neighbor_distance": 0.01293376637710624,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_be5421b22f7157f2",
+      "sample_id": "cvae_high_20260815_0253",
+      "scenario_hash": "be5421b22f7157f2355702656aff06dad8d00e234a1e283e4ff6f430d5bb79af",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "high"
+      ],
+      "target_risk": "high",
+      "target_index": 2.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 1.0,
+      "target_match": false,
+      "risk_score_mean": 79.03766666666667,
+      "risk_score_std": 1.2352187390633858,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8477149309201093,
+      "diversity_score": 0.10166910991566913,
+      "nearest_neighbor_distance": 0.01525036648735037,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_8adb4345dc4b5228",
+      "sample_id": "cvae_high_20260817_0158",
+      "scenario_hash": "8adb4345dc4b5228dced3016a78524866d1ae5d85ea685e2a469006dee8ebd03",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "high"
+      ],
+      "target_risk": "high",
+      "target_index": 2.0,
+      "observed_risk": "high",
+      "observed_index": 2,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 50.605,
+      "risk_score_std": 0.0017320508075689429,
+      "collision_observed": false,
+      "collision_run_count": 0,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.88883115386197,
+      "diversity_score": 0.10166910991566913,
+      "nearest_neighbor_distance": 0.01525036648735037,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_653b4203511c7943",
+      "sample_id": "cvae_critical_20260816_0163",
+      "scenario_hash": "653b4203511c79432a17424ee17cea86c1e73d999eb88b1d264ee4d9cd94a02a",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 83.566,
+      "risk_score_std": 4.378808399553467,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.7429286089037733,
+      "diversity_score": 0.10288697646056132,
+      "nearest_neighbor_distance": 0.015433046469084197,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded"
+    }
+  ],
+  "lowest_operational_quality": [
+    {
+      "library_id": "slv1_62aa02f743035d61",
+      "sample_id": "cvae_high_20260815_0159",
+      "scenario_hash": "62aa02f743035d61770c1296d8cf5f19a088a447b514374a5507fe5912d05558",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "high"
+      ],
+      "target_risk": "high",
+      "target_index": 2.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 1.0,
+      "target_match": false,
+      "risk_score_mean": 87.86666666666666,
+      "risk_score_std": 5.514564926930624,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.7050700579912014,
+      "diversity_score": 0.1977836538102834,
+      "nearest_neighbor_distance": 0.02966754807154251,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_b8f17894eafe6bd6",
+      "sample_id": "lhs_critical_20260818_0046",
+      "scenario_hash": "b8f17894eafe6bd62b929c93b144208f059247073813acaa4f97b61a459ce6ab",
+      "generators": [
+        "lhs"
+      ],
+      "generator": "lhs",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 90.919,
+      "risk_score_std": 4.666969359230888,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.7333232435811926,
+      "diversity_score": 0.43891762981199567,
+      "nearest_neighbor_distance": 0.06583764447179935,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_653b4203511c7943",
+      "sample_id": "cvae_critical_20260816_0163",
+      "scenario_hash": "653b4203511c79432a17424ee17cea86c1e73d999eb88b1d264ee4d9cd94a02a",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 83.566,
+      "risk_score_std": 4.378808399553467,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.7429286089037733,
+      "diversity_score": 0.10288697646056132,
+      "nearest_neighbor_distance": 0.015433046469084197,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_883d996d33a65a8a",
+      "sample_id": "cvae_critical_20260817_0225",
+      "scenario_hash": "883d996d33a65a8aeb5a5ad599da4e6709965eaa878a172f00c9928ac6fd32bd",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 82.11333333333333,
+      "risk_score_std": 4.119394170667983,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.7515757498666228,
+      "diversity_score": 0.07129776056055238,
+      "nearest_neighbor_distance": 0.010694664084082857,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_7384b1555ec55aa3",
+      "sample_id": "gmm_critical_20260816_0070",
+      "scenario_hash": "7384b1555ec55aa3caff6ebb05ccbe09a6d375f79e3e5bc49d5024c164f2e95d",
+      "generators": [
+        "gmm"
+      ],
+      "generator": "gmm",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 95.849,
+      "risk_score_std": 2.0031173205781054,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8221183115362853,
+      "diversity_score": 0.35252109343320037,
+      "nearest_neighbor_distance": 0.05287816401498006,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_d8914911e9583351",
+      "sample_id": "cvae_critical_20260816_0183",
+      "scenario_hash": "d8914911e9583351a2f7b6101d32429a82834fa7c65910047b12f1d116e0834a",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 80.068,
+      "risk_score_std": 1.2985472652160177,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.845603980048355,
+      "diversity_score": 0.10288697646056132,
+      "nearest_neighbor_distance": 0.015433046469084197,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_be5421b22f7157f2",
+      "sample_id": "cvae_high_20260815_0253",
+      "scenario_hash": "be5421b22f7157f2355702656aff06dad8d00e234a1e283e4ff6f430d5bb79af",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "high"
+      ],
+      "target_risk": "high",
+      "target_index": 2.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 1.0,
+      "target_match": false,
+      "risk_score_mean": 79.03766666666667,
+      "risk_score_std": 1.2352187390633858,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8477149309201093,
+      "diversity_score": 0.10166910991566913,
+      "nearest_neighbor_distance": 0.01525036648735037,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_b3c3586c4c510c44",
+      "sample_id": "gmm_critical_20260817_0094",
+      "scenario_hash": "b3c3586c4c510c443a94b01fed2b724ad4cde675f747a6179527228a82f19bb6",
+      "generators": [
+        "gmm"
+      ],
+      "generator": "gmm",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "high",
+      "observed_index": 2,
+      "risk_gap": -1.0,
+      "target_match": false,
+      "risk_score_mean": 52.26733333333333,
+      "risk_score_std": 1.21651030958777,
+      "collision_observed": false,
+      "collision_run_count": 0,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8483385452359632,
+      "diversity_score": 0.3101772744190467,
+      "nearest_neighbor_distance": 0.046526591162857005,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;realism_not_assessed;run_level_evidence_not_embedded;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_dc515da2788a5948",
+      "sample_id": "gmm_critical_20260816_0073",
+      "scenario_hash": "dc515da2788a5948c2e097c6f537efdb4275d89264a966a51d3b05949c5b6947",
+      "generators": [
+        "gmm"
+      ],
+      "generator": "gmm",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 0.0,
+      "target_match": true,
+      "risk_score_mean": 85.651,
+      "risk_score_std": 1.1643843867039774,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8500760759987562,
+      "diversity_score": 0.3026546004449599,
+      "nearest_neighbor_distance": 0.04539819006674398,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;realism_not_assessed;run_level_evidence_not_embedded"
+    },
+    {
+      "library_id": "slv1_a1dcda298bc91d41",
+      "sample_id": "lhs_critical_20260816_0144",
+      "scenario_hash": "a1dcda298bc91d4197177aac10b96d33a6691e41372aa68a7f956f520be1f1cc",
+      "generators": [
+        "lhs"
+      ],
+      "generator": "lhs",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "high",
+      "observed_index": 2,
+      "risk_gap": -1.0,
+      "target_match": false,
+      "risk_score_mean": 54.419333333333334,
+      "risk_score_std": 1.1581754328828313,
+      "collision_observed": false,
+      "collision_run_count": 0,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8502830411261278,
+      "diversity_score": 0.38648761937595333,
+      "nearest_neighbor_distance": 0.057973142906393,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;realism_not_assessed;run_level_evidence_not_embedded;target_condition_mismatch"
+    }
+  ],
+  "largest_target_mismatches": [
+    {
+      "library_id": "slv1_1056fc1a0c38486c",
+      "sample_id": "gmm_critical_20260816_0119",
+      "scenario_hash": "1056fc1a0c38486c4af3ab486d802e1779fc874505e2db1e52709991faf68005",
+      "generators": [
+        "gmm"
+      ],
+      "generator": "gmm",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "medium",
+      "observed_index": 1,
+      "risk_gap": -2.0,
+      "target_match": false,
+      "risk_score_mean": 49.50233333333333,
+      "risk_score_std": 0.00472581562625237,
+      "collision_observed": false,
+      "collision_run_count": 0,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8887313617013471,
+      "diversity_score": 0.4397800283615538,
+      "nearest_neighbor_distance": 0.06596700425423306,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;realism_not_assessed;run_level_evidence_not_embedded;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_6294f10d2c1aa706",
+      "sample_id": "lhs_critical_20260813_0101",
+      "scenario_hash": "6294f10d2c1aa70619ea6822bc6cb9620951e0b0326016ccedc0f7a733587029",
+      "generators": [
+        "lhs"
+      ],
+      "generator": "lhs",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "medium",
+      "observed_index": 1,
+      "risk_gap": -2.0,
+      "target_match": false,
+      "risk_score_mean": 48.967999999999996,
+      "risk_score_std": 1.42136694769507,
+      "collision_observed": false,
+      "collision_run_count": 0,
+      "accepted_run_count": 3,
+      "evidence_granularity": "run_level",
+      "carla_versions": [],
+      "quality_tier": "silver",
+      "operational_quality": 0.8785470276694235,
+      "diversity_score": 0.6091013882117491,
+      "nearest_neighbor_distance": 0.09136520823176236,
+      "quality_flags": [
+        "carla_version_not_recorded",
+        "historical_runtime_paths",
+        "realism_not_assessed",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "carla_version_not_recorded;historical_runtime_paths;realism_not_assessed;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_1900a0545228a024",
+      "sample_id": "cvae_critical_20260813_0042",
+      "scenario_hash": "1900a0545228a02498cebf573053903505427668b544766344fcee2b0a1d69b9",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "medium",
+      "observed_index": 1,
+      "risk_gap": -2.0,
+      "target_match": false,
+      "risk_score_mean": 48.01533333333333,
+      "risk_score_std": 1.1302797588797793,
+      "collision_observed": false,
+      "collision_run_count": 0,
+      "accepted_run_count": 3,
+      "evidence_granularity": "run_level",
+      "carla_versions": [],
+      "quality_tier": "silver",
+      "operational_quality": 0.8882499339632667,
+      "diversity_score": 0.29380217300630745,
+      "nearest_neighbor_distance": 0.044070325950946114,
+      "quality_flags": [
+        "carla_version_not_recorded",
+        "historical_runtime_paths",
+        "realism_not_assessed",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "carla_version_not_recorded;historical_runtime_paths;realism_not_assessed;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_71c7552a0e4a4fcf",
+      "sample_id": "cvae_critical_20260813_0030",
+      "scenario_hash": "71c7552a0e4a4fcf4b4a0062e97f4ee004dc2fd11c4613eb5b4a08edb00c11f0",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "medium",
+      "observed_index": 1,
+      "risk_gap": -2.0,
+      "target_match": false,
+      "risk_score_mean": 46.976333333333336,
+      "risk_score_std": 0.8245619038818934,
+      "collision_observed": false,
+      "collision_run_count": 0,
+      "accepted_run_count": 3,
+      "evidence_granularity": "run_level",
+      "carla_versions": [],
+      "quality_tier": "silver",
+      "operational_quality": 0.8984405291298628,
+      "diversity_score": 0.32085702662916943,
+      "nearest_neighbor_distance": 0.04812855399437541,
+      "quality_flags": [
+        "carla_version_not_recorded",
+        "historical_runtime_paths",
+        "realism_not_assessed",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "carla_version_not_recorded;historical_runtime_paths;realism_not_assessed;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_98f62985a779e4c1",
+      "sample_id": "gmm_critical_20260813_0072",
+      "scenario_hash": "98f62985a779e4c139c87ad4286c9ebca18a75d3c21ab887c0fa97bdeb818611",
+      "generators": [
+        "gmm"
+      ],
+      "generator": "gmm",
+      "target_risk_levels": [
+        "critical"
+      ],
+      "target_risk": "critical",
+      "target_index": 3.0,
+      "observed_risk": "medium",
+      "observed_index": 1,
+      "risk_gap": -2.0,
+      "target_match": false,
+      "risk_score_mean": 46.531000000000006,
+      "risk_score_std": 0.1163486140871474,
+      "collision_observed": false,
+      "collision_run_count": 0,
+      "accepted_run_count": 3,
+      "evidence_granularity": "run_level",
+      "carla_versions": [],
+      "quality_tier": "silver",
+      "operational_quality": 0.9220476387896878,
+      "diversity_score": 0.3382545420521398,
+      "nearest_neighbor_distance": 0.05073818130782096,
+      "quality_flags": [
+        "carla_version_not_recorded",
+        "historical_runtime_paths",
+        "realism_not_assessed",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "carla_version_not_recorded;historical_runtime_paths;realism_not_assessed;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_62aa02f743035d61",
+      "sample_id": "cvae_high_20260815_0159",
+      "scenario_hash": "62aa02f743035d61770c1296d8cf5f19a088a447b514374a5507fe5912d05558",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "high"
+      ],
+      "target_risk": "high",
+      "target_index": 2.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 1.0,
+      "target_match": false,
+      "risk_score_mean": 87.86666666666666,
+      "risk_score_std": 5.514564926930624,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.7050700579912014,
+      "diversity_score": 0.1977836538102834,
+      "nearest_neighbor_distance": 0.02966754807154251,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_3be7adc22ec58fb5",
+      "sample_id": "lhs_high_20260817_0022",
+      "scenario_hash": "3be7adc22ec58fb51648fd97b8c9281424a669fc919c1059f45319458c8ae31e",
+      "generators": [
+        "lhs"
+      ],
+      "generator": "lhs",
+      "target_risk_levels": [
+        "high"
+      ],
+      "target_risk": "high",
+      "target_index": 2.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 1.0,
+      "target_match": false,
+      "risk_score_mean": 81.09066666666666,
+      "risk_score_std": 0.08545369116271667,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8860404325167983,
+      "diversity_score": 0.44479938533215213,
+      "nearest_neighbor_distance": 0.06671990779982281,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;realism_not_assessed;run_level_evidence_not_embedded;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_a6d1a59ab5e0212d",
+      "sample_id": "lhs_high_20260815_0093",
+      "scenario_hash": "a6d1a59ab5e0212d31ca7726568eee6e7f12a51d8a4b45649d1be58234362bf1",
+      "generators": [
+        "lhs"
+      ],
+      "generator": "lhs",
+      "target_risk_levels": [
+        "high"
+      ],
+      "target_risk": "high",
+      "target_index": 2.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 1.0,
+      "target_match": false,
+      "risk_score_mean": 80.819,
+      "risk_score_std": 0.010392304845413657,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8885424787273751,
+      "diversity_score": 0.5276051101907695,
+      "nearest_neighbor_distance": 0.07914076652861542,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;realism_not_assessed;run_level_evidence_not_embedded;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_c9952445c8f7aa65",
+      "sample_id": "gmm_high_20260815_0227",
+      "scenario_hash": "c9952445c8f7aa6584a78fc7f51db4fbb0faf8c71dda0e20b2c9a6acb7ae5da8",
+      "generators": [
+        "gmm"
+      ],
+      "generator": "gmm",
+      "target_risk_levels": [
+        "high"
+      ],
+      "target_risk": "high",
+      "target_index": 2.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 1.0,
+      "target_match": false,
+      "risk_score_mean": 80.22566666666667,
+      "risk_score_std": 0.02193931022921208,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8881575785479151,
+      "diversity_score": 0.5514515554180816,
+      "nearest_neighbor_distance": 0.08271773331271223,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;realism_not_assessed;run_level_evidence_not_embedded;target_condition_mismatch"
+    },
+    {
+      "library_id": "slv1_be5421b22f7157f2",
+      "sample_id": "cvae_high_20260815_0253",
+      "scenario_hash": "be5421b22f7157f2355702656aff06dad8d00e234a1e283e4ff6f430d5bb79af",
+      "generators": [
+        "cvae"
+      ],
+      "generator": "cvae",
+      "target_risk_levels": [
+        "high"
+      ],
+      "target_risk": "high",
+      "target_index": 2.0,
+      "observed_risk": "critical",
+      "observed_index": 3,
+      "risk_gap": 1.0,
+      "target_match": false,
+      "risk_score_mean": 79.03766666666667,
+      "risk_score_std": 1.2352187390633858,
+      "collision_observed": true,
+      "collision_run_count": 3,
+      "accepted_run_count": 3,
+      "evidence_granularity": "aggregate",
+      "carla_versions": [],
+      "quality_tier": "bronze",
+      "operational_quality": 0.8477149309201093,
+      "diversity_score": 0.10166910991566913,
+      "nearest_neighbor_distance": 0.01525036648735037,
+      "quality_flags": [
+        "aggregate_evidence_only",
+        "carla_version_not_recorded",
+        "collision_observed",
+        "low_relative_diversity",
+        "realism_not_assessed",
+        "run_level_evidence_not_embedded",
+        "target_condition_mismatch"
+      ],
+      "quality_flag_text": "aggregate_evidence_only;carla_version_not_recorded;collision_observed;low_relative_diversity;realism_not_assessed;run_level_evidence_not_embedded;target_condition_mismatch"
+    }
+  ],
+  "input": {
+    "path": "D:\\Xx\\竞赛\\大创实施ing\\data\\scenarios\\scenario_library_v1\\entries.jsonl",
+    "sha256": "f7bbea6667a22f9e870fdff9e3c05a4e3b7d2eeca71b5a7b736d089ad94bf766"
+  }
+}

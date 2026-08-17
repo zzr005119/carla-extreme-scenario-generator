@@ -1,0 +1,9 @@
+﻿quality_flag,scene_count,scene_rate
+carla_version_not_recorded,117,1.0
+realism_not_assessed,117,1.0
+aggregate_evidence_only,81,0.6923076923076923
+run_level_evidence_not_embedded,81,0.6923076923076923
+target_condition_mismatch,67,0.5726495726495726
+collision_observed,39,0.3333333333333333
+historical_runtime_paths,36,0.3076923076923077
+low_relative_diversity,30,0.2564102564102564

@@ -15,6 +15,12 @@
 - `summary.json`：数量、风险、质量和证据范围汇总。
 - `manifest.json`：输入、Schema 与输出文件哈希。
 
+## 质量分析
+
+- `quality_analysis_v1/analysis_summary.json`：质量分析基线和统计摘要。
+- `quality_analysis_v1/quality_analysis_report.md`：风险、证据、目标偏差和多样性审查报告。
+- `quality_analysis_v1/scenario_library_quality_overview.png`：质量总览图。
+
 ## 查询示例
 
 ```cmd
