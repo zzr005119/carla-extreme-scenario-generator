@@ -9,11 +9,32 @@
   "sources": [
     {
       "source_id": "generator_comparison_v1",
+      "kind": "run_bundle",
       "selected_records": "data/scenarios/generator_comparison_v1/selected_records.jsonl",
       "manifest": "data/scenarios/generator_comparison_v1/manifest.json",
       "run_results": "data/scenarios/generator_comparison_v1/run_results.csv",
       "strict_only": true,
       "risk_method": "heuristic_v2"
+    },
+    {
+      "source_id": "risk_feedback_v5",
+      "kind": "aggregate_feedback_dataset",
+      "dataset_candidates": [
+        "F:\\Carla\\project-transfer\\server-results\\20260817_140802_20260817_143432\\dataset\\dataset.csv",
+        "/home/zhaozirong/software/output/carla-0.9.16/risk_feedback_v5/20260817_140802/dataset/dataset.csv"
+      ],
+      "merge_summary_candidates": [
+        "F:\\Carla\\project-transfer\\server-results\\20260817_140802_20260817_143432\\dataset\\merge_summary.json",
+        "/home/zhaozirong/software/output/carla-0.9.16/risk_feedback_v5/20260817_140802/dataset/merge_summary.json"
+      ],
+      "expected_dataset_sha256": "402179ae9fbd0c713ae1ee1c7c0e23dc848244fa12831916f4f8aafc9ebd8c0e",
+      "expected_merge_summary_sha256": "2630bdbd7863d893e46dcc05f3449e6656caa4691d40164217097aa8241dcf9d",
+      "strict_acceptance_inherited": true,
+      "risk_method": "heuristic_v2",
+      "duration_seconds": 20.0,
+      "pedestrian_spawn_z_offset_m": 0.5,
+      "sensor_status": "completed",
+      "server_status": "healthy"
     }
   ]
 }

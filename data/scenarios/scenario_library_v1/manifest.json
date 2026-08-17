@@ -4,21 +4,22 @@
   "build_date": "2026-08-17",
   "schema": {
     "path": "schemas/scenario_library_entry.schema.json",
-    "sha256": "77036d5ca57a42ee6258cf1ded3b37ab3ec688c36214a88685e4cf9477ca143c"
+    "sha256": "6e09fd38c3947a1a96b045c4aade2147d5cd36804fc8b26414ee5d7e7e29a434"
   },
   "source_config": {
     "path": "configs/scenario_library_sources_v1.json",
-    "sha256": "bae02d5f027472841b2fd03d0a5375fc4679770505edfc945f9b58bb39a24c9d"
+    "sha256": "e3b0c5ea5b10dd157a8cb5855d9ead0536728650f1fb77ff908d69713e41d293"
   },
   "source_ids": [
-    "generator_comparison_v1"
+    "generator_comparison_v1",
+    "risk_feedback_v5"
   ],
-  "entry_count": 36,
-  "accepted_run_evidence_count": 108,
+  "entry_count": 117,
+  "accepted_run_evidence_count": 351,
   "outputs": {
-    "entries.jsonl": "635fd8a7e8c4d3ec862b546a6582542cc18418b85e37a94b0a4dac9274a8ef20",
-    "index.csv": "68b57a2801a66e57989dad0177ff663f62a3dca91ecd6c14ef8a0ef3c5e4b884",
-    "summary.json": "5a25f0d16fd21986ecc53b9c05b3c575b717585dd664eac0d52b29fef0bd1046",
-    "README.md": "209f9fe3c76da7a57e4b22ecb2a65fefd0f593ff13f8ed46cdcfd1eaf1fc3242"
+    "entries.jsonl": "f7bbea6667a22f9e870fdff9e3c05a4e3b7d2eeca71b5a7b736d089ad94bf766",
+    "index.csv": "3c534f84441a4df3ddbe11dfe9fa4866c10461ee9ba7ac77bf11eed887bb645f",
+    "summary.json": "2ddd5fed380e1ef879ad40f233922a167f29da4729dfc902b67e0879f12330da",
+    "README.md": "1000e7c79014998b0689153d12c887d84d00a369e5fb8cae07f1f4edbf32a2a5"
   }
 }

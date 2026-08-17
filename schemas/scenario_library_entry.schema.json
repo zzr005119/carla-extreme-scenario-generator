@@ -171,7 +171,7 @@
               "experiment_format": {"type": "string", "minLength": 1},
               "generator": {"type": "string", "minLength": 1},
               "generator_implementation": {"type": "string", "minLength": 1},
-              "generator_seed": {"type": "integer", "minimum": 0},
+              "generator_seed": {"type": ["integer", "null"], "minimum": 0},
               "source_record_path": {"type": "string", "minLength": 1},
               "source_record_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
               "selected_records_path": {"type": "string", "minLength": 1},
@@ -190,6 +190,7 @@
       "additionalProperties": false,
       "required": [
         "verification_level",
+        "evidence_granularity",
         "expected_run_count",
         "completed_run_count",
         "accepted_run_count",
@@ -202,11 +203,15 @@
         "server_statuses",
         "run_ids",
         "metadata_paths",
-        "config_refs"
+        "config_refs",
+        "aggregate_refs"
       ],
       "properties": {
         "verification_level": {
           "enum": ["static_validated", "runtime_completed", "strictly_accepted"]
+        },
+        "evidence_granularity": {
+          "enum": ["run_level", "aggregate"]
         },
         "expected_run_count": {"type": "integer", "minimum": 0},
         "completed_run_count": {"type": "integer", "minimum": 0},
@@ -237,19 +242,16 @@
         },
         "run_ids": {
           "type": "array",
-          "minItems": 1,
           "uniqueItems": true,
           "items": {"type": "string", "minLength": 1}
         },
         "metadata_paths": {
           "type": "array",
-          "minItems": 1,
           "uniqueItems": true,
           "items": {"type": "string", "minLength": 1}
         },
         "config_refs": {
           "type": "array",
-          "minItems": 1,
           "items": {
             "type": "object",
             "additionalProperties": false,
@@ -258,6 +260,20 @@
               "run_id": {"type": "string", "minLength": 1},
               "path": {"type": "string", "minLength": 1},
               "sha256": {"type": ["string", "null"], "pattern": "^[a-f0-9]{64}$"}
+            }
+          }
+        },
+        "aggregate_refs": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["role", "path", "sha256"],
+            "properties": {
+              "role": {"type": "string", "minLength": 1},
+              "path": {"type": "string", "minLength": 1},
+              "sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"}
             }
           }
         }
@@ -294,7 +310,7 @@
         "score_min": {"type": "number", "minimum": 0.0, "maximum": 100.0},
         "score_max": {"type": "number", "minimum": 0.0, "maximum": 100.0},
         "modal_level": {"enum": ["low", "medium", "high", "critical"]},
-        "target_match_rate": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "target_match_rate": {"type": ["number", "null"], "minimum": 0.0, "maximum": 1.0},
         "high_or_critical": {"type": "boolean"},
         "collision_observed": {"type": "boolean"},
         "collision_run_count": {"type": "integer", "minimum": 0},

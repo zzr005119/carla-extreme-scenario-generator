@@ -52,6 +52,8 @@ INDEX_FIELDS = (
     "risk_score_std",
     "collision_observed",
     "verification_level",
+    "evidence_granularity",
+    "carla_versions",
     "accepted_run_count",
     "expected_run_count",
     "quality_tier",
@@ -102,6 +104,8 @@ def index_row(entry):
         "risk_score_std": risk["score_std"],
         "collision_observed": risk["collision_observed"],
         "verification_level": evidence["verification_level"],
+        "evidence_granularity": evidence["evidence_granularity"],
+        "carla_versions": ";".join(evidence["carla_versions"]) or "unknown",
         "accepted_run_count": evidence["accepted_run_count"],
         "expected_run_count": evidence["expected_run_count"],
         "quality_tier": quality["tier"],
@@ -128,6 +132,8 @@ def build_summary(entries, stats, source_config):
     observed_counts = Counter()
     quality_tiers = Counter()
     verification_levels = Counter()
+    evidence_granularities = Counter()
+    quality_flags = Counter()
     for entry in entries:
         generator_counts.update(entry["labels"]["generators"])
         target_counts.update(entry["labels"]["target_risk_levels"])
@@ -136,6 +142,22 @@ def build_summary(entries, stats, source_config):
         verification_levels.update(
             [entry["execution_evidence"]["verification_level"]]
         )
+        evidence_granularities.update(
+            [entry["execution_evidence"]["evidence_granularity"]]
+        )
+        quality_flags.update(entry["quality"]["flags"])
+    high_target_count = sum(
+        "high" in entry["labels"]["target_risk_levels"]
+        or "critical" in entry["labels"]["target_risk_levels"]
+        for entry in entries
+    )
+    collision_scene_count = sum(
+        entry["observed_risk"]["collision_observed"] for entry in entries
+    )
+    high_observed_count = sum(
+        entry["observed_risk"]["high_or_critical"] for entry in entries
+    )
+    run_level_count = evidence_granularities["run_level"]
     return {
         "format": "scenario_library_v1_summary",
         "library_version": source_config["library_version"],
@@ -145,13 +167,18 @@ def build_summary(entries, stats, source_config):
         "target_risk_level_counts": dict(sorted(target_counts.items())),
         "observed_risk_level_counts": dict(sorted(observed_counts.items())),
         "verification_level_counts": dict(sorted(verification_levels.items())),
+        "evidence_granularity_counts": dict(
+            sorted(evidence_granularities.items())
+        ),
         "quality_tier_counts": dict(sorted(quality_tiers.items())),
-        "collision_scene_count": sum(
-            entry["observed_risk"]["collision_observed"] for entry in entries
-        ),
-        "high_or_critical_scene_count": sum(
-            entry["observed_risk"]["high_or_critical"] for entry in entries
-        ),
+        "quality_flag_counts": dict(sorted(quality_flags.items())),
+        "target_high_or_critical_scene_count": high_target_count,
+        "target_high_or_critical_scene_rate": high_target_count / len(entries),
+        "collision_scene_count": collision_scene_count,
+        "collision_scene_rate": collision_scene_count / len(entries),
+        "high_or_critical_scene_count": high_observed_count,
+        "high_or_critical_scene_rate": high_observed_count / len(entries),
+        "run_level_evidence_rate": run_level_count / len(entries),
         "mean_risk_score": statistics.fmean(
             entry["observed_risk"]["score_mean"] for entry in entries
         ),
@@ -163,7 +190,7 @@ def build_summary(entries, stats, source_config):
         ),
         "quality_scope": {
             "executability": "assessed_from_strict_acceptance",
-            "evidence_completeness": "assessed_from_run_result_fields",
+            "evidence_completeness": "assessed_from_run_level_fields_or_aggregate_lineage",
             "repeatability": "assessed_from_three_seed_risk_score_std",
             "dangerousness": "assessed_from_heuristic_v2_mean_score",
             "diversity": "assessed_within_current_library_in_normalized_15d_space",
@@ -190,13 +217,23 @@ def render_readme(summary):
 - `summary.json`：数量、风险、质量和证据范围汇总。
 - `manifest.json`：输入、Schema 与输出文件哈希。
 
+## 查询示例
+
+```cmd
+python tools\query_scenario_library.py --collision yes --sort risk_desc --limit 10
+python tools\query_scenario_library.py --generator cvae --target-risk critical --min-score 70
+python tools\query_scenario_library.py --evidence-granularity run_level --quality-tier silver
+```
+
 ## 质量边界
 
 - 可执行性、证据完整性和重复性来自 CARLA 运行与严格验收记录。
 - 危险性来自 `heuristic_v2` 实测风险均值，不等同于真实道路事故概率。
 - 多样性仅表示当前库内 15 维归一化参数空间的最近邻距离，会随场景库扩展而变化。
 - 真实性尚未评估，因为当前没有同口径真实世界参数分布；条目保持 `partial`，不得表述为真实性验证通过。
-- 首批历史运行结果未记录 CARLA 客户端/服务端版本字段，因此证据完整性不会被评为满分；这不改变原批次在当时验收规则下 `108/108` 通过的事实。
+- `run_level` 条目保留逐次运行、配置与历史元数据路径；`aggregate` 条目只保留 V5 场景级聚合结果和来源文件哈希，不能反向伪造逐次运行路径。
+- 当前聚合数据和首批历史运行结果均未在场景级表中记录 CARLA 客户端/服务端版本，因此证据完整性不会被评为满分；这不改变来源批次通过严格验收的事实。
+- 当前库是风险反馈驱动的压力测试库，高/临界目标占比较高，不代表真实交通场景自然分布。
 """
 
 
