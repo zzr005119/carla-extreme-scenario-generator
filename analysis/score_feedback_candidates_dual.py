@@ -36,10 +36,16 @@ from score_feedback_candidates import (  # noqa: E402
     write_jsonl,
     write_csv,
 )
+from core.physical_features import (  # noqa: E402
+    PHYSICAL_FEATURE_VERSION,
+    physical_feature_matrix,
+    physical_feature_names,
+)
 
 
 TARGET_COLUMN = "observed_risk_score_mean"
 FEATURE_PREFIX = "feature_"
+FEATURE_SPACES = ("raw_15d", "physical_enhanced")
 SELECTION_MODES = {
     "single_channel": {
         "stable_high_score": "stable_high_score_base",
@@ -59,6 +65,12 @@ def parse_args():
     parser.add_argument("--dataset", required=True)
     parser.add_argument("--candidates", action="append", required=True)
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument(
+        "--feature-space",
+        choices=FEATURE_SPACES,
+        default="raw_15d",
+        help="风险回归器和碰撞分类器使用的特征空间",
+    )
     parser.add_argument("--scoring-repeats", type=int, default=5)
     parser.add_argument("--bootstrap-models", type=int, default=30)
     parser.add_argument("--n-estimators", type=int, default=300)
@@ -250,7 +262,7 @@ def build_scored_frame(
     base_frame,
     training_frame,
     feature_columns,
-    candidate_features,
+    distance_candidate_features,
     risk_predictions,
     collision_predictions,
     top_fraction,
@@ -267,7 +279,10 @@ def build_scored_frame(
     )
     top_counts = add_top_frequencies(frame, risk_predictions, top_fraction)
     distance_summary = add_distance_scores(
-        frame, candidate_features, training_frame, feature_columns
+        frame,
+        distance_candidate_features,
+        training_frame,
+        feature_columns,
     )
     add_channel_scores(frame)
     add_collision_scores(frame, collision_predictions)
@@ -339,6 +354,7 @@ def build_report(summary, single_selected, dual_selected):
     lines = [
         "# 双通道反馈候选评分 V2",
         "",
+        f"- 特征空间：`{summary['feature_space']}`，模型特征数 `{summary['model_feature_count']}`。",
         f"- 训练数据：`{summary['dataset']['independent_scenario_count']}` 个独立场景，其中碰撞场景 `{summary['dataset']['collision_scenario_count']}` 个。",
         f"- 候选池：`{summary['candidate_count']}` 个；评分重复：`{summary['scoring_repeats']}` 次；每次 Bootstrap 模型：`{summary['bootstrap_models_per_repeat']}` 个。",
         "- 两种策略共享候选池、生成器、目标档配额和多样性规则，只改变第三个风险选择通道。",
@@ -394,8 +410,18 @@ def main():
     ]
     if candidate_feature_columns != feature_columns:
         raise ValueError("候选特征列与训练数据特征列不一致")
-    training_features = training_frame[feature_columns].to_numpy(dtype=float)
-    candidate_features = candidate_frame[feature_columns].to_numpy(dtype=float)
+    raw_training_features = training_frame[feature_columns].to_numpy(dtype=float)
+    raw_candidate_features = candidate_frame[feature_columns].to_numpy(dtype=float)
+    if args.feature_space == "physical_enhanced":
+        training_features = np.column_stack(
+            (raw_training_features, physical_feature_matrix(raw_training_features))
+        )
+        candidate_features = np.column_stack(
+            (raw_candidate_features, physical_feature_matrix(raw_candidate_features))
+        )
+    else:
+        training_features = raw_training_features
+        candidate_features = raw_candidate_features
     risk_target = training_frame[TARGET_COLUMN].to_numpy(dtype=float)
     collision_target = (
         training_frame["collision_event_total"].to_numpy(dtype=float) > 0
@@ -441,7 +467,7 @@ def main():
             candidate_frame,
             training_frame,
             feature_columns,
-            candidate_features,
+            raw_candidate_features,
             risk_matrix,
             collision_matrix,
             args.top_fraction,
@@ -451,7 +477,7 @@ def main():
         for mode_name in SELECTION_MODES:
             selections = select_mode(
                 repeat_frame,
-                candidate_features,
+                raw_candidate_features,
                 mode_name,
                 args.select_per_channel,
                 args.min_per_target_channel,
@@ -470,7 +496,7 @@ def main():
         candidate_frame,
         training_frame,
         feature_columns,
-        candidate_features,
+        raw_candidate_features,
         final_risk_matrix,
         final_collision_matrix,
         args.top_fraction,
@@ -481,7 +507,7 @@ def main():
     for mode_name in SELECTION_MODES:
         selections = select_mode(
             scored_frame,
-            candidate_features,
+            raw_candidate_features,
             mode_name,
             args.select_per_channel,
             args.min_per_target_channel,
@@ -500,7 +526,9 @@ def main():
         ]
         repeat_stability[mode_name] = {
             "pairwise_jaccard_mean": float(np.mean(pairwise)),
-            "pairwise_jaccard_std": float(np.std(pairwise, ddof=1)),
+            "pairwise_jaccard_std": float(
+                np.std(pairwise, ddof=1) if len(pairwise) > 1 else 0.0
+            ),
             "pairwise_jaccard_min": float(np.min(pairwise)),
             "pairwise_jaccard_max": float(np.max(pairwise)),
         }
@@ -519,6 +547,18 @@ def main():
     }
     summary = {
         "format": "feedback_candidate_scoring_dual_v2",
+        "feature_space": args.feature_space,
+        "model_feature_count": int(training_features.shape[1]),
+        "model_feature_names": (
+            list(feature_columns)
+            if args.feature_space == "raw_15d"
+            else list(feature_columns) + list(physical_feature_names())
+        ),
+        "physical_feature_version": (
+            PHYSICAL_FEATURE_VERSION
+            if args.feature_space == "physical_enhanced"
+            else None
+        ),
         "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "dataset": {
             "path": dataset_path,
@@ -545,6 +585,7 @@ def main():
             "连续风险预测和碰撞倾向预测均只用于候选预排序，不能替代 CARLA 实测 observed_risk。",
             "碰撞倾向由 18 个独立碰撞场景训练，不能解释为跨地图、跨控制策略的真实碰撞概率。",
             "单通道与双通道比较只说明离线选择行为差异，不构成生成器优劣结论。",
+            "物理增强特征仅由生成前可知的 15 维场景参数计算，不读取遥测、碰撞结果或风险标签。",
         ],
     }
 
