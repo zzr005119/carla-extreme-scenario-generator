@@ -281,7 +281,7 @@ def main():
     }
     write_json(output_dir / "proxy_summary.json", summary)
     report_lines = [
-        f"# 风险代理基线 {label}",
+        f"# 风险代理 {label}",
         "",
         f"- 独立场景：`{len(frame)}` 个。",
         "- 重复测量：每个场景的 3 个 Traffic Manager 种子先聚合为场景均值。",

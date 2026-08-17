@@ -1,0 +1,40 @@
+{
+  "format": "risk_feedback_v5_stage_summary",
+  "independent_scenario_count": 117,
+  "collision_scenario_count": 39,
+  "generator_counts": {
+    "cvae": 39,
+    "gmm": 39,
+    "lhs": 39
+  },
+  "repeated_oof": {
+    "repeats": 50,
+    "folds": 3,
+    "baseline_15d": {
+      "mae": 12.012,
+      "spearman": 0.686,
+      "top_9_jaccard": 0.254,
+      "collision_mae": 17.527,
+      "collision_average_precision": 0.535,
+      "collision_roc_auc": 0.740
+    },
+    "physical_enhanced_27d": {
+      "mae": 10.986,
+      "spearman": 0.781,
+      "top_9_jaccard": 0.304,
+      "collision_mae": 16.169,
+      "collision_average_precision": 0.686,
+      "collision_roc_auc": 0.825
+    }
+  },
+  "frozen_proxy": {
+    "feature_space": "physical_enhanced",
+    "feature_count": 27,
+    "selected_model": "random_forest",
+    "oof_mae": 11.472146418213127,
+    "oof_rmse": 13.911362356574337,
+    "oof_spearman": 0.7371008107419562,
+    "high_or_critical_recall": 0.9861111111111112,
+    "artifact": "/home/zhaozirong/software/models/carla-extreme-scenario-generator/artifacts/risk_proxy_v5_physical/20260817_140802/selected_model.joblib"
+  }
+}
