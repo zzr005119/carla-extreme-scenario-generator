@@ -59,6 +59,17 @@ def augment_row(row, run):
         "run_order",
         "block_selection_order",
         "block_traffic_manager_seed",
+        "comparison_arm",
+        "feature_space",
+        "pair_id",
+        "pair_index",
+        "paired_sample_id",
+        "slot_order",
+        "pair_crossover_strength",
+        "pair_baseline_preference",
+        "pair_enhanced_preference",
+        "pair_risk_disagreement",
+        "pair_collision_disagreement",
     )
     for field in fields:
         row[field] = run.get(field)
