@@ -182,6 +182,7 @@ def flatten_entry(entry):
         "collision_observed": bool(risk["collision_observed"]),
         "collision_run_count": int(risk["collision_run_count"]),
         "accepted_run_count": int(evidence["accepted_run_count"]),
+        "verification_basis": evidence["verification_basis"],
         "evidence_granularity": evidence["evidence_granularity"],
         "carla_versions": evidence["carla_versions"],
         "quality_tier": quality["tier"],
@@ -253,6 +254,9 @@ def build_analysis(entries, top_k):
         flag for record in records for flag in record["quality_flags"]
     )
     evidence_counts = Counter(record["evidence_granularity"] for record in records)
+    verification_basis_counts = Counter(
+        record["verification_basis"] for record in records
+    )
     quality_tiers = Counter(record["quality_tier"] for record in records)
     generator_counts = Counter(
         generator for record in records for generator in record["generators"]
@@ -356,6 +360,9 @@ def build_analysis(entries, top_k):
             "quantiles": safe_quantiles(repeatability_stds),
         },
         "evidence_granularity_counts": dict(sorted(evidence_counts.items())),
+        "verification_basis_counts": dict(
+            sorted(verification_basis_counts.items())
+        ),
         "quality_tier_counts": dict(sorted(quality_tiers.items())),
         "carla_version_counts": dict(sorted(all_versions.items())),
         "carla_version_unknown_count": unknown_version_count,
@@ -392,6 +399,7 @@ def write_scenario_index(path, records):
         "collision_observed",
         "collision_run_count",
         "accepted_run_count",
+        "verification_basis",
         "evidence_granularity",
         "quality_tier",
         "operational_quality",
@@ -446,6 +454,7 @@ def configure_plot_style():
             "axes.spines.right": False,
             "figure.dpi": 120,
             "savefig.dpi": 300,
+            "svg.hashsalt": "scenario-library-v1",
         }
     )
 
@@ -566,8 +575,14 @@ def plot_quality_overview(path_png, path_svg, records, summary):
     figure.suptitle("Scenario Library V1 Quality Baseline", fontsize=13, fontweight="bold")
     figure.tight_layout(rect=(0.0, 0.0, 1.0, 0.96))
     figure.savefig(path_png, bbox_inches="tight")
-    figure.savefig(path_svg, bbox_inches="tight")
+    figure.savefig(path_svg, bbox_inches="tight", metadata={"Date": None})
     plt.close(figure)
+    svg_path = Path(path_svg)
+    svg_text = svg_path.read_text(encoding="utf-8")
+    svg_path.write_text(
+        "\n".join(line.rstrip() for line in svg_text.splitlines()) + "\n",
+        encoding="utf-8",
+    )
 
 
 def format_rate(value):
@@ -626,6 +641,7 @@ def write_report(path, entries_path, entries_sha256, summary):
             f"{row['critical']} | {sum(row.values())} |"
         )
     evidence = summary["evidence_granularity_counts"]
+    verification_bases = summary["verification_basis_counts"]
     tiers = summary["quality_tier_counts"]
     lines = [
         "# 场景库 V1 质量分析基线",
@@ -640,7 +656,7 @@ def write_report(path, entries_path, entries_sha256, summary):
         "## 总体结论",
         "",
         f"- 当前库包含 `{summary['entry_count']}` 个独立场景和 "
-        f"`{summary['accepted_run_evidence_count']}` 次严格验收运行证据。",
+        f"`{summary['accepted_run_evidence_count']}` 次来源批次严格验收运行。",
         f"- 实测 high/critical 场景 `{summary['high_or_critical_scene_count']}` 个，"
         f"占 `{format_rate(summary['high_or_critical_scene_rate'])}`；碰撞场景 "
         f"`{summary['collision_scene_count']}` 个，占 "
@@ -653,6 +669,9 @@ def write_report(path, entries_path, entries_sha256, summary):
         f"- 逐次证据 `{evidence.get('run_level', 0)}` 个、聚合证据 "
         f"`{evidence.get('aggregate', 0)}` 个；质量等级为 silver "
         f"`{tiers.get('silver', 0)}` 个、bronze `{tiers.get('bronze', 0)}` 个。",
+        f"- 直接逐次验收依据 `{verification_bases.get('direct_run_evidence', 0)}` 个；"
+        f"继承来源批次验收依据 "
+        f"`{verification_bases.get('inherited_batch_acceptance', 0)}` 个。",
         f"- `{summary['carla_version_unknown_count']}` 个条目未记录场景级 CARLA 版本，"
         f"`{summary['realism_not_assessed_count']}` 个条目的真实性尚未评估。",
         "",

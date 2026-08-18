@@ -213,6 +213,20 @@ def _modal_risk_level(rows):
     return max(RISK_LEVELS, key=lambda level: (counts[level], RISK_LEVELS.index(level)))
 
 
+def _strict_acceptance_row_valid(row):
+    """严格验收必须同时满足运行、传感器、服务和路线条件。"""
+    return (
+        row.get("status") == "completed"
+        and row.get("acceptance_status") == "completed"
+        and parse_bool(row.get("runtime_verified")) is True
+        and row.get("sensor_status") == "completed"
+        and row.get("server_status") == "healthy"
+        and row.get("route_status") == "completed"
+        and parse_bool(row.get("route_verified")) is True
+        and str(row.get("metadata_path") or "").strip() != ""
+    )
+
+
 def _quality_tier(executability, evidence, repeatability):
     if executability == 1.0 and evidence >= 0.95 and repeatability >= 0.9:
         return "gold"
@@ -235,12 +249,14 @@ def _source_generator(planned_runs, record):
 def _strictly_accepted(planned_runs, result_rows):
     if not planned_runs or len(planned_runs) != len(result_rows):
         return False
+    if len({run.get("run_id") for run in planned_runs}) != len(planned_runs):
+        return False
+    if len({row.get("run_id") for row in result_rows}) != len(result_rows):
+        return False
     expected_ids = {run["run_id"] for run in planned_runs}
     actual_ids = {row["run_id"] for row in result_rows}
     return expected_ids == actual_ids and all(
-        row.get("status") == "completed"
-        and row.get("acceptance_status") == "completed"
-        for row in result_rows
+        _strict_acceptance_row_valid(row) for row in result_rows
     )
 
 
@@ -660,14 +676,16 @@ def _finalize_entry(scenario_hash, accumulator, quality_config):
     rows.sort(key=lambda row: row["run_id"])
     aggregate_rows = list(accumulator["aggregate_rows"].values())
     evidence_granularity = "run_level" if rows else "aggregate"
+    verification_basis = (
+        "direct_run_evidence" if rows else "inherited_batch_acceptance"
+    )
     if rows:
         expected_count = len(expected_runs)
         completed_rows = [row for row in rows if row.get("status") == "completed"]
         accepted_rows = [
             row
             for row in rows
-            if row.get("status") == "completed"
-            and row.get("acceptance_status") == "completed"
+            if _strict_acceptance_row_valid(row)
         ]
         if not accepted_rows:
             raise ValueError(f"{record['sample_id']}: 没有可用的严格验收运行")
@@ -818,6 +836,7 @@ def _finalize_entry(scenario_hash, accumulator, quality_config):
         },
         "execution_evidence": {
             "verification_level": verification_level,
+            "verification_basis": verification_basis,
             "evidence_granularity": evidence_granularity,
             "expected_run_count": expected_count,
             "completed_run_count": completed_count,

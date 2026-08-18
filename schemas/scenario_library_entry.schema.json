@@ -190,6 +190,7 @@
       "additionalProperties": false,
       "required": [
         "verification_level",
+        "verification_basis",
         "evidence_granularity",
         "expected_run_count",
         "completed_run_count",
@@ -209,6 +210,9 @@
       "properties": {
         "verification_level": {
           "enum": ["static_validated", "runtime_completed", "strictly_accepted"]
+        },
+        "verification_basis": {
+          "enum": ["direct_run_evidence", "inherited_batch_acceptance"]
         },
         "evidence_granularity": {
           "enum": ["run_level", "aggregate"]

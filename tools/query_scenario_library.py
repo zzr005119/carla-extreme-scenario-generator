@@ -26,6 +26,7 @@ OUTPUT_FIELDS = (
     "observed_risk_level",
     "risk_score_mean",
     "collision_observed",
+    "verification_basis",
     "evidence_granularity",
     "carla_versions",
     "quality_tier",
@@ -50,6 +51,10 @@ def parse_args():
     parser.add_argument(
         "--evidence-granularity",
         choices=("run_level", "aggregate"),
+    )
+    parser.add_argument(
+        "--verification-basis",
+        choices=("direct_run_evidence", "inherited_batch_acceptance"),
     )
     parser.add_argument("--carla-version", help="使用 unknown 查询未记录版本的条目")
     parser.add_argument("--quality-tier", choices=("bronze", "silver", "gold"))
@@ -109,6 +114,11 @@ def matches(entry, args):
         and args.evidence_granularity != evidence["evidence_granularity"]
     ):
         return False
+    if (
+        args.verification_basis
+        and args.verification_basis != evidence["verification_basis"]
+    ):
+        return False
     if args.carla_version:
         versions = evidence["carla_versions"]
         if args.carla_version == "unknown":
@@ -164,6 +174,7 @@ def flatten_entry(entry):
         "observed_risk_level": labels["observed_risk_level"],
         "risk_score_mean": round(risk["score_mean"], 3),
         "collision_observed": risk["collision_observed"],
+        "verification_basis": evidence["verification_basis"],
         "evidence_granularity": evidence["evidence_granularity"],
         "carla_versions": ";".join(evidence["carla_versions"]) or "unknown",
         "quality_tier": quality["tier"],

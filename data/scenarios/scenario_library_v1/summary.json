@@ -28,6 +28,10 @@
   "verification_level_counts": {
     "strictly_accepted": 117
   },
+  "verification_basis_counts": {
+    "direct_run_evidence": 36,
+    "inherited_batch_acceptance": 81
+  },
   "evidence_granularity_counts": {
     "aggregate": 81,
     "run_level": 36

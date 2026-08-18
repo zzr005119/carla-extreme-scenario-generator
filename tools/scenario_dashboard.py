@@ -324,6 +324,7 @@ HTML_PAGE = r"""
           <tr><td>最小前车净间距</td><td>${formatNumber(risk.minimum_lead_gap_m, 3)} m</td></tr>
           <tr><td>完成运行</td><td>${valueOrDash(evidence.completed_run_count)} / ${valueOrDash(evidence.expected_run_count)}</td></tr>
           <tr><td>严格验收</td><td>${valueOrDash(evidence.accepted_run_count)}</td></tr>
+          <tr><td>验收依据</td><td>${valueOrDash(evidence.verification_basis)}</td></tr>
           <tr><td>证据粒度</td><td>${valueOrDash(evidence.evidence_granularity)}</td></tr>
         </table>
         <h3>场景参数</h3>

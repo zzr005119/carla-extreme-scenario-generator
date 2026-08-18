@@ -52,6 +52,7 @@ INDEX_FIELDS = (
     "risk_score_std",
     "collision_observed",
     "verification_level",
+    "verification_basis",
     "evidence_granularity",
     "carla_versions",
     "accepted_run_count",
@@ -104,6 +105,7 @@ def index_row(entry):
         "risk_score_std": risk["score_std"],
         "collision_observed": risk["collision_observed"],
         "verification_level": evidence["verification_level"],
+        "verification_basis": evidence["verification_basis"],
         "evidence_granularity": evidence["evidence_granularity"],
         "carla_versions": ";".join(evidence["carla_versions"]) or "unknown",
         "accepted_run_count": evidence["accepted_run_count"],
@@ -132,6 +134,7 @@ def build_summary(entries, stats, source_config):
     observed_counts = Counter()
     quality_tiers = Counter()
     verification_levels = Counter()
+    verification_bases = Counter()
     evidence_granularities = Counter()
     quality_flags = Counter()
     for entry in entries:
@@ -141,6 +144,9 @@ def build_summary(entries, stats, source_config):
         quality_tiers.update([entry["quality"]["tier"]])
         verification_levels.update(
             [entry["execution_evidence"]["verification_level"]]
+        )
+        verification_bases.update(
+            [entry["execution_evidence"]["verification_basis"]]
         )
         evidence_granularities.update(
             [entry["execution_evidence"]["evidence_granularity"]]
@@ -167,6 +173,7 @@ def build_summary(entries, stats, source_config):
         "target_risk_level_counts": dict(sorted(target_counts.items())),
         "observed_risk_level_counts": dict(sorted(observed_counts.items())),
         "verification_level_counts": dict(sorted(verification_levels.items())),
+        "verification_basis_counts": dict(sorted(verification_bases.items())),
         "evidence_granularity_counts": dict(
             sorted(evidence_granularities.items())
         ),
@@ -205,7 +212,7 @@ def render_readme(summary):
 ## 当前内容
 
 - 独立场景：`{summary['entry_count']}` 个；内容哈希已去重。
-- 严格验收运行证据：`{summary['accepted_run_evidence_count']}` 次。
+- 来源批次严格验收运行：`{summary['accepted_run_evidence_count']}` 次。
 - 生成器分布：`{json.dumps(summary['generator_counts'], ensure_ascii=False)}`。
 - 目标风险分布：`{json.dumps(summary['target_risk_level_counts'], ensure_ascii=False)}`。
 - 实测高风险及以上：`{summary['high_or_critical_scene_count']}` 个；碰撞场景：`{summary['collision_scene_count']}` 个。
@@ -231,6 +238,7 @@ def render_readme(summary):
 python tools\query_scenario_library.py --collision yes --sort risk_desc --limit 10
 python tools\query_scenario_library.py --generator cvae --target-risk critical --min-score 70
 python tools\query_scenario_library.py --evidence-granularity run_level --quality-tier silver
+python tools\query_scenario_library.py --verification-basis inherited_batch_acceptance --limit 0
 ```
 
 ## 质量边界
@@ -240,6 +248,7 @@ python tools\query_scenario_library.py --evidence-granularity run_level --qualit
 - 多样性仅表示当前库内 15 维归一化参数空间的最近邻距离，会随场景库扩展而变化。
 - 真实性尚未评估，因为当前没有同口径真实世界参数分布；条目保持 `partial`，不得表述为真实性验证通过。
 - `run_level` 条目保留逐次运行、配置与历史元数据路径；`aggregate` 条目只保留 V5 场景级聚合结果和来源文件哈希，不能反向伪造逐次运行路径。
+- `verification_basis=direct_run_evidence` 表示条目保留逐次验收记录；`inherited_batch_acceptance` 表示只继承来源批次的严格验收结论。
 - 当前聚合数据和首批历史运行结果均未在场景级表中记录 CARLA 客户端/服务端版本，因此证据完整性不会被评为满分；这不改变来源批次通过严格验收的事实。
 - 当前库是风险反馈驱动的压力测试库，高/临界目标占比较高，不代表真实交通场景自然分布。
 """

@@ -58,7 +58,7 @@ flowchart LR
 | --- | --- | --- | --- | --- |
 | M01 | 场景生成与条件编译 | 已验证实现 / 原型 | `tools/generate_seed_dataset.py`、`tools/generate_with_model.py`、`models/`、`training/` | LHS、条件 GMM、条件表格 CVAE 已完成离线生成与对照；生成模型仍属于研究分支 |
 | M02 | 场景约束与校验 | 已验证实现 | `core/scenario_validator.py`、`schemas/` | Schema、语义校验和 CARLA 配置编译；256 条种子记录全部通过 |
-| M03 | 场景库管理 | 已验证实现 | `core/scenario_library.py`、`tools/build_scenario_library.py`、`tools/query_scenario_library.py` | 场景库 V1 收录 117 个独立场景、351 次严格验收证据；查询和质量门回归通过 |
+| M03 | 场景库管理 | 已验证实现 | `core/scenario_library.py`、`tools/build_scenario_library.py`、`tools/query_scenario_library.py` | 场景库 V1 收录 117 个独立场景、351 次来源批次严格验收运行；查询和质量门回归通过 |
 | M04 | 仿真执行与多传感器采集 | 已验证实现 / 原型 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py`、`batch_runner.py` | CARLA 0.9.16 实机回归；RGB、Depth、SemSeg、Collision；确定性路线控制已验证 |
 | M05 | 风险评估与结果分析 | 已验证实现 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2`、TTC、车距、碰撞和遥测分析；风险反馈 V5 与 27 维代理冻结 |
 | M06 | 实验编排与复现管理 | 已验证实现 / 原型 | `batch_runner.py`、`tools/server_*.cmd`、`configs/` | 批次调度、种子、配置哈希、服务器工作流和质量门；服务器模型权重不进入 Git |
@@ -91,7 +91,7 @@ flowchart LR
 - **处理：** 规范化参数向量、SHA-256 场景去重、来源追踪、运行证据聚合、风险汇总、质量分级和多样性计算。
 - **输出：** 场景库条目、CSV 索引、质量分析报告和可筛选的查询结果。
 - **实现映射：** `schemas/scenario_library_entry.schema.json`、`core/scenario_library.py`、`tools/build_scenario_library.py`、`tools/query_scenario_library.py`、`analysis/analyze_scenario_library.py`。
-- **证据边界：** 当前库有 117 个独立场景和 351 次严格验收运行证据；其中部分条目只有聚合级血缘，真实性字段仍为 `not_assessed`，不能写成真实道路分布代表库。
+- **证据边界：** 当前库有 117 个独立场景和 351 次来源批次严格验收运行；36 个条目保留 `direct_run_evidence` 逐次证据，81 个条目仅以 `inherited_batch_acceptance` 继承批次验收结论。真实性字段仍为 `not_assessed`，不能写成真实道路分布代表库。
 
 ### M04 仿真执行与多传感器采集
 

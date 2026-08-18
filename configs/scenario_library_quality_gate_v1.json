@@ -21,6 +21,10 @@
       "bronze": 81,
       "silver": 36
     },
+    "verification_basis_counts": {
+      "direct_run_evidence": 36,
+      "inherited_batch_acceptance": 81
+    },
     "collision_scene_count": 39,
     "high_or_critical_scene_count": 72
   },
@@ -31,7 +35,11 @@
     "collision_scene_count": 39,
     "high_or_critical_scene_count": 72,
     "carla_version_unknown_count": 117,
-    "realism_not_assessed_count": 117
+    "realism_not_assessed_count": 117,
+    "verification_basis_counts": {
+      "direct_run_evidence": 36,
+      "inherited_batch_acceptance": 81
+    }
   },
   "query_fields": [
     "library_id",
@@ -41,6 +49,7 @@
     "observed_risk_level",
     "risk_score_mean",
     "collision_observed",
+    "verification_basis",
     "evidence_granularity",
     "carla_versions",
     "quality_tier",
@@ -59,6 +68,12 @@
       "args": ["--evidence-granularity", "run_level", "--quality-tier", "silver", "--limit", "0", "--format", "jsonl"],
       "format": "jsonl",
       "expected_count": 36
+    },
+    {
+      "name": "inherited_aggregate",
+      "args": ["--verification-basis", "inherited_batch_acceptance", "--limit", "0", "--format", "jsonl"],
+      "format": "jsonl",
+      "expected_count": 81
     },
     {
       "name": "cvae_all",

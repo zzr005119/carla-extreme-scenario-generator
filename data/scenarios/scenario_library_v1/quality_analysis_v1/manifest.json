@@ -1,18 +1,18 @@
 {
   "format": "scenario_library_quality_analysis_v1_manifest",
-  "analysis_date": "2026-08-17",
+  "analysis_date": "2026-08-18",
   "input": {
     "path": "D:\\Xx\\竞赛\\大创实施ing\\data\\scenarios\\scenario_library_v1\\entries.jsonl",
-    "sha256": "f7bbea6667a22f9e870fdff9e3c05a4e3b7d2eeca71b5a7b736d089ad94bf766"
+    "sha256": "6038a288a77b37ab89210b2ee201849e531663c54f5b0203e4df865f9a5bd23a"
   },
   "outputs": {
     "analysis_summary.json": {
-      "sha256": "4cd2ed5b01cb25123adb34e7b4f997bfc94fdcc01659834357c2cc68010c44b0",
-      "size_bytes": 60371
+      "sha256": "52c7edec3f51685db8eb8607c87f9d6801740063d0d99e855c65658d874a26a2",
+      "size_bytes": 62813
     },
     "scenario_quality_index.csv": {
-      "sha256": "67a90a12826406f035a60b322ec85db545e2bab7f53436e574c60cb0ac8dcd1d",
-      "size_bytes": 37511
+      "sha256": "39ccc8e603dc38cc8c660bb99c2e397a25a6dde9ba4901f912c8ca7a35c0f9e4",
+      "size_bytes": 40437
     },
     "generator_quality_summary.csv": {
       "sha256": "e281bc0729b096ee1db0ab0982b2e986899cf3b6a7137fa01462423900d8a594",
@@ -31,12 +31,12 @@
       "size_bytes": 410056
     },
     "scenario_library_quality_overview.svg": {
-      "sha256": "98e06eaa5049a24986428bb942c59c90a6fc5833614834449844bdc7826098b6",
-      "size_bytes": 151347
+      "sha256": "63ae2bc094fcc6ae23b73f92e0dd84b3a0e65618975dda514812751d31806081",
+      "size_bytes": 149804
     },
     "quality_analysis_report.md": {
-      "sha256": "6e2cfb5506dc8d76f5c5cfcc9178f40f1bd196962678b29eeb7e82b120468942",
-      "size_bytes": 5466
+      "sha256": "e361312296bbcbcbb6f4bc559661460e032a9ca27f8f93b88d06d0255e3fb286",
+      "size_bytes": 5554
     }
   }
 }

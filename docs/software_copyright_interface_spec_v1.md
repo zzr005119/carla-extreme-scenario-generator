@@ -142,7 +142,7 @@ M02 只负责“记录和配置是否合法”。`--validate-only` 只能证明�
 
 - 通过参数内容哈希去重，不以 `sample_id` 单独判定独立性。
 - 聚合 `execution_evidence`、`observed_risk` 和 `quality`，保留来源文件哈希。
-- 质量门当前冻结为 117 个独立场景、351 次严格验收证据；其中 81 个条目为聚合级证据，真实性仍为 `not_assessed`。
+- 质量门当前冻结为 117 个独立场景和 351 次来源批次严格验收运行；36 个条目为 `direct_run_evidence`，81 个条目为 `inherited_batch_acceptance` 聚合证据，真实性仍为 `not_assessed`。
 - 查询只读取已构建索引，不重新运行 CARLA，也不修改场景库条目。
 
 ## 🖥️ M04 仿真与采集接口
