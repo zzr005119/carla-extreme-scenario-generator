@@ -1,0 +1,76 @@
+{
+  "format": "scenario_library_quality_gate_v1",
+  "library_summary": "data/scenarios/scenario_library_v1/summary.json",
+  "quality_analysis_summary": "data/scenarios/scenario_library_v1/quality_analysis_v1/analysis_summary.json",
+  "expected_library": {
+    "input_record_count": 153,
+    "excluded_record_count": 0,
+    "duplicate_record_count": 36,
+    "entry_count": 117,
+    "accepted_run_evidence_count": 351,
+    "generator_counts": {
+      "cvae": 39,
+      "gmm": 39,
+      "lhs": 39
+    },
+    "evidence_granularity_counts": {
+      "aggregate": 81,
+      "run_level": 36
+    },
+    "quality_tier_counts": {
+      "bronze": 81,
+      "silver": 36
+    },
+    "collision_scene_count": 39,
+    "high_or_critical_scene_count": 72
+  },
+  "expected_analysis": {
+    "entry_count": 117,
+    "accepted_run_evidence_count": 351,
+    "target_match_count": 50,
+    "collision_scene_count": 39,
+    "high_or_critical_scene_count": 72,
+    "carla_version_unknown_count": 117,
+    "realism_not_assessed_count": 117
+  },
+  "query_fields": [
+    "library_id",
+    "sample_id",
+    "generators",
+    "target_risk_levels",
+    "observed_risk_level",
+    "risk_score_mean",
+    "collision_observed",
+    "evidence_granularity",
+    "carla_versions",
+    "quality_tier",
+    "operational_quality",
+    "diversity_score"
+  ],
+  "query_contracts": [
+    {
+      "name": "collision_top5",
+      "args": ["--collision", "yes", "--sort", "risk_desc", "--limit", "5", "--format", "jsonl"],
+      "format": "jsonl",
+      "expected_count": 5
+    },
+    {
+      "name": "run_level_silver",
+      "args": ["--evidence-granularity", "run_level", "--quality-tier", "silver", "--limit", "0", "--format", "jsonl"],
+      "format": "jsonl",
+      "expected_count": 36
+    },
+    {
+      "name": "cvae_all",
+      "args": ["--generator", "cvae", "--limit", "0", "--format", "jsonl"],
+      "format": "jsonl",
+      "expected_count": 39
+    },
+    {
+      "name": "csv_header",
+      "args": ["--generator", "cvae", "--limit", "1", "--format", "csv"],
+      "format": "csv",
+      "expected_count": 1
+    }
+  ]
+}

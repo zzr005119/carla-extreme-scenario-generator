@@ -20,6 +20,8 @@
 - `quality_analysis_v1/analysis_summary.json`：质量分析基线和统计摘要。
 - `quality_analysis_v1/quality_analysis_report.md`：风险、证据、目标偏差和多样性审查报告。
 - `quality_analysis_v1/scenario_library_quality_overview.png`：质量总览图。
+- `configs/scenario_library_quality_gate_v1.json`：固定数量、证据分层和查询字段质量门。
+- `tools/test_scenario_library.cmd`：构建器、分析器和查询 CLI 的一键回归测试入口。
 
 ## 查询示例
 
