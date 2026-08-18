@@ -1,10 +1,10 @@
-# 软著系统接口规格 V1
+# 软著系统接口规格 V1（M01–M07）
 
 _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1.0；配套模块映射：`docs/software_copyright_module_mapping_v1.md`；更新日期：2026-08-18_
 
 ---
 
-> **文档定位：** 本文固化 M01–M06 的现有命令入口、核心函数、数据契约、输出物和验收条件，作为软件说明书和后续系统集成的工程底稿。本文只记录当前代码已经提供或已经验证的接口。
+> **文档定位：** 本文固化 M01–M07 的现有命令入口、核心函数、数据契约、输出物和验收条件，作为软件说明书和后续系统集成的工程底稿。本文只记录当前代码已经提供或已经验证的接口。
 
 ## 📋 接口原则
 
@@ -26,6 +26,7 @@ _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1
 | M04 | `scene_04_parameterized.py`、`batch_runner.py` | JSON 配置、CARLA 服务、运行参数 | `metadata.json`、`telemetry.csv`、传感器帧 | 已验证实现 / 原型 |
 | M05 | `risk_metrics.py`、`analysis/` | 遥测、事件、运行元数据 | 风险分数、等级、分析报告 | 已验证实现 |
 | M06 | `batch_runner.py`、`tools/server_*.cmd` | 实验计划、Git 提交、服务器资源 | 批次汇总、日志、轻量结果 | 已验证实现 / 原型 |
+| M07 | `scenario_dashboard.py`、`scenario_dashboard.cmd` | 场景库索引、条目和汇总 | 只读页面、筛选结果、详情 JSON | 原型能力 |
 
 ## ⚙️ 数据契约
 
@@ -238,9 +239,29 @@ flowchart TB
 | M05 风险分析 | 检查 `metadata.json` 和离线报告 | 存在 `observed_risk`，指标来源可追溯 |
 | M06 复现管理 | 检查批次汇总和服务器任务目录 | 配置、提交、种子和结果可关联 |
 
+## 📡 M07 只读可视化接口
+
+### 启动入口
+
+| 用途 | 命令 |
+| --- | --- |
+| 启动并打开浏览器 | `tools\scenario_dashboard.cmd` |
+| 只校验数据加载 | `python tools\scenario_dashboard.py --validate-only` |
+| 指定端口 | `python tools\scenario_dashboard.py --port 8765 --open` |
+
+### HTTP 接口
+
+| 方法 | 路径 | 返回内容 | 是否写入 |
+| --- | --- | --- | --- |
+| `GET` | `/` | Dashboard 页面 | 否 |
+| `GET` | `/api/summary` | 场景库和质量分析汇总 | 否 |
+| `GET` | `/api/scenarios` | 场景索引列表 | 否 |
+| `GET` | `/api/scenarios/{library_id}` | 单个场景完整条目 | 否 |
+
+页面只读取 `index.csv`、`entries.jsonl`、`summary.json` 和质量分析摘要，不修改场景库、不启动 CARLA、不提交实验任务。当前只支持本机访问和单进程服务，尚未提供用户认证、权限管理或多用户部署。
+
 ## ⚠️ 未冻结接口
 
-- M07 可视化界面尚无正式 API 或页面入口，后续应优先定义只读查询接口，不复制 M03/M05 的业务逻辑。
 - 完整 OpenSCENARIO 适配尚未实现，不能把当前自定义 JSON 配置称为通用场景交换接口。
 - 强化学习测试代理尚未形成训练、部署和评估接口，阶段四完成前不纳入软著已实现功能。
 - 真实世界数据映射和真实性评估接口尚未冻结，场景库 `realism` 继续保持 `not_assessed`。
