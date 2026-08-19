@@ -426,12 +426,35 @@ class AdversarialTestAgentV1:
         self.terminated = False
         self.truncated = False
 
-    def reset(self, record):
+    def reset(self, record, baseline_result=None):
         require_valid_scenario(record)
         self._reset_state()
         self.current_record = copy.deepcopy(record)
         self.last_fingerprint = canonical_parameter_fingerprint(record)
-        self.last_feedback = {"step_index": 0}
+        if baseline_result is not None:
+            result = EpisodeResult.from_mapping(baseline_result)
+            if not result.successful:
+                raise AgentContractError("baseline_result 必须通过严格运行验收")
+            self.current_record["observed_risk"] = {
+                "status": "completed",
+                "method": result.risk_method,
+                "score": result.observed_risk_score,
+                "level": result.observed_risk_level,
+                "run_dir": result.run_dir,
+            }
+            require_valid_scenario(self.current_record)
+            self.last_result = result
+            self.last_feedback = {
+                "observed_risk_score": result.observed_risk_score,
+                "collision_count": result.collision_count,
+                "event_count": result.event_count,
+                "run_valid": result.run_valid,
+                "strict_acceptance_passed": result.strict_acceptance_passed,
+                "repeat_count": 0,
+                "step_index": 0,
+            }
+        else:
+            self.last_feedback = {"step_index": 0}
         return build_observation(self.current_record, self.last_feedback, self.config)
 
     def propose(self, action):

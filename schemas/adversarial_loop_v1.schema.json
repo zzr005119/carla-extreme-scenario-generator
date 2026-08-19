@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "adversarial_loop_v1.schema.json",
+  "title": "Adversarial Loop V1 Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "agent_config_path",
+    "base_carla_config_path",
+    "route_profile_path",
+    "max_agent_steps",
+    "fixed_action",
+    "runtime",
+    "acceptance_requirements"
+  ],
+  "properties": {
+    "format": {"const": "adversarial_loop_v1"},
+    "agent_config_path": {"type": "string", "minLength": 1},
+    "base_carla_config_path": {"type": "string", "minLength": 1},
+    "route_profile_path": {"type": "string", "minLength": 1},
+    "max_agent_steps": {"type": "integer", "minimum": 1, "maximum": 16},
+    "fixed_action": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 15,
+      "items": {"type": "number", "minimum": -1.0, "maximum": 1.0}
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["output_subdirectory", "scene_timeout_seconds", "traffic_manager_port"],
+      "properties": {
+        "output_subdirectory": {"type": "string", "minLength": 1},
+        "scene_timeout_seconds": {"type": "integer", "minimum": 30, "maximum": 1800},
+        "traffic_manager_port": {"type": "integer", "minimum": 1, "maximum": 65535}
+      }
+    },
+    "acceptance_requirements": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "sensor_status",
+        "server_status",
+        "minimum_rgb_frames",
+        "route_control_mode",
+        "minimum_route_both_on_rate",
+        "maximum_route_deviation_m",
+        "route_verification_scope",
+        "carla_version"
+      ],
+      "properties": {
+        "sensor_status": {"const": "completed"},
+        "server_status": {"const": "healthy"},
+        "minimum_rgb_frames": {"type": "integer", "minimum": 1},
+        "route_control_mode": {"const": "waypoint_follower"},
+        "minimum_route_both_on_rate": {"type": "number", "minimum": 0.0, "maximum": 1.0},
+        "maximum_route_deviation_m": {"type": "number", "minimum": 0.1},
+        "route_verification_scope": {"enum": ["full_run", "pre_collision_for_collision_runs"]},
+        "carla_version": {"const": "0.9.16"}
+      }
+    }
+  }
+}

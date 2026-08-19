@@ -43,6 +43,26 @@ class AdversarialAgentTests(unittest.TestCase):
         self.assertEqual(len(observation["vector"]), OBSERVATION_DIM)
         self.assertTrue(all(0.0 <= value <= 1.0 for value in observation["vector"]))
 
+    def test_reset_accepts_strict_baseline_result(self):
+        agent = AdversarialTestAgentV1(self.config)
+        observation = agent.reset(
+            self.record,
+            baseline_result={
+                "status": "completed",
+                "observed_risk_score": 35.0,
+                "observed_risk_level": "medium",
+                "risk_method": "heuristic_v2",
+                "collision_count": 0,
+                "event_count": 2,
+                "run_valid": True,
+                "strict_acceptance_passed": True,
+                "carla_service_healthy": True,
+                "run_dir": "F:\\Carla\\baseline",
+            },
+        )
+        self.assertEqual(observation["feedback"]["observed_risk_score"], 0.35)
+        self.assertEqual(agent.current_record["observed_risk"]["status"], "completed")
+
     def test_zero_action_produces_valid_candidate(self):
         proposal = propose_candidate(self.record, [0.0] * 15, config=self.config)
         self.assertTrue(proposal["valid"], proposal["error"])
