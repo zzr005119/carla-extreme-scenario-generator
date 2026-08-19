@@ -19,3 +19,9 @@
 - `carla`：执行两次真实 CARLA 运行并产生严格验收证据。
 
 服务器冒烟入口为 `tools/server_adversarial_loop_smoke_v1.cmd`。运行任务继续遵循服务器优先、CARLA 0.9.16、项目环境 `Carla666-0916` 和 GPU 1 项目锁规则。
+
+## 已完成真实冒烟
+
+2026-08-19 使用 `cvae_medium_20260813_0103` 和 Traffic Manager seed `20260823` 完成一次基线 + 一次候选运行。基线 `heuristic_v2=26.536/medium`，候选 `28.939/medium`，风险增量 `+2.403`；两次均无碰撞，RGB 各保存 `100` 帧，路线双车同时在途率为 `1.0`，最大路线偏差分别不超过 `0.997 m` 和 `1.000 m`，CARLA 客户端/服务端均为 `0.9.16`，严格验收 `2/2` 通过。
+
+证据目录：`F:\Carla\project-transfer\server-results\adversarial_loop_smoke_v1_20260819_123339`。该样本和单步固定动作只用于验证闭环执行与风险回填，不支持“代理已经学会发现薄弱环节”的结论。
