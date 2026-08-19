@@ -156,6 +156,8 @@ M02 只负责“记录和配置是否合法”。`--validate-only` 只能证明�
 | 指定输出根目录 | 在运行命令后追加 `--output-root <dir>` |
 | 批次运行 | `python batch_runner.py --config <batch.json> --limit <N> --repeat <N>` |
 | 批次静态校验 | `python batch_runner.py --config <batch.json> --validate-only` |
+| 自定义 JSON 适配静态校验 | `python tools\convert_scenario_to_openscenario.py --input <record.json> --validate-only` |
+| 生成 OpenSCENARIO 与 CARLA 配置 | `python tools\convert_scenario_to_openscenario.py --input <record.json> --output-dir <dir>` |
 
 ### 运行流程
 
@@ -189,6 +191,16 @@ flowchart TB
 - `telemetry.csv`：逐帧车辆状态、TTC、车距、行人距离、控制量、路线匹配和控制原因。
 - `sensor_pipeline`：传感器监听、队列、写盘完成状态和各传感器帧数。
 - 运行失败必须保留 `metadata.json` 和错误字段，禁止只输出终端错误后丢弃证据。
+
+### OpenSCENARIO/CARLA 最小适配 V1
+
+- 自定义 JSON 仍是工程事实源；适配器版本为 `custom_json_to_openscenario_carla_v1`。
+- 当前只生成 OpenSCENARIO XML 1.0 的实体、相对初始位置、仿真时间触发器和停止触发器。
+- 天气、传感器、Traffic Manager、风险算法、路线控制器和输出目录继续由编译后的 CARLA JSON 负责；条件、实测风险和来源血缘保留在适配清单中。
+- 每次转换必须同时生成 `.xosc`、`.carla.json` 和 `.adapter_manifest.json`，清单保存源记录、基础配置、映射和 XOSC 哈希。
+- 适配器的 `--validate-only` 只证明静态结构和字段覆盖，不证明 ScenarioRunner 可执行、自定义行人命令可用或 CARLA 实机验收通过。
+- 已有一次 CARLA JSON 运行时冒烟证据：客户端/服务端 `0.9.16` 匹配，20 秒同步运行完成，RGB/Depth/Semantic 各 `200` 帧，服务健康；路线控制未启用，因此不计为路线严格验收。
+- 详细边界见 `docs/openscenario_carla_adapter_v1.md`，版本化映射见 `configs/openscenario_adapter_v1.json`。
 
 ## 📊 M05 风险评估接口
 
@@ -235,6 +247,7 @@ flowchart TB
 | M01 生成契约 | 生成后运行 M02 校验 | JSON Schema 和语义校验通过 |
 | M02 编译能力 | `--validate-only` 和配置快照检查 | 生成配置字段完整、输出目录正确 |
 | M03 场景库 | `tools\test_scenario_library.cmd` | 5 项接口回归全部通过 |
+| M04.1 格式适配 | 适配器 `--validate-only` + XML 结构回归 | 输入、映射、XOSC 结构和 CARLA 配置形状通过 |
 | M04 仿真执行 | 单场景 CARLA 实机运行 | 状态完成、传感器写盘完成、服务健康 |
 | M05 风险分析 | 检查 `metadata.json` 和离线报告 | 存在 `observed_risk`，指标来源可追溯 |
 | M06 复现管理 | 检查批次汇总和服务器任务目录 | 配置、提交、种子和结果可关联 |
@@ -262,7 +275,8 @@ flowchart TB
 
 ## ⚠️ 未冻结接口
 
-- 完整 OpenSCENARIO 适配尚未实现，不能把当前自定义 JSON 配置称为通用场景交换接口。
+- 已形成 OpenSCENARIO 1.0 最小交换子集适配，但完整导入/导出、地图坐标绑定和跨仿真器执行仍未实现；不能把当前自定义 JSON 配置称为通用场景交换接口。
+- OpenSCENARIO XML 1.4 作为未来标准交换适配方向保留，暂不替换当前 1.0 运行目标；需要单独的映射版本、Schema 校验和运行时证据。
 - 强化学习测试代理尚未形成训练、部署和评估接口，阶段四完成前不纳入软著已实现功能。
 - 真实世界数据映射和真实性评估接口尚未冻结，场景库 `realism` 继续保持 `not_assessed`。
 
@@ -270,7 +284,7 @@ flowchart TB
 
 1. 用本文接口矩阵作为后续改动的验收清单。
 2. 保持 M07 只读 Dashboard 的页面级回归，不改变当前仿真和风险计算逻辑。
-3. 进入阶段四，定义 OpenSCENARIO/CARLA 适配和对抗性测试代理接口。
+3. 在已通过的 M04.1 静态适配和 CARLA JSON 冒烟基础上，定义对抗性测试代理接口。
 4. 完成阶段四关键闭环后，再更新接口规格和软著模块映射版本。
 
 ---

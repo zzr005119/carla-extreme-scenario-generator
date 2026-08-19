@@ -1,0 +1,71 @@
+{
+  "mapping_version": "1.0",
+  "adapter_id": "custom_json_to_openscenario_carla_v1",
+  "source": {
+    "schema_path": "schemas/generated_scenario.schema.json",
+    "family": "multi_hazard_parameter_v1"
+  },
+  "openscenario": {
+    "standard_version": "1.0",
+    "road_network_logic_file": "Town10HD_Opt",
+    "coordinate_system": "CARLA",
+    "entity_names": {
+      "ego": "ego",
+      "lead": "lead_vehicle",
+      "pedestrian": "pedestrian"
+    }
+  },
+  "carla": {
+    "base_config_path": "configs/multi_hazard_rainy_night.json",
+    "extension_prefix": "carla:",
+    "compiled_output_suffix": ".carla.json"
+  },
+  "field_mappings": [
+    {"source": "scenario.duration_seconds", "target": "Storyboard.StopTrigger.SimulationTimeCondition.value", "mode": "direct"},
+    {"source": "scenario.traffic_manager_seed", "target": "ParameterDeclarations.carla_traffic_manager_seed", "mode": "preserved", "note": "CARLA 专属运行复现字段"},
+    {"source": "weather.*", "target": "ParameterDeclarations.carla_weather_*", "mode": "preserved", "note": "天气由 CARLA 配置执行，XOSC 只保留可追溯参数"},
+    {"source": "lead_vehicle.initial_distance_m", "target": "lead_vehicle.RelativeObjectPosition.dx", "mode": "direct"},
+    {"source": "lead_vehicle.brake_trigger_seconds", "target": "lead_vehicle.BrakeEvent.StartTrigger.SimulationTimeCondition.value", "mode": "direct"},
+    {"source": "lead_vehicle.brake_intensity", "target": "carla:lead_vehicle.brake_intensity", "mode": "preserved"},
+    {"source": "pedestrian.forward_distance_m", "target": "pedestrian.RelativeObjectPosition.dx", "mode": "direct"},
+    {"source": "pedestrian.roadside_offset_m", "target": "pedestrian.RelativeObjectPosition.dy", "mode": "direct"},
+    {"source": "pedestrian.trigger_seconds", "target": "pedestrian.CrossingEvent.StartTrigger.SimulationTimeCondition.value", "mode": "direct"},
+    {"source": "pedestrian.speed_mps", "target": "carla:pedestrian.speed_mps", "mode": "preserved"},
+    {"source": "scenario.ego_spawn_index", "target": "carla:ego_spawn_index", "mode": "inherited", "note": "当前生成记录不含该字段，由基础 CARLA 配置继承"},
+    {"source": "conditions.*", "target": "adapter_manifest.source_conditions", "mode": "preserved"},
+    {"source": "observed_risk.*", "target": "adapter_manifest.source_observed_risk", "mode": "preserved"},
+    {"source": "provenance.*", "target": "adapter_manifest.source_provenance", "mode": "preserved"},
+    {"source": "sensors.*", "target": "CARLA JSON sensors", "mode": "inherited"},
+    {"source": "risk_evaluation.*", "target": "CARLA JSON risk_evaluation", "mode": "inherited"},
+    {"source": "traffic.*", "target": "CARLA JSON traffic", "mode": "inherited"}
+  ],
+  "coverage": {
+    "direct": [
+      "scenario.duration_seconds",
+      "lead_vehicle.initial_distance_m",
+      "lead_vehicle.brake_trigger_seconds",
+      "pedestrian.forward_distance_m",
+      "pedestrian.roadside_offset_m",
+      "pedestrian.trigger_seconds"
+    ],
+    "preserved_out_of_band": [
+      "scenario.traffic_manager_seed",
+      "weather.*",
+      "lead_vehicle.brake_intensity",
+      "pedestrian.speed_mps",
+      "conditions.*",
+      "observed_risk.*",
+      "provenance.*",
+      "sensors.*",
+      "risk_evaluation.*",
+      "traffic.*"
+    ],
+    "not_executable_in_xosc_v1": [
+      "CARLA ego_spawn_index to concrete map transform",
+      "CARLA sensor pipeline and output writers",
+      "heuristic_v2 risk evaluation",
+      "deterministic waypoint_follower_v1 controller",
+      "pedestrian crossing trajectory geometry"
+    ]
+  }
+}

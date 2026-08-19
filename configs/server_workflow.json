@@ -22,6 +22,11 @@
     "carla_tmux_session": "carla0916"
   },
   "local": {
-    "transfer_root": "F:\\Carla\\project-transfer"
+    "transfer_root": "F:\\Carla\\project-transfer",
+    "carla_root": "F:\\Carla\\carla-0.9.16",
+    "python_environment": "D:\\ANACONDA\\envs\\Carla666-0916",
+    "output_root": "F:\\Carla\\output-0.9.16",
+    "carla_rpc_port": 2000,
+    "traffic_manager_port": 8100
   }
 }
