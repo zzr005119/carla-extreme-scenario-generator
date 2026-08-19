@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "adversarial_agent_v1.schema.json",
+  "title": "Adversarial Test Agent V1 Contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["agent_id", "mode", "action_space", "observation_space", "reward", "termination"],
+  "properties": {
+    "agent_id": {"const": "adversarial_test_agent_v1"},
+    "mode": {"const": "scene_between_episodes"},
+    "action_space": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "dimension", "low", "high", "step_size", "clip_out_of_range", "feature_names"],
+      "properties": {
+        "type": {"const": "normalized_delta"},
+        "dimension": {"const": 15},
+        "low": {"const": -1.0},
+        "high": {"const": 1.0},
+        "step_size": {"type": "number", "exclusiveMinimum": 0.0, "maximum": 1.0},
+        "clip_out_of_range": {"type": "boolean"},
+        "feature_names": {"type": "array", "minItems": 15, "maxItems": 15, "uniqueItems": true, "items": {"type": "string"}}
+      }
+    },
+    "observation_space": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "dimension", "low", "high", "feedback_fields"],
+      "properties": {
+        "type": {"const": "box"},
+        "dimension": {"const": 34},
+        "low": {"const": 0.0},
+        "high": {"const": 1.0},
+        "feedback_fields": {"type": "array", "minItems": 7, "maxItems": 7, "uniqueItems": true, "items": {"type": "string"}}
+      }
+    },
+    "reward": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["risk_delta_weight", "collision_event_reward", "event_reward", "invalid_candidate_penalty", "duplicate_penalty", "run_failure_penalty", "collision_event_cap", "event_cap"],
+      "properties": {
+        "risk_delta_weight": {"type": "number"},
+        "collision_event_reward": {"type": "number"},
+        "event_reward": {"type": "number"},
+        "invalid_candidate_penalty": {"type": "number"},
+        "duplicate_penalty": {"type": "number"},
+        "run_failure_penalty": {"type": "number"},
+        "collision_event_cap": {"type": "integer", "minimum": 1},
+        "event_cap": {"type": "integer", "minimum": 1}
+      }
+    },
+    "termination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_steps", "max_consecutive_duplicates", "terminate_on_invalid_candidate", "terminate_on_run_failure", "truncate_on_repeated_scene", "truncate_on_max_steps"],
+      "properties": {
+        "max_steps": {"type": "integer", "minimum": 1},
+        "max_consecutive_duplicates": {"type": "integer", "minimum": 1},
+        "terminate_on_invalid_candidate": {"type": "boolean"},
+        "terminate_on_run_failure": {"type": "boolean"},
+        "truncate_on_repeated_scene": {"type": "boolean"},
+        "truncate_on_max_steps": {"type": "boolean"}
+      }
+    }
+  }
+}
