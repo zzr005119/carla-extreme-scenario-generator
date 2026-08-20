@@ -44,4 +44,4 @@
 ## 下一步
 
 - 评估将当前代理契约封装为 `gymnasium` 环境的最小接口，先进行离线接口适配和基线设计
-- 在训练环境接口稳定后，再决定是否进行小规模 Stable-Baselines3 训练实验
+- 评估结果见 `docs/adversarial_gymnasium_evaluation_v1.md`：先实现可选 Gymnasium 外壳、mock contract tests 和环境级 CARLA 冒烟，再决定是否进行小规模 Stable-Baselines3 训练实验

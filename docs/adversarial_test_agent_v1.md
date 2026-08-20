@@ -25,4 +25,4 @@
 
 ## 当前边界
 
-本版本没有训练 SAC/PPO，也没有声明闭环 CARLA 自动运行完成；`gymnasium` 和 `stable-baselines3` 仍不是当前运行依赖。下一步是在不破坏阶段三质量门的前提下，把该契约接到“生成候选 → CARLA 执行 → 风险回填 → 下一候选”的编排接口。
+本版本没有训练 SAC/PPO，也没有声明闭环 CARLA 自动运行完成；`gymnasium` 和 `stable-baselines3` 仍不是当前运行依赖。Gymnasium 接口可行性评估已完成，边界和验收门见 `docs/adversarial_gymnasium_evaluation_v1.md`；下一步是在不破坏阶段三质量门的前提下，实现可选环境外壳并完成 mock/API 检查。
