@@ -31,7 +31,17 @@
 
 证据目录：`F:\Carla\project-transfer\server-results\adversarial_loop_multistep_v1_20260820_132752`，episode 汇总位于 `episodes/cvae_medium_20260813_0103_20260820_132752/episode_summary.json`。本轮连续候选仍使用同一个固定 15 维动作，因此只证明反馈进入下一观测、样本 ID 递进和风险回填链路可用，不支持策略学习、RL 有效性或跨场景泛化结论。
 
+## 异常路径编排测试
+
+`tests/test_adversarial_loop.py` 已覆盖三类编排级状态机路径：
+
+- candidate 严格运行失败：立即停止后续步骤，保留最后一次成功候选，并记录失败原因和 `run_failure` 惩罚
+- 无效 candidate：测试配置关闭 `terminate_on_invalid_candidate` 时跳过执行器调用，在下一步继续生成并执行有效候选；默认配置仍对无效候选立即终止
+- 重复场景：连续重复达到 `max_consecutive_duplicates` 后以 `repeated_scene` 截断，不再执行后续步骤
+
+全仓库 `36/36` 单元测试、`compileall`、多步 `mock` CLI 和 `git diff --check` 均通过。这些是纯 Python/mock 编排证据，不新增 CARLA 实机结论。
+
 ## 下一步
 
-- 增加 candidate 严格验收失败后的中止与恢复测试，确认失败原因、奖励和终止状态完整落盘。
-- 增加重复场景触发截断测试，再评估是否引入 `gymnasium` 与 Stable-Baselines3。
+- 评估将当前代理契约封装为 `gymnasium` 环境的最小接口，先进行离线接口适配和基线设计
+- 在训练环境接口稳定后，再决定是否进行小规模 Stable-Baselines3 训练实验

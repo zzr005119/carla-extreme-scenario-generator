@@ -31,6 +31,16 @@ class SequenceExecutor:
         return self.results.pop(0)
 
 
+class SequenceActionStrategy:
+    def __init__(self, actions):
+        self.actions = [list(action) for action in actions]
+        self.observations = []
+
+    def select_action(self, step_index, observation):
+        self.observations.append((step_index, copy.deepcopy(observation)))
+        return self.actions.pop(0)
+
+
 def successful_result(score, level, run_dir):
     return {
         "status": "completed",
@@ -43,6 +53,16 @@ def successful_result(score, level, run_dir):
         "strict_acceptance_passed": True,
         "carla_service_healthy": True,
         "run_dir": run_dir,
+    }
+
+
+def failed_result(reason):
+    return {
+        "status": "failed",
+        "run_valid": False,
+        "strict_acceptance_passed": False,
+        "carla_service_healthy": False,
+        "failure_reason": reason,
     }
 
 
@@ -149,6 +169,132 @@ class AdversarialLoopTests(unittest.TestCase):
             ],
             [0.35, 0.4, 0.45],
         )
+
+    def test_candidate_failure_stops_remaining_steps_and_preserves_last_success(self):
+        executor = SequenceExecutor(
+            [
+                successful_result(30.0, "medium", "mock://baseline"),
+                successful_result(35.0, "medium", "mock://candidate-0"),
+                failed_result("candidate_route_acceptance_failed"),
+                successful_result(90.0, "critical", "mock://must-not-run"),
+            ]
+        )
+        runner = AdversarialEpisodeRunner(
+            AdversarialTestAgentV1(self.agent_config),
+            FixedActionStrategy(tuple(self.loop_config["fixed_action"])),
+            executor,
+            max_agent_steps=3,
+        )
+        execution = runner.run(copy.deepcopy(self.record))
+        self.assertEqual(execution.status, "failed")
+        self.assertEqual(
+            execution.termination_reason,
+            "candidate_route_acceptance_failed",
+        )
+        self.assertEqual(len(execution.transitions), 2)
+        self.assertEqual(
+            [call[1:] for call in executor.calls],
+            [("baseline", -1), ("candidate", 0), ("candidate", 1)],
+        )
+        self.assertEqual(len(executor.results), 1)
+        failed_transition = execution.transitions[-1]
+        self.assertTrue(failed_transition["terminated"])
+        self.assertFalse(failed_transition["truncated"])
+        self.assertEqual(
+            failed_transition["reward_breakdown"]["run_failure"],
+            -1.0,
+        )
+        self.assertEqual(
+            execution.final_record["observed_risk"]["run_dir"],
+            "mock://candidate-0",
+        )
+
+    def test_invalid_candidate_can_skip_execution_and_recover_next_step(self):
+        agent_config = copy.deepcopy(self.agent_config)
+        agent_config["termination"]["terminate_on_invalid_candidate"] = False
+        strategy = SequenceActionStrategy(
+            [
+                [0.0] * 14,
+                self.loop_config["fixed_action"],
+            ]
+        )
+        executor = SequenceExecutor(
+            [
+                successful_result(30.0, "medium", "mock://baseline"),
+                successful_result(42.0, "medium", "mock://candidate-1"),
+            ]
+        )
+        runner = AdversarialEpisodeRunner(
+            AdversarialTestAgentV1(agent_config),
+            strategy,
+            executor,
+            max_agent_steps=2,
+        )
+        execution = runner.run(copy.deepcopy(self.record))
+        self.assertEqual(execution.status, "completed")
+        self.assertIsNone(execution.termination_reason)
+        self.assertEqual(len(execution.transitions), 2)
+        self.assertEqual(
+            [call[1:] for call in executor.calls],
+            [("baseline", -1), ("candidate", 1)],
+        )
+        invalid_transition, recovered_transition = execution.transitions
+        self.assertIsNone(invalid_transition["candidate"])
+        self.assertFalse(invalid_transition["terminated"])
+        self.assertEqual(invalid_transition["reason"], "invalid_candidate")
+        self.assertEqual(
+            invalid_transition["reward_breakdown"]["invalid_candidate"],
+            -1.0,
+        )
+        self.assertEqual(
+            recovered_transition["candidate"]["sample_id"],
+            f"{self.record['sample_id']}_adv_0001",
+        )
+        self.assertEqual(
+            strategy.observations[1][1]["sample_id"],
+            self.record["sample_id"],
+        )
+        self.assertEqual(execution.final_record["observed_risk"]["score"], 42.0)
+
+    def test_repeated_candidates_truncate_episode_before_step_limit(self):
+        executor = SequenceExecutor(
+            [
+                successful_result(20.0, "low", "mock://baseline"),
+                successful_result(20.0, "low", "mock://repeat-0"),
+                successful_result(20.0, "low", "mock://repeat-1"),
+                successful_result(20.0, "low", "mock://repeat-2"),
+                successful_result(90.0, "critical", "mock://must-not-run"),
+            ]
+        )
+        runner = AdversarialEpisodeRunner(
+            AdversarialTestAgentV1(self.agent_config),
+            FixedActionStrategy(tuple([0.0] * 15)),
+            executor,
+            max_agent_steps=5,
+        )
+        execution = runner.run(copy.deepcopy(self.record))
+        self.assertEqual(execution.status, "truncated")
+        self.assertEqual(execution.termination_reason, "repeated_scene")
+        self.assertEqual(len(execution.transitions), 3)
+        self.assertEqual(
+            [transition["info"]["duplicate_count"] for transition in execution.transitions],
+            [1, 2, 3],
+        )
+        self.assertTrue(execution.transitions[-1]["truncated"])
+        self.assertEqual(
+            execution.transitions[-1]["reward_breakdown"]["duplicate"],
+            -0.25,
+        )
+        self.assertEqual(
+            [call[1:] for call in executor.calls],
+            [
+                ("baseline", -1),
+                ("candidate", 0),
+                ("candidate", 1),
+                ("candidate", 2),
+            ],
+        )
+        self.assertEqual(len(executor.results), 1)
 
     def test_loop_config_and_route_profile_compile_scene04_config(self):
         base_config = load_json(
