@@ -66,7 +66,7 @@ flowchart LR
 
 1. 在不改变 `core/adversarial_agent.py` 契约的前提下实现可选 `AdversarialGymEnv` 外壳（已完成，代码位于 `core/adversarial_gym_env.py`）
 2. 用 mock executor 验证 `reset/step` 返回值、`Box` 范围、`terminated/truncated` 和 episode 重置（已完成，新增 5 项测试）
-3. 在服务器项目环境安装 `requirements-rl-interface.txt`，运行 Gymnasium `check_env`；Stable-Baselines3 仍不安装
+3. 在服务器项目环境安装 `requirements-rl-interface.txt`，运行 Gymnasium `check_env`（入口：`tools/check_adversarial_gymnasium.py`）；Stable-Baselines3 仍不安装
 4. 用服务器 CARLA 完成一个基线加两个候选的环境级冒烟，并回收 `info` 与终止状态
 5. 只有上述门槛通过后，才建立固定动作、随机动作、规则/LHS 和 SAC/PPO 的小规模对照计划
 
