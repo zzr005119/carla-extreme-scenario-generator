@@ -108,6 +108,48 @@ class AdversarialLoopTests(unittest.TestCase):
         self.assertEqual(len(execution.transitions), 0)
         self.assertEqual(len(executor.calls), 1)
 
+    def test_three_step_loop_carries_each_result_into_next_candidate(self):
+        executor = SequenceExecutor(
+            [
+                successful_result(30.0, "medium", "mock://baseline"),
+                successful_result(35.0, "medium", "mock://candidate-0"),
+                successful_result(40.0, "medium", "mock://candidate-1"),
+                successful_result(45.0, "medium", "mock://candidate-2"),
+            ]
+        )
+        runner = AdversarialEpisodeRunner(
+            AdversarialTestAgentV1(self.agent_config),
+            FixedActionStrategy(tuple(self.loop_config["fixed_action"])),
+            executor,
+            max_agent_steps=3,
+        )
+        execution = runner.run(copy.deepcopy(self.record))
+        self.assertEqual(execution.status, "completed")
+        self.assertEqual(len(execution.transitions), 3)
+        self.assertEqual(
+            [call[1:] for call in executor.calls],
+            [("baseline", -1), ("candidate", 0), ("candidate", 1), ("candidate", 2)],
+        )
+        candidate_ids = [
+            transition["candidate"]["sample_id"]
+            for transition in execution.transitions
+        ]
+        self.assertEqual(len(set(candidate_ids)), 3)
+        self.assertEqual(
+            [
+                transition["candidate"]["observed_risk"]["score"]
+                for transition in execution.transitions
+            ],
+            [35.0, 40.0, 45.0],
+        )
+        self.assertEqual(
+            [
+                transition["observation"]["feedback"]["observed_risk_score"]
+                for transition in execution.transitions
+            ],
+            [0.35, 0.4, 0.45],
+        )
+
     def test_loop_config_and_route_profile_compile_scene04_config(self):
         base_config = load_json(
             os.path.join(PROJECT_ROOT, "configs", "multi_hazard_rainy_night.json")
