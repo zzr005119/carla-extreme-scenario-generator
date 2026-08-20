@@ -61,7 +61,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - 闭环编排 V1 已完成：`core/adversarial_loop.py` 和 `tools/run_adversarial_episode.py` 先执行严格基线，再执行固定动作候选，并将 metadata 解析为代理 EpisodeResult；`validate`、`mock`、`carla` 三种模式和服务器冒烟入口已建立。2026-08-19 服务器 CARLA `0.9.16` 单 episode 真实冒烟完成 `2/2` 次严格验收：基线风险 `26.536/medium`，候选风险 `28.939/medium`，实测增量 `+2.403`；两次均无碰撞、RGB 各 `100` 帧、路线双车在途率 `1.0`、最大路线偏差不超过 `1.000 m`、服务健康、客户端/服务端版本一致。证据已回收至 `F:\Carla\project-transfer\server-results\adversarial_loop_smoke_v1_20260819_123339`。该结果只证明执行链路和结果回填可用，不构成策略效果或 RL 有效性结论。
 - 多步闭环真实冒烟已完成：配置 `configs/adversarial_loop_multistep_v1.json` 将 `max_agent_steps` 设为 `3`，服务器任务 `adversarial-loop-multistep-v1_20260820_132752` 执行基线加 3 个连续候选，共 `4/4` 次严格验收通过。风险序列为 `27.774 → 28.942 → 30.375 → 31.651`，基线到最终候选实测增量 `+3.877`；3 个 transition 的风险增量奖励项为 `0.01168`、`0.01433`、`0.01276`。四次均无碰撞、RGB 各 `100` 帧，路线和 CARLA 服务健康验收通过，客户端/服务端均为 `0.9.16`。证据已回收至 `F:\Carla\project-transfer\server-results\adversarial_loop_multistep_v1_20260820_132752`。本轮使用固定 15 维动作，结果只证明连续反馈、样本递进和风险回填链路可用，不代表 RL 策略已学习。
 - 闭环异常路径编排测试已完成：`tests/test_adversarial_loop.py` 新增候选运行失败立即中止、可配置的无效候选跳过执行并在下一步恢复、连续重复候选达到阈值后截断三类用例；验证执行器调用序列、失败原因、奖励项、最终记录和终止状态。全仓库 `36/36` 单元测试、`compileall`、多步 `mock` CLI 和 `git diff --check` 均通过。该结果是纯 Python/mock 编排证据，不新增 CARLA 实机结论；默认配置仍保持无效候选立即终止。
-- Gymnasium 接口评估 V1 已完成：确认 15 维归一化连续动作、34 维 `[0,1]` 观测、`reset/step` 返回契约以及 `terminated/truncated` 语义均可映射；同时确认基线执行属于 `reset()` 外部副作用、固定单场景不能直接训练，且当前项目环境未安装 `gymnasium`/Stable-Baselines3。评估文档见 `docs/adversarial_gymnasium_evaluation_v1.md`，本轮不安装依赖、不启动训练。
+- Gymnasium 接口评估 V1 已完成：确认 15 维归一化连续动作、34 维 `[0,1]` 观测、`reset/step` 返回契约以及 `terminated/truncated` 语义均可映射；可选外壳位于 `core/adversarial_gym_env.py`，依赖无关契约测试已通过。基线执行属于 `reset()` 外部副作用，固定单场景不能直接训练；下一步仅在服务器项目环境安装 `requirements-rl-interface.txt` 并运行 Gymnasium `check_env`，Stable-Baselines3 暂不安装。评估文档见 `docs/adversarial_gymnasium_evaluation_v1.md`。
 - 2026-08-18 已完成适配器生成 CARLA JSON 的单场景实机冒烟：CARLA 客户端/服务端均为 `0.9.16`，20 秒同步仿真完成，RGB/Depth/Semantic 各保存 `200` 帧，服务健康，事件和 `heuristic_v2` 风险结果均写入 `metadata.json`，无碰撞。该配置未启用路线锁定，因此只计为运行时冒烟，不计为路线严格验收；证据目录为 `F:\Carla\output-0.9.16\adapter_smoke\seed_v1_high_0165\20260818_222032`。
 - 适配器冒烟期间曾发现本机默认 `python` 加载 CARLA `0.9.15`；该残留包已卸除，后续本机连接 CARLA 0.9.16 必须显式使用 `Carla666-0916` 环境。
 - 运行环境规则已收口：服务器优先，SSH/RPC/健康检查失败才回退本机；本机固定使用 `D:\ANACONDA\envs\Carla666-0916`，运行前检查客户端/服务端均为 `0.9.16`。本机 Python 0.9.15 残留包已卸除。
@@ -271,7 +271,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 6. **版本与数据边界**：服务器运行结果必须能够追溯到 Git 提交、配置、随机种子和输出目录。服务器工作区不直接编辑；发现问题后回笔记本修改、提交并重新同步。GitHub `origin` 用于阶段备份和对外同步，内网 `lab` 用于高频开发部署；两者均只接收已验证且不含大文件或敏感信息的提交。
 
 ## 下一步
-1. 实现可选 `AdversarialGymEnv` 外壳和 mock contract tests，随后在独立依赖环境中运行 Gymnasium/SB3 `check_env`。
+1. 在服务器项目环境安装 `requirements-rl-interface.txt`，运行 Gymnasium `check_env`，不安装 Stable-Baselines3。
 2. 完成环境级服务器 CARLA 冒烟后，再设计固定动作、随机动作、规则/LHS 和 SAC/PPO 小规模对照；当前仍不启动训练。
 3. 继续维护场景库质量门和 Dashboard 回归，避免阶段四实验破坏阶段三证据。
 4. 软著演示截图后置到正式申请准备阶段；真实性研究继续等待同口径真实世界参数分布。

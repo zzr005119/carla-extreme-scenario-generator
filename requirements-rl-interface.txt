@@ -1,0 +1,3 @@
+# Optional interface dependency for the scene-between-episodes agent.
+# Install only after the dependency-free contract tests pass.
+gymnasium>=1.1,<2

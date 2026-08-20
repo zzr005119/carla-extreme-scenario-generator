@@ -64,9 +64,9 @@ flowchart LR
 
 ## ✅ 后续验收门
 
-1. 在不改变 `core/adversarial_agent.py` 契约的前提下实现可选 `AdversarialGymEnv` 外壳
-2. 用 mock executor 验证 `reset/step` 返回值、`Box` 范围、`terminated/truncated` 和 episode 重置
-3. 在安装可选依赖的独立环境中运行 Gymnasium/SB3 `check_env`
+1. 在不改变 `core/adversarial_agent.py` 契约的前提下实现可选 `AdversarialGymEnv` 外壳（已完成，代码位于 `core/adversarial_gym_env.py`）
+2. 用 mock executor 验证 `reset/step` 返回值、`Box` 范围、`terminated/truncated` 和 episode 重置（已完成，新增 5 项测试）
+3. 在服务器项目环境安装 `requirements-rl-interface.txt`，运行 Gymnasium `check_env`；Stable-Baselines3 仍不安装
 4. 用服务器 CARLA 完成一个基线加两个候选的环境级冒烟，并回收 `info` 与终止状态
 5. 只有上述门槛通过后，才建立固定动作、随机动作、规则/LHS 和 SAC/PPO 的小规模对照计划
 
@@ -74,10 +74,10 @@ flowchart LR
 
 | 项目 | 当前决定 |
 |---|---|
-| 是否立即安装 Gymnasium | 否，先保留当前 CARLA 环境稳定性 |
+| 是否安装 Gymnasium | 下一步仅在服务器项目环境安装接口依赖 |
 | 是否立即安装 Stable-Baselines3 | 否，等待适配器与 mock 检查通过 |
 | 是否启动训练 | 否 |
-| 下一项代码工作 | 实现可选 Gymnasium 外壳与 mock contract tests |
+| 下一项代码工作 | 完成服务器 Gymnasium `check_env` 和环境级 CARLA 冒烟 |
 | 真实 CARLA 要求 | 服务器优先，仍使用 CARLA 0.9.16 与 `Carla666-0916` |
 
 [^1]: Gymnasium. “Env API.” https://gymnasium.farama.org/api/env/
