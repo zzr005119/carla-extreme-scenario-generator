@@ -51,7 +51,7 @@ def main():
     record = load_json(RECORD_PATH)
     executor = InfiniteMockExecutor()
     env = AdversarialGymEnv(record=record, executor=executor)
-    check_env(env, warn=True)
+    check_env(env)
     observation, info = env.reset(seed=123)
     next_observation, reward, terminated, truncated, step_info = env.step(
         env.action_space.sample()

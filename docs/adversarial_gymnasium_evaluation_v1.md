@@ -80,6 +80,12 @@ flowchart LR
 | 下一项代码工作 | 完成服务器 Gymnasium `check_env` 和环境级 CARLA 冒烟 |
 | 真实 CARLA 要求 | 服务器优先，仍使用 CARLA 0.9.16 与 `Carla666-0916` |
 
+## ✅ 已执行验证
+
+2026-08-20 服务器任务 `check-adversarial-gymnasium_20260820_214522` 使用 Gymnasium `1.3.0` 通过标准 `check_env`。mock executor 验证了观测 `(34,)`、动作 `(15,)`、`float32` 类型、首次 step 返回和非终止状态；该任务不连接 CARLA。Gymnasium 检查器仅提示环境未通过 `gymnasium.make()` 注册，因而不检查备用渲染模式；项目环境没有渲染需求，该提示不影响接口检查。
+
+服务器全量 `unittest` 任务 `server-gymnasium-full-tests_20260820_214610` 未通过，原因是既有场景库分析测试导入 `matplotlib`，而服务器项目环境尚未安装该非本任务依赖。失败发生在 `analysis/analyze_scenario_library.py --validate-only`，不涉及 Gymnasium 适配；本机全量 `41/41` 仍通过，服务器 Gymnasium 专项检查已独立通过。
+
 [^1]: Gymnasium. “Env API.” https://gymnasium.farama.org/api/env/
 [^2]: Stable-Baselines3. “Using Custom Environments.” https://stable-baselines3.readthedocs.io/en/master/guide/custom_env.html
 [^3]: Stable-Baselines3. “SAC.” https://stable-baselines3.readthedocs.io/en/master/modules/sac.html
