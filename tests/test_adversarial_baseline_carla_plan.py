@@ -17,6 +17,7 @@ from tools.run_adversarial_baseline_carla_plan import (  # noqa: E402
     build_candidate_comparison,
     select_pair_ids,
 )
+from tools.analyze_adversarial_baseline_carla_results import analyze_results  # noqa: E402
 
 
 class AdversarialBaselineCarlaPlanTests(unittest.TestCase):
@@ -115,6 +116,47 @@ class AdversarialBaselineCarlaPlanTests(unittest.TestCase):
         self.assertEqual(comparison["reward_breakdown"]["collision_event"], 0.0)
         self.assertEqual(comparison["reward_breakdown"]["event"], 0.0)
         self.assertAlmostEqual(comparison["reward"], -0.07)
+
+    def test_paired_analysis_tracks_collision_changes_and_median(self):
+        rows = []
+        for pair_index, baseline_collision in ((1, False), (2, True)):
+            pair_id = f"pair_{pair_index:02d}"
+            rows.append(
+                {
+                    "pair_id": pair_id,
+                    "phase": "baseline",
+                    "strategy": None,
+                    "risk_score": 50.0,
+                    "collision_observed": baseline_collision,
+                    "strict_acceptance_passed": True,
+                }
+            )
+            for strategy_index, strategy in enumerate(
+                ("fixed", "random", "lhs", "rule_guided_lhs")
+            ):
+                delta = float(strategy_index + pair_index)
+                rows.append(
+                    {
+                        "pair_id": pair_id,
+                        "phase": "candidate",
+                        "strategy": strategy,
+                        "generator": "lhs",
+                        "target_risk_level": "high",
+                        "risk_score": 50.0 + delta,
+                        "risk_delta": delta,
+                        "reward": delta / 100.0,
+                        "collision_observed": strategy == "random",
+                        "collision_count": 1 if strategy == "random" else 0,
+                        "strict_acceptance_passed": True,
+                    }
+                )
+        summary, strategies, comparisons = analyze_results(rows)
+        self.assertEqual(summary["strictly_accepted_run_count"], 10)
+        self.assertEqual(len(comparisons), 8)
+        random_row = next(row for row in strategies if row["strategy"] == "random")
+        self.assertEqual(random_row["collision_introduced_count"], 1)
+        self.assertEqual(random_row["collision_both_count"], 1)
+        self.assertEqual(random_row["median_risk_delta"], 2.5)
 
 
 if __name__ == "__main__":
