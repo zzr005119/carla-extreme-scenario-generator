@@ -1,12 +1,12 @@
 # 对抗性测试代理 Gymnasium 接口评估 V1
 
-_评估日期：2026年8月20日；范围：阶段四场景间对抗性测试代理，不启动 RL 训练_
+_评估日期：2026年8月21日；范围：阶段四场景间对抗性测试代理，不启动 RL 训练_
 
 ---
 
 ## 📋 评估结论
 
-当前代理契约**适合封装为 Gymnasium 环境**，但暂不把 `gymnasium` 或 Stable-Baselines3 加入当前 CARLA 运行环境，也不启动训练。现有核心逻辑已经具备动作校验、34 维观测、奖励分解、失败终止和重复/步数截断；缺少的是标准环境外壳、初始场景采样策略和依赖隔离。
+当前代理契约**已完成 Gymnasium 外壳适配和服务器级接口验证**，但仍未安装 Stable-Baselines3，也不启动训练。现有核心逻辑已经具备动作校验、34 维观测、奖励分解、失败终止和重复/步数截断；尚缺分层场景采样策略和训练前基线对照。
 
 Gymnasium 的当前接口要求 `reset()` 返回 `(observation, info)`，`step()` 返回 `(observation, reward, terminated, truncated, info)`；episode 在任一结束标志为真后必须重新 `reset()`。[^1] 这与当前 `AgentTransition` 的两个独立状态字段可以直接对应。
 
@@ -50,11 +50,11 @@ flowchart LR
 
 ### CARLA 执行成本决定验证顺序
 
-适配器应先使用现有 mock executor 验证 API 状态机，再使用服务器 CARLA 做单 episode 冒烟。Gymnasium 环境接口通过后，仍需单独验证真实 CARLA 的运行失败、超时、路线失败和服务异常是否能稳定落盘。
+适配器已先通过 mock executor 验证 API 状态机，再使用服务器 CARLA 完成单 episode 冒烟。后续仍需单独验证真实 CARLA 的运行失败、超时、路线失败和服务异常是否能稳定落盘。
 
-### 当前环境没有训练依赖
+### 依赖边界
 
-项目环境 `D:\ANACONDA\envs\Carla666-0916` 当前检测到 NumPy 和 PyTorch，但未检测到 `gymnasium` 或 `stable_baselines3`。本轮不修改环境、不安装依赖、不生成模型权重。
+服务器项目环境 `/home/zhaozirong/software/envs/Carla666-0916` 已安装 Gymnasium `1.3.0`；本机开发环境仍不要求安装该可选依赖。Stable-Baselines3 尚未安装，不生成模型权重。
 
 ## 🧭 算法选择建议
 
@@ -66,18 +66,18 @@ flowchart LR
 
 1. 在不改变 `core/adversarial_agent.py` 契约的前提下实现可选 `AdversarialGymEnv` 外壳（已完成，代码位于 `core/adversarial_gym_env.py`）
 2. 用 mock executor 验证 `reset/step` 返回值、`Box` 范围、`terminated/truncated` 和 episode 重置（已完成，新增 5 项测试）
-3. 在服务器项目环境安装 `requirements-rl-interface.txt`，运行 Gymnasium `check_env`（入口：`tools/check_adversarial_gymnasium.py`）；Stable-Baselines3 仍不安装
-4. 用服务器 CARLA 完成一个基线加两个候选的环境级冒烟，并回收 `info` 与终止状态
-5. 只有上述门槛通过后，才建立固定动作、随机动作、规则/LHS 和 SAC/PPO 的小规模对照计划
+3. 在服务器项目环境安装 `requirements-rl-interface.txt`，运行 Gymnasium `check_env`（已完成）；Stable-Baselines3 仍不安装
+4. 用服务器 CARLA 完成一个基线加两个候选的环境级冒烟，并回收 `info` 与终止状态（已完成）
+5. 增加分层场景采样器，完成固定动作、随机动作、规则/LHS 的小规模对照后，才评估 Stable-Baselines3
 
 ## 📌 当前决策
 
 | 项目 | 当前决定 |
 |---|---|
-| 是否安装 Gymnasium | 下一步仅在服务器项目环境安装接口依赖 |
-| 是否立即安装 Stable-Baselines3 | 否，等待适配器与 mock 检查通过 |
+| 是否安装 Gymnasium | 已在服务器项目环境安装 `1.3.0` |
+| 是否立即安装 Stable-Baselines3 | 否，先完成分层采样和固定/随机/规则基线 |
 | 是否启动训练 | 否 |
-| 下一项代码工作 | 完成服务器 Gymnasium `check_env` 和环境级 CARLA 冒烟 |
+| 下一项代码工作 | 分层场景采样器和固定/随机/规则基线 |
 | 真实 CARLA 要求 | 服务器优先，仍使用 CARLA 0.9.16 与 `Carla666-0916` |
 
 ## ✅ 已执行验证
@@ -85,6 +85,8 @@ flowchart LR
 2026-08-20 服务器任务 `check-adversarial-gymnasium_20260820_214522` 使用 Gymnasium `1.3.0` 通过标准 `check_env`。mock executor 验证了观测 `(34,)`、动作 `(15,)`、`float32` 类型、首次 step 返回和非终止状态；该任务不连接 CARLA。Gymnasium 检查器仅提示环境未通过 `gymnasium.make()` 注册，因而不检查备用渲染模式；项目环境没有渲染需求，该提示不影响接口检查。
 
 服务器全量 `unittest` 任务 `server-gymnasium-full-tests_20260820_214610` 未通过，原因是既有场景库分析测试导入 `matplotlib`，而服务器项目环境尚未安装该非本任务依赖。失败发生在 `analysis/analyze_scenario_library.py --validate-only`，不涉及 Gymnasium 适配；本机全量 `41/41` 仍通过，服务器 Gymnasium 专项检查已独立通过。
+
+2026-08-20 服务器任务 `adversarial-gymnasium-smoke-v1_20260820_215156` 完成真实 CARLA 环境冒烟：Gymnasium `1.3.0` 执行一次 `reset()` 基线和两次 `step()` 候选，`3/3` 次严格验收通过。风险序列为 `27.764 → 28.899 → 30.353`，transition reward 为 `0.21135`、`0.21454`；三次均无碰撞、RGB 各 `100` 帧、路线双车在途率 `1.0`、CARLA 服务健康、客户端/服务端均为 `0.9.16`，两次返回均为 `terminated=false`、`truncated=false`。证据目录：`F:\Carla\project-transfer\server-results\20260820_215156_20260820_215411`。该证据只证明环境外壳与真实 executor 的闭环回填可用，不支持策略学习或 RL 有效性结论。
 
 [^1]: Gymnasium. “Env API.” https://gymnasium.farama.org/api/env/
 [^2]: Stable-Baselines3. “Using Custom Environments.” https://stable-baselines3.readthedocs.io/en/master/guide/custom_env.html

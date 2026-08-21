@@ -25,4 +25,4 @@
 
 ## 当前边界
 
-本版本没有训练 SAC/PPO，也没有声明闭环 CARLA 自动运行完成；`gymnasium` 和 `stable-baselines3` 仍不是当前运行依赖。Gymnasium 接口可行性评估已完成，边界和验收门见 `docs/adversarial_gymnasium_evaluation_v1.md`；下一步是在不破坏阶段三质量门的前提下，实现可选环境外壳并完成 mock/API 检查。
+本版本没有训练 SAC/PPO，也没有声明策略已经学会发现薄弱环节。服务器项目环境已安装 Gymnasium `1.3.0`，可选环境外壳、mock/API 检查和一次真实 CARLA 环境冒烟均已完成；Stable-Baselines3 仍未安装。边界和证据见 `docs/adversarial_gymnasium_evaluation_v1.md`；下一步是在不破坏阶段三质量门的前提下补充分层场景采样和固定/随机/规则基线。
