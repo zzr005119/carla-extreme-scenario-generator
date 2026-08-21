@@ -19,12 +19,23 @@
     "model": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["root_env", "relative_path", "sha256", "class"],
+      "required": [
+        "root_env",
+        "relative_path",
+        "sha256",
+        "class",
+        "inference_n_jobs"
+      ],
       "properties": {
         "root_env": {"type": "string", "minLength": 1},
         "relative_path": {"type": "string", "minLength": 1},
         "sha256": {"type": "string", "pattern": "[0-9a-f]{64}"},
-        "class": {"type": "string", "minLength": 1}
+        "class": {"type": "string", "minLength": 1},
+        "inference_n_jobs": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 64
+        }
       }
     },
     "feature_contract": {

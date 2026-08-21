@@ -6,7 +6,7 @@ import unittest
 
 import joblib
 import numpy as np
-from sklearn.dummy import DummyRegressor
+from sklearn.ensemble import RandomForestRegressor
 
 
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -45,19 +45,27 @@ class FrozenRiskProxyExecutorTests(unittest.TestCase):
         cls.base_config = load_proxy_executor_config()
 
     def build_executor(self, directory):
-        model = DummyRegressor(strategy="constant", constant=42.5)
+        model = RandomForestRegressor(
+            n_estimators=2,
+            random_state=7,
+            n_jobs=-1,
+        )
         model.fit(np.zeros((2, 27)), np.asarray([42.5, 42.5]))
         model_path = os.path.join(directory, "selected_model.joblib")
         joblib.dump(model, model_path)
         config = copy.deepcopy(self.base_config)
         config["model"]["sha256"] = file_sha256(model_path)
-        config["model"]["class"] = "sklearn.dummy.DummyRegressor"
+        config["model"]["class"] = (
+            "sklearn.ensemble._forest.RandomForestRegressor"
+        )
         return FrozenRiskProxyExecutor(config=config, model_path=model_path), config
 
     def test_feature_contract_and_proxy_payload(self):
         with tempfile.TemporaryDirectory() as directory:
             executor, _ = self.build_executor(directory)
             self.assertEqual(executor.feature_vector(self.record).shape, (27,))
+            self.assertEqual(executor.model.n_jobs, 1)
+            self.assertEqual(executor.metadata()["inference_n_jobs"], 1)
             payload = executor(self.record, "baseline", -1)
             self.assertEqual(payload["observed_risk_score"], 42.5)
             self.assertEqual(payload["reward_channels_available"], ["risk"])

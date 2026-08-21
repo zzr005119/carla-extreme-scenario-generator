@@ -5,7 +5,8 @@
     "root_env": "PROJECT_MODEL_ROOT",
     "relative_path": "artifacts/risk_proxy_v5_physical/20260817_140802/selected_model.joblib",
     "sha256": "26dd5f56fc3c556cb9691ac2c2922b0ebd44a94f0910452f3bfc92c90153c188",
-    "class": "sklearn.ensemble._forest.RandomForestRegressor"
+    "class": "sklearn.ensemble._forest.RandomForestRegressor",
+    "inference_n_jobs": 1
   },
   "feature_contract": {
     "feature_space": "physical_enhanced",

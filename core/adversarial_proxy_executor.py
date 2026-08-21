@@ -124,6 +124,13 @@ class FrozenRiskProxyExecutor:
         if int(getattr(self.model, "n_features_in_", -1)) != feature_count:
             raise ProxyExecutorError("冻结代理模型输入维度不是 27")
 
+        self.inference_n_jobs = int(
+            self.config["model"]["inference_n_jobs"]
+        )
+        if not hasattr(self.model, "n_jobs"):
+            raise ProxyExecutorError("冻结代理模型不支持固定推理线程数")
+        self.model.n_jobs = self.inference_n_jobs
+
         self.model_sha256 = actual_sha256
         self.calls = []
 
@@ -195,6 +202,7 @@ class FrozenRiskProxyExecutor:
             "model_path": self.model_path,
             "model_sha256": self.model_sha256,
             "model_class": self.config["model"]["class"],
+            "inference_n_jobs": self.inference_n_jobs,
             "feature_contract": self.config["feature_contract"],
             "training_evidence": self.config["training_evidence"],
             "reward_channels_available": self.config[
