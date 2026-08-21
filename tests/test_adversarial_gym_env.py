@@ -129,6 +129,30 @@ class AdversarialEnvCoreTests(unittest.TestCase):
             env.reset()
         self.assertEqual(context.exception.result.failure_reason, "baseline_unhealthy")
 
+    def test_sampler_metadata_is_exposed_in_reset_info(self):
+        sampling = {
+            "source": "scenario_library_v1",
+            "library_id": "slv1_test",
+            "generator": "lhs",
+        }
+        executor = SequenceExecutor(
+            [successful_result(30.0, "medium", "mock://baseline")]
+        )
+
+        def sampler(seed, options):
+            self.assertEqual(seed, 17)
+            self.assertEqual(options["generators"], ["lhs"])
+            return copy.deepcopy(self.record), sampling
+
+        env = AdversarialEnvCore(
+            record_sampler=sampler,
+            executor=executor,
+            config=self.config,
+        )
+        _, info = env.reset(seed=17, options={"generators": ["lhs"]})
+        self.assertEqual(info["sampling"], sampling)
+        self.assertIsNot(info["sampling"], sampling)
+
     def test_step_after_terminal_transition_requires_reset(self):
         config = copy.deepcopy(self.config)
         config["termination"]["max_steps"] = 1

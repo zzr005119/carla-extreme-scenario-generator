@@ -44,4 +44,4 @@
 ## 下一步
 
 - 评估将当前代理契约封装为 `gymnasium` 环境的最小接口，先进行离线接口适配和基线设计
-- Gymnasium 外壳、服务器 `check_env` 和环境级 CARLA 冒烟已完成；评估结果与真实证据见 `docs/adversarial_gymnasium_evaluation_v1.md`。下一步先做分层场景采样和固定/随机/规则基线，再决定是否进行小规模 Stable-Baselines3 训练实验
+- Gymnasium 外壳、服务器 `check_env`、环境级 CARLA 冒烟、分层场景采样和固定/随机/LHS/规则引导 LHS 离线基线均已完成；评估结果与证据见 `docs/adversarial_gymnasium_evaluation_v1.md` 和 `docs/adversarial_sampling_baselines_v1.md`。下一步先做约束感知重采样与小规模真实 CARLA 对照，再决定是否进行 Stable-Baselines3 训练实验

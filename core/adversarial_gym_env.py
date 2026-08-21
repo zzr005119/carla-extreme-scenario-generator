@@ -59,14 +59,24 @@ class AdversarialEnvCore:
 
     def _select_record(self, seed=None, options=None):
         options = dict(options or {})
+        sampling_info = None
         if "record" in options:
             record = copy.deepcopy(options["record"])
         elif self.record_sampler is not None:
-            record = self.record_sampler(seed, options)
+            selected = self.record_sampler(seed, options)
+            if (
+                isinstance(selected, tuple)
+                and len(selected) == 2
+                and isinstance(selected[1], dict)
+            ):
+                record, sampling_info = selected
+            else:
+                record = selected
         else:
             record = copy.deepcopy(self.initial_record)
+        record = copy.deepcopy(record)
         require_valid_scenario(record)
-        return record
+        return record, copy.deepcopy(sampling_info)
 
     @staticmethod
     def _vector(observation):
@@ -90,7 +100,7 @@ class AdversarialEnvCore:
         return values.tolist()
 
     def reset(self, seed=None, options=None):
-        record = self._select_record(seed=seed, options=options)
+        record, sampling_info = self._select_record(seed=seed, options=options)
         baseline_payload = self.executor(record, "baseline", -1)
         baseline_result = EpisodeResult.from_mapping(baseline_payload)
         if not baseline_result.successful:
@@ -115,6 +125,8 @@ class AdversarialEnvCore:
             "sample_id": record["sample_id"],
             "baseline_result": asdict(baseline_result),
         }
+        if sampling_info is not None:
+            info["sampling"] = sampling_info
         return self._vector(initial_observation), info
 
     def step(self, action):
@@ -215,4 +227,3 @@ class AdversarialGymEnv(_GymEnvBase):
 
     def close(self):
         self.core.close()
-

@@ -1,0 +1,36 @@
+{
+  "format": "adversarial_baselines_v1",
+  "scenario_library_path": "data/scenarios/scenario_library_v1/entries.jsonl",
+  "scenario_library_manifest_path": "data/scenarios/scenario_library_v1/manifest.json",
+  "agent_config_path": "configs/adversarial_agent_v1.json",
+  "sample_count": 24,
+  "random_seed": 20260821,
+  "fixed_action": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.25,
+    -0.25,
+    -0.1,
+    0.0,
+    -0.4,
+    -0.25,
+    0.3,
+    -0.1,
+    0.0,
+    -0.1,
+    0.25
+  ],
+  "lhs_batch_size": 24,
+  "rule_lhs_minimum_magnitude": 0.25,
+  "filters": {
+    "generators": ["lhs", "gmm", "cvae"],
+    "target_risk_levels": ["low", "medium", "high", "critical"],
+    "weather_tags": [],
+    "hazard_tags": ["lead_vehicle_braking", "pedestrian_crossing"],
+    "weather_match": "all",
+    "hazard_match": "all"
+  },
+  "output_subdirectory": "adversarial_baselines_v1"
+}

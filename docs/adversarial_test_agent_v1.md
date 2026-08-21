@@ -25,4 +25,4 @@
 
 ## 当前边界
 
-本版本没有训练 SAC/PPO，也没有声明策略已经学会发现薄弱环节。服务器项目环境已安装 Gymnasium `1.3.0`，可选环境外壳、mock/API 检查和一次真实 CARLA 环境冒烟均已完成；Stable-Baselines3 仍未安装。边界和证据见 `docs/adversarial_gymnasium_evaluation_v1.md`；下一步是在不破坏阶段三质量门的前提下补充分层场景采样和固定/随机/规则基线。
+本版本没有训练 SAC/PPO，也没有声明策略已经学会发现薄弱环节。服务器项目环境已安装 Gymnasium `1.3.0`，可选环境外壳、mock/API 检查、一次真实 CARLA 环境冒烟、场景库分层采样和固定/随机/LHS/规则引导 LHS 离线候选对照均已完成；Stable-Baselines3 仍未安装。边界和证据见 `docs/adversarial_gymnasium_evaluation_v1.md` 与 `docs/adversarial_sampling_baselines_v1.md`；下一步先处理约束感知重采样并准备小规模真实 CARLA 对照。

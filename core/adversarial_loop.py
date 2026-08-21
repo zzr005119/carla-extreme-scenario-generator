@@ -3,11 +3,14 @@
 import copy
 from dataclasses import asdict, dataclass
 
+import numpy as np
+
 from core.adversarial_agent import (
     AdversarialTestAgentV1,
     AgentContractError,
     EpisodeResult,
 )
+from core.scenario_features import FEATURE_DIM
 from core.scenario_validator import require_valid_scenario
 
 
@@ -28,6 +31,69 @@ class FixedActionStrategy:
     def select_action(self, step_index, observation):
         del step_index, observation
         return list(self.action)
+
+
+class RandomActionStrategy:
+    """Reproducible uniform random actions for a non-learning baseline."""
+
+    def __init__(self, seed=20260821):
+        self.rng = np.random.default_rng(int(seed))
+
+    def select_action(self, step_index, observation):
+        del step_index, observation
+        return self.rng.uniform(-1.0, 1.0, size=FEATURE_DIM).tolist()
+
+
+class LatinHypercubeActionStrategy:
+    """Dependency-free Latin-hypercube coverage of the normalized action box."""
+
+    def __init__(self, seed=20260821, batch_size=32):
+        if int(batch_size) <= 0:
+            raise LoopContractError("LHS batch_size must be greater than 0")
+        self.rng = np.random.default_rng(int(seed))
+        self.batch_size = int(batch_size)
+        self.actions = []
+        self.cursor = 0
+
+    def _append_batch(self):
+        batch = np.empty((self.batch_size, FEATURE_DIM), dtype=np.float64)
+        for column in range(FEATURE_DIM):
+            permutation = self.rng.permutation(self.batch_size)
+            batch[:, column] = (
+                permutation + self.rng.random(self.batch_size)
+            ) / self.batch_size
+        self.actions.extend((batch * 2.0 - 1.0).tolist())
+
+    def select_action(self, step_index, observation):
+        del step_index, observation
+        if self.cursor >= len(self.actions):
+            self._append_batch()
+        action = self.actions[self.cursor]
+        self.cursor += 1
+        return list(action)
+
+
+class RuleGuidedLhsActionStrategy(LatinHypercubeActionStrategy):
+    """Risk-directed signs with LHS magnitudes; still a static heuristic."""
+
+    DIRECTIONS = np.asarray(
+        [1, 1, 1, 1, 1, -1, -1, 1, -1, -1, 1, -1, -1, -1, 1],
+        dtype=np.float64,
+    )
+
+    def __init__(self, seed=20260821, batch_size=32, minimum_magnitude=0.25):
+        if not 0.0 <= float(minimum_magnitude) <= 1.0:
+            raise LoopContractError("minimum_magnitude must be in [0, 1]")
+        super().__init__(seed=seed, batch_size=batch_size)
+        self.minimum_magnitude = float(minimum_magnitude)
+
+    def _append_batch(self):
+        start = len(self.actions)
+        super()._append_batch()
+        for index in range(start, len(self.actions)):
+            unit = (np.asarray(self.actions[index]) + 1.0) / 2.0
+            magnitude = self.minimum_magnitude + unit * (1.0 - self.minimum_magnitude)
+            self.actions[index] = (magnitude * self.DIRECTIONS).tolist()
 
 
 @dataclass

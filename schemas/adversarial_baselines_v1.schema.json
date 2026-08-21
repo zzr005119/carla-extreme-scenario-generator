@@ -1,0 +1,90 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "adversarial_baselines_v1.schema.json",
+  "title": "Adversarial Offline Baselines V1 Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "scenario_library_path",
+    "scenario_library_manifest_path",
+    "agent_config_path",
+    "sample_count",
+    "random_seed",
+    "fixed_action",
+    "lhs_batch_size",
+    "rule_lhs_minimum_magnitude",
+    "filters",
+    "output_subdirectory"
+  ],
+  "properties": {
+    "format": {"const": "adversarial_baselines_v1"},
+    "scenario_library_path": {"type": "string", "minLength": 1},
+    "scenario_library_manifest_path": {"type": "string", "minLength": 1},
+    "agent_config_path": {"type": "string", "minLength": 1},
+    "sample_count": {"type": "integer", "minimum": 12},
+    "random_seed": {"type": "integer", "minimum": 0},
+    "fixed_action": {
+      "type": "array",
+      "minItems": 15,
+      "maxItems": 15,
+      "items": {"type": "number", "minimum": -1.0, "maximum": 1.0}
+    },
+    "lhs_batch_size": {"type": "integer", "minimum": 1},
+    "rule_lhs_minimum_magnitude": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0
+    },
+    "filters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "generators",
+        "target_risk_levels",
+        "weather_tags",
+        "hazard_tags",
+        "weather_match",
+        "hazard_match"
+      ],
+      "properties": {
+        "generators": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["lhs", "gmm", "cvae"]}
+        },
+        "target_risk_levels": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {"enum": ["low", "medium", "high", "critical"]}
+        },
+        "weather_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "rain",
+              "heavy_rain",
+              "fog",
+              "dense_fog",
+              "night",
+              "day",
+              "wet_road",
+              "strong_wind"
+            ]
+          }
+        },
+        "hazard_tags": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "enum": ["lead_vehicle_braking", "pedestrian_crossing"]
+          }
+        },
+        "weather_match": {"enum": ["all", "any"]},
+        "hazard_match": {"enum": ["all", "any"]}
+      }
+    },
+    "output_subdirectory": {"type": "string", "minLength": 1}
+  }
+}
