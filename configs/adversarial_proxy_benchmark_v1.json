@@ -1,0 +1,19 @@
+{
+  "format": "adversarial_proxy_benchmark_v1",
+  "executor_config_path": "configs/adversarial_proxy_executor_v1.json",
+  "agent_config_path": "configs/adversarial_agent_proxy_training_v1.json",
+  "baseline_config_path": "configs/adversarial_baselines_v1.json",
+  "training": {
+    "algorithms": ["ppo", "sac"],
+    "seeds": [20260821, 20260822, 20260823],
+    "total_timesteps": 4096,
+    "device": "cpu",
+    "max_excluded_skips": 256
+  },
+  "evaluation": {
+    "sample_count": 24,
+    "sample_seed": 20260921,
+    "deterministic_policy": true
+  },
+  "output_subdirectory": "adversarial_proxy_benchmark_v1"
+}
