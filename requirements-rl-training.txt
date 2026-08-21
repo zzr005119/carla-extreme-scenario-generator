@@ -1,0 +1,4 @@
+# Optional low-cost training dependencies for the adversarial agent.
+# Keep the Gymnasium interface usable without installing this file.
+-r requirements-rl-interface.txt
+stable-baselines3==2.9.0
