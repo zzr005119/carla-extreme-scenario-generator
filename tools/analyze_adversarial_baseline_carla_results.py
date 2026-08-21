@@ -9,7 +9,7 @@ from collections import Counter
 from datetime import datetime
 
 
-EXPECTED_STRATEGIES = ("fixed", "random", "lhs", "rule_guided_lhs")
+DEFAULT_STRATEGIES = ("fixed", "random", "lhs", "rule_guided_lhs")
 
 
 def _write_json(path, value):
@@ -32,10 +32,18 @@ def _rounded(value, digits=6):
     return round(float(value), digits)
 
 
-def analyze_results(rows):
+def analyze_results(rows, expected_strategies=None):
     if not isinstance(rows, list) or not rows:
         raise ValueError("Runtime results must be a non-empty list")
     pair_ids = list(dict.fromkeys(row["pair_id"] for row in rows))
+    if expected_strategies is None:
+        first_pair_rows = [row for row in rows if row["pair_id"] == pair_ids[0]]
+        expected_strategies = tuple(
+            row["strategy"]
+            for row in first_pair_rows
+            if row["phase"] == "candidate"
+        )
+    expected_strategies = tuple(expected_strategies or DEFAULT_STRATEGIES)
     baselines = {}
     comparisons = []
     for pair_id in pair_ids:
@@ -45,9 +53,9 @@ def analyze_results(rows):
         if len(baseline_rows) != 1:
             raise ValueError(f"{pair_id} must contain exactly one baseline")
         strategy_names = tuple(row["strategy"] for row in candidate_rows)
-        if strategy_names != EXPECTED_STRATEGIES:
+        if strategy_names != expected_strategies:
             raise ValueError(
-                f"{pair_id} strategy order must be {EXPECTED_STRATEGIES}, "
+                f"{pair_id} strategy order must be {expected_strategies}, "
                 f"got {strategy_names}"
             )
         baseline = baseline_rows[0]
@@ -98,7 +106,7 @@ def analyze_results(rows):
                 highest_reward_counts[row["strategy"]] += 1
 
     strategy_rows = []
-    for strategy in EXPECTED_STRATEGIES:
+    for strategy in expected_strategies:
         selected = [row for row in comparisons if row["strategy"] == strategy]
         risk_deltas = [row["risk_delta"] for row in selected]
         rewards = [row["reward"] for row in selected]

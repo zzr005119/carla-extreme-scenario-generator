@@ -39,7 +39,11 @@ DEFAULT_AGENT_CONFIG = os.path.join(
     "configs",
     "adversarial_agent_v1.json",
 )
-EXPECTED_STRATEGIES = ("fixed", "random", "lhs", "rule_guided_lhs")
+DEFAULT_STRATEGIES = ("fixed", "random", "lhs", "rule_guided_lhs")
+SUPPORTED_PLAN_FORMATS = {
+    "adversarial_baseline_carla_run_plan_v1",
+    "adversarial_policy_carla_run_plan_v1",
+}
 
 
 def _write_json(path, value):
@@ -102,7 +106,7 @@ def _resolve_plan_path(plan_dir, path):
 
 def load_run_plan(path):
     plan = load_json(os.path.abspath(path))
-    if plan.get("format") != "adversarial_baseline_carla_run_plan_v1":
+    if plan.get("format") not in SUPPORTED_PLAN_FORMATS:
         raise ValueError("Unsupported adversarial baseline CARLA plan format")
     if not plan.get("runs"):
         raise ValueError("Run plan contains no runs")
@@ -415,6 +419,13 @@ def execute_plan(
     plan_path = os.path.abspath(plan_path)
     plan_dir = os.path.dirname(plan_path)
     plan = load_run_plan(plan_path)
+    expected_strategies = tuple(
+        plan["summary"].get("strategy_order") or DEFAULT_STRATEGIES
+    )
+    if not expected_strategies or len(set(expected_strategies)) != len(
+        expected_strategies
+    ):
+        raise ValueError("Run plan strategy_order must be non-empty and unique")
     pair_ids = select_pair_ids(plan, requested_pair_ids, pair_count)
     selected = [
         run
@@ -456,9 +467,9 @@ def execute_plan(
         if len(baseline_runs) != 1:
             raise ValueError(f"{pair_id} must contain exactly one baseline")
         strategies = tuple(run.get("strategy") for run in candidate_runs)
-        if strategies != EXPECTED_STRATEGIES:
+        if strategies != expected_strategies:
             raise ValueError(
-                f"{pair_id} strategy order must be {EXPECTED_STRATEGIES}, got {strategies}"
+                f"{pair_id} strategy order must be {expected_strategies}, got {strategies}"
             )
         baseline_run = baseline_runs[0]
         baseline_record = load_json(
@@ -536,7 +547,10 @@ def execute_plan(
         )
         pair_summary["executed_run_count"] = len(pair_rows)
         pair_summary["status"] = (
-            "accepted" if len(pair_rows) == 5 and pair_summary["strictly_accepted_run_count"] == 5 else "failed"
+            "accepted"
+            if len(pair_rows) == len(pair_runs)
+            and pair_summary["strictly_accepted_run_count"] == len(pair_runs)
+            else "failed"
         )
         persist("running")
         if abort_all:
@@ -583,6 +597,7 @@ def execute_plan(
         "strictly_accepted_run_count": accepted_count,
         "acceptance_failed_run_count": len(results) - accepted_count,
         "strategy_result_counts": dict(sorted(strategy_counts.items())),
+        "strategy_order": list(expected_strategies),
         "risk_method_check_passed": risk_method_check,
         "carla_version_check_passed": version_check,
         "runtime_gate_passed": runtime_gate,

@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "adversarial_policy_carla_plan_v1.schema.json",
+  "title": "Adversarial Policy CARLA Independent Plan V1 Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "baseline_config_path",
+    "loop_config_path",
+    "proxy_executor_config_path",
+    "proxy_agent_config_path",
+    "policy_model",
+    "excluded_proxy_evaluation",
+    "sample_count",
+    "sample_seed",
+    "max_selection_attempts",
+    "rule_guided_lhs_seed",
+    "strategy_order",
+    "validate_scene_configs",
+    "output_subdirectory",
+    "runtime_output_subdirectory"
+  ],
+  "properties": {
+    "format": {"const": "adversarial_policy_carla_plan_v1"},
+    "baseline_config_path": {"type": "string", "minLength": 1},
+    "loop_config_path": {"type": "string", "minLength": 1},
+    "proxy_executor_config_path": {"type": "string", "minLength": 1},
+    "proxy_agent_config_path": {"type": "string", "minLength": 1},
+    "policy_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "algorithm",
+        "seed",
+        "root_env",
+        "relative_path",
+        "sha256",
+        "device",
+        "deterministic"
+      ],
+      "properties": {
+        "algorithm": {"const": "sac"},
+        "seed": {"const": 20260822},
+        "root_env": {"type": "string", "minLength": 1},
+        "relative_path": {"type": "string", "minLength": 1},
+        "sha256": {"type": "string", "pattern": "[0-9a-f]{64}"},
+        "device": {"type": "string", "minLength": 1},
+        "deterministic": {"const": true}
+      }
+    },
+    "excluded_proxy_evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "root_env",
+        "relative_path",
+        "expected_library_entry_count"
+      ],
+      "properties": {
+        "root_env": {"type": "string", "minLength": 1},
+        "relative_path": {"type": "string", "minLength": 1},
+        "expected_library_entry_count": {"const": 24}
+      }
+    },
+    "sample_count": {"const": 12},
+    "sample_seed": {"type": "integer", "minimum": 0},
+    "max_selection_attempts": {"type": "integer", "minimum": 12},
+    "rule_guided_lhs_seed": {"type": "integer", "minimum": 0},
+    "strategy_order": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "prefixItems": [
+        {"const": "sac_policy"},
+        {"const": "rule_guided_lhs"}
+      ],
+      "items": false
+    },
+    "validate_scene_configs": {"type": "boolean"},
+    "output_subdirectory": {"type": "string", "minLength": 1},
+    "runtime_output_subdirectory": {"type": "string", "minLength": 1}
+  }
+}
