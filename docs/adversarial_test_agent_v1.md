@@ -27,4 +27,4 @@
 
 ## 当前边界
 
-本版本没有训练 SAC/PPO，也没有声明策略已经学会发现薄弱环节。服务器项目环境已安装 Gymnasium `1.3.0`，可选环境外壳、mock/API 检查、真实 CARLA 环境冒烟、场景库分层采样、四类非学习离线候选对照、有限约束重试和 60 次 CARLA 实机对照均已完成；Stable-Baselines3 仍未安装。边界和证据见 `docs/adversarial_gymnasium_evaluation_v1.md`、`docs/adversarial_sampling_baselines_v1.md` 与 `docs/adversarial_baseline_carla_plan_v1.md`；下一步进行 Stable-Baselines3 兼容性验证和低成本训练执行器设计，不直接启动高成本 CARLA 在线训练。
+本版本已使用 Stable-Baselines3 `2.9.0` 完成 SAC/PPO 各 64 步的确定性 mock 短训练、模型保存加载和预测，但没有声明策略已经学会发现薄弱环节。服务器项目环境同时固定 Gymnasium `1.3.0`；可选环境外壳、两套 `check_env`、真实 CARLA 环境冒烟、场景库分层采样、四类非学习候选对照、有限约束重试和 60 次 CARLA 实机对照均已完成。短训练证据明确标记为 `training_plumbing_only`，不连接 CARLA。边界和证据见 `docs/adversarial_gymnasium_evaluation_v1.md`、`docs/adversarial_sampling_baselines_v1.md` 与 `docs/adversarial_baseline_carla_plan_v1.md`；下一步接入冻结的 27 维风险代理作为近似训练执行器，再做少量 CARLA 独立评估，不启动高成本 CARLA 在线训练。

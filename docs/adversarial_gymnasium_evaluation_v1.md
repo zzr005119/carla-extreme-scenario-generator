@@ -1,12 +1,14 @@
 # 对抗性测试代理 Gymnasium 接口评估 V1
 
-_评估日期：2026年8月21日；范围：阶段四场景间对抗性测试代理，不启动 RL 训练_
+_评估日期：2026年8月21日；范围：阶段四场景间对抗性测试代理与低成本训练工程验证_
 
 ---
 
 ## 📋 评估结论
 
-当前代理契约**已完成 Gymnasium 外壳适配、服务器级接口验证、分层场景采样和训练前离线基线对照**，但仍未安装 Stable-Baselines3，也不启动训练。现有核心逻辑已经具备动作校验、34 维观测、奖励分解、失败终止、重复/步数截断和场景库轮转采样。
+当前代理契约**已完成 Gymnasium 外壳适配、服务器级接口验证、分层场景采样、四类非学习 CARLA 对照和 Stable-Baselines3 低成本训练工程验证**。服务器已安装 Stable-Baselines3 `2.9.0`，PPO 与 SAC 均完成短步数 mock 训练、模型保存、加载和预测。现有核心逻辑已经具备动作校验、34 维观测、奖励分解、失败终止、重复/步数截断和场景库轮转采样。
+
+本次训练执行器是确定性 mock 风险函数，不读取 CARLA，也不复用冻结风险代理；输出显式记录 `training_plumbing_only`、`carla_connected=false` 和 `supports_policy_effect_claim=false`。因此当前只证明训练代码链路可运行，不能据此声称 PPO/SAC 已学会提高真实风险。
 
 Gymnasium 的当前接口要求 `reset()` 返回 `(observation, info)`，`step()` 返回 `(observation, reward, terminated, truncated, info)`；episode 在任一结束标志为真后必须重新 `reset()`。[^1] 这与当前 `AgentTransition` 的两个独立状态字段可以直接对应。
 
@@ -54,45 +56,49 @@ flowchart LR
 
 ### 依赖边界
 
-服务器项目环境 `/home/zhaozirong/software/envs/Carla666-0916` 已安装 Gymnasium `1.3.0`；本机开发环境仍不要求安装该可选依赖。Stable-Baselines3 尚未安装，不生成模型权重。
+服务器项目环境 `/home/zhaozirong/software/envs/Carla666-0916` 已安装 Gymnasium `1.3.0`、Stable-Baselines3 `2.9.0` 和 PyTorch `2.12.1+cu126`。本机开发环境仍不要求安装这些可选训练依赖；`requirements-rl-interface.txt` 保持仅含接口依赖，`requirements-rl-training.txt` 单独锁定训练依赖。服务器短训练生成的模型权重保留在服务器输出目录，不纳入 Git。
 
 ## 🧭 算法选择建议
 
 当前动作空间是有界连续 `Box`，因此后续首选 **SAC**，并以 PPO 作为对照基线。Stable-Baselines3 将 SAC 定位为连续动作算法，且其自定义环境流程要求实现 Gymnasium 接口并运行 `check_env()`。[^2][^3]
 
-这只是接口适配建议，不代表 SAC/PPO 已经适合当前数据规模，也不代表已经证明策略能发现 SUT 薄弱环节。固定、随机、LHS 和规则引导 LHS 的首轮离线候选对照已经完成，但尚未比较 CARLA 实测奖励，因此仍不能启动正式训练。
+这只是接口适配与工程可运行性结论，不代表 SAC/PPO 已经适合当前数据规模，也不代表已经证明策略能发现 SUT 薄弱环节。固定、随机、LHS 和规则引导 LHS 已完成 60 次 CARLA 严格对照；rule-guided LHS 暂作为主要非学习对照。后续训练仍应先使用冻结风险代理近似环境，再由独立 CARLA 小预算评估验证，不能用代理训练回报替代实测结果。
 
 ## ✅ 后续验收门
 
 1. 在不改变 `core/adversarial_agent.py` 契约的前提下实现可选 `AdversarialGymEnv` 外壳（已完成，代码位于 `core/adversarial_gym_env.py`）
 2. 用 mock executor 验证 `reset/step` 返回值、`Box` 范围、`terminated/truncated` 和 episode 重置（已完成，新增 5 项测试）
-3. 在服务器项目环境安装 `requirements-rl-interface.txt`，运行 Gymnasium `check_env`（已完成）；Stable-Baselines3 仍不安装
+3. 在服务器项目环境安装 `requirements-rl-interface.txt`，运行 Gymnasium `check_env`（已完成）
 4. 用服务器 CARLA 完成一个基线加两个候选的环境级冒烟，并回收 `info` 与终止状态（已完成）
 5. 增加分层场景采样器并完成固定、随机、LHS、规则引导 LHS 的离线候选对照（已完成，见 `docs/adversarial_sampling_baselines_v1.md`）
-6. 增加约束感知重采样并准备共享基线与四策略 CARLA 对照计划（已完成静态计划，尚未实机）
-7. 服务器执行单 pair 的 1 基线 + 4 候选冒烟；通过后再决定完整对照和 Stable-Baselines3
+6. 增加约束感知重采样并准备共享基线与四策略 CARLA 对照计划（已完成）
+7. 完成 12 个共享基线和 48 个四策略候选的 `60/60` CARLA 严格对照（已完成）
+8. 安装 Stable-Baselines3 `2.9.0`，通过 SB3 `check_env`，完成 PPO/SAC 短训练和模型持久化往返（已完成）
+9. 接入冻结的 27 维风险代理并设计少量 12 分层 CARLA 独立策略评估（下一步）
 
 ## 📌 当前决策
 
 | 项目 | 当前决定 |
 |---|---|
 | 是否安装 Gymnasium | 已在服务器项目环境安装 `1.3.0` |
-| 是否立即安装 Stable-Baselines3 | 否，先完成单 pair 真实 CARLA 基线冒烟 |
-| 是否启动训练 | 否 |
-| 下一项代码工作 | CARLA 计划执行与结果聚合入口 |
+| 是否安装 Stable-Baselines3 | 已在服务器项目环境固定 `2.9.0` |
+| 是否启动训练 | 已完成仅用于工程验证的 PPO/SAC 64 步 mock 短训练；不启动 CARLA 在线训练 |
+| 下一项代码工作 | 冻结 27 维风险代理执行器与少量 CARLA 独立评估计划 |
 | 真实 CARLA 要求 | 服务器优先，仍使用 CARLA 0.9.16 与 `Carla666-0916` |
 
 ## ✅ 已执行验证
 
 2026-08-20 服务器任务 `check-adversarial-gymnasium_20260820_214522` 使用 Gymnasium `1.3.0` 通过标准 `check_env`。mock executor 验证了观测 `(34,)`、动作 `(15,)`、`float32` 类型、首次 step 返回和非终止状态；该任务不连接 CARLA。Gymnasium 检查器仅提示环境未通过 `gymnasium.make()` 注册，因而不检查备用渲染模式；项目环境没有渲染需求，该提示不影响接口检查。
 
-服务器全量 `unittest` 任务 `server-gymnasium-full-tests_20260820_214610` 未通过，原因是既有场景库分析测试导入 `matplotlib`，而服务器项目环境尚未安装该非本任务依赖。失败发生在 `analysis/analyze_scenario_library.py --validate-only`，不涉及 Gymnasium 适配；本机加入分层采样与约束重试测试后全量 `51/51` 通过，服务器 Gymnasium 专项检查已独立通过。
+服务器旧全量 `unittest` 任务 `server-gymnasium-full-tests_20260820_214610` 曾因缺少 `matplotlib` 失败。该依赖已按 `3.11.0` 写入 `requirements-models.txt` 并安装，`pip check` 无冲突；2026-08-21 任务 `server-sb3-full-tests-fixed_20260821_165638` 已完成服务器全量 `60/60` 测试，另有 1 项仅在 Gymnasium 缺失时运行的测试按预期跳过。
 
 2026-08-20 服务器任务 `adversarial-gymnasium-smoke-v1_20260820_215156` 完成真实 CARLA 环境冒烟：Gymnasium `1.3.0` 执行一次 `reset()` 基线和两次 `step()` 候选，`3/3` 次严格验收通过。风险序列为 `27.764 → 28.899 → 30.353`；三次均无碰撞、RGB 各 `100` 帧、路线双车在途率 `1.0`、CARLA 服务健康、客户端/服务端均为 `0.9.16`，两次返回均为 `terminated=false`、`truncated=false`。当时记录的 transition reward `0.21135/0.21454` 使用旧的绝对事件奖励语义，只保留为历史链路证据，不与 2026-08-21 冻结的 `relative_capped_delta` reward V2 直接比较。证据目录：`F:\Carla\project-transfer\server-results\20260820_215156_20260820_215411`。该证据只证明环境外壳与真实 executor 的闭环回填可用，不支持策略学习或 RL 有效性结论。
 
 2026-08-21 完成分层采样、四类离线基线和独立重试动作流：24 个独立场景覆盖全部 12 个“生成器 × 目标风险档”组合，三个 Traffic Manager 种子各 8 次；fixed/random/LHS/rule-guided LHS 原始首轮有效数为 `24/21/21/22`，额外使用 `0/3/3/2` 次动作后四组均补齐 `24/24`，没有重试预算耗尽。最终离线结果目录为 `F:\Carla\output-0.9.16\adversarial_baselines_v1\20260821_132033`。候选未运行 CARLA，因此不能把约束有效率解释为风险提升率。
 
-同日完成一个 12 分层周期的 CARLA 静态对照计划：12 个共享基线加 48 个四策略候选，共 `60` 个计划运行，60/60 场景与配置通过 Scene 04 `--validate-only`。计划目录为 `F:\Carla\output-0.9.16\adversarial_baseline_carla_plan_v1\20260821_132000`。该结果未连接 CARLA，不构成真实风险、奖励或严格运行验收证据。
+同日完成一个 12 分层周期的 CARLA 对照：12 个共享基线加 48 个四策略候选，共 `60/60` 次严格验收通过。rule-guided LHS 在 `10/12` 个 pair 风险升高、`8/12` 次取得四策略最高风险，中位风险增量 `+2.045`；当前仅将其作为主要非学习对照，不声称普遍优势。轻量结果位于 `F:\Carla\project-transfer\server-results\20260821_152924_20260821_155826`。
+
+2026-08-21 服务器任务 `adversarial-sb3-smoke-v1_20260821_165303` 使用 Python `3.12.13`、Gymnasium `1.3.0`、Stable-Baselines3 `2.9.0` 和 PyTorch `2.12.1+cu126` 完成训练工程冒烟。Gymnasium 与 SB3 两套 `check_env` 均通过；PPO 与 SAC 各训练 `64` 步，模型均成功保存、重新加载并产生合法候选预测。结构化摘要回收至 `F:\Carla\project-transfer\server-results\20260821_165304_20260821_165402\training_summary.json`。该任务没有连接 CARLA，PPO/SAC 的单次预测 reward 不用于策略效果比较。
 
 [^1]: Gymnasium. “Env API.” https://gymnasium.farama.org/api/env/
 [^2]: Stable-Baselines3. “Using Custom Environments.” https://stable-baselines3.readthedocs.io/en/master/guide/custom_env.html

@@ -77,4 +77,4 @@ reward V2 已改为 `relative_capped_delta`：碰撞按相对基线的 0/1 状�
 
 ## 下一步
 
-冻结 reward V2 和四类非学习基线结果；下一步安装并验证 Stable-Baselines3，先建立不直接消耗 CARLA 的训练/接口检查路径，再设计与 60 次实机基线同口径的低预算策略评估。
+reward V2、四类非学习基线结果和 Stable-Baselines3 低成本训练工程链路均已冻结。下一步接入 27 维冻结风险代理作为近似训练执行器，再设计与本轮 12 分层、共享基线、严格验收和 reward V2 同口径的低预算 CARLA 独立策略评估。
