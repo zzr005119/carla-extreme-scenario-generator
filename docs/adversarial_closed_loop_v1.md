@@ -44,4 +44,4 @@
 ## 下一步
 
 - Gymnasium 外壳、服务器两套 `check_env`、环境级 CARLA 冒烟、分层场景采样、四类非学习基线、有限约束重试、60 次 CARLA 严格对照以及 Stable-Baselines3 PPO/SAC 短训练链路均已完成；证据见 `docs/adversarial_gymnasium_evaluation_v1.md`、`docs/adversarial_sampling_baselines_v1.md` 和 `docs/adversarial_baseline_carla_plan_v1.md`
-- 下一步把冻结的 27 维风险代理接成只读近似训练执行器，再冻结少量 12 分层 CARLA 独立评估；CARLA 只负责策略验收，不作为大步数在线训练环境
+- 冻结的 27 维风险代理已接成只读近似训练执行器；下一步进行多随机种子训练和等预算非学习基线对照，再冻结少量 12 分层 CARLA 独立评估。CARLA 只负责策略验收，不作为大步数在线训练环境

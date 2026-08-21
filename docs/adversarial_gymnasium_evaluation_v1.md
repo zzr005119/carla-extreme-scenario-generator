@@ -6,7 +6,7 @@ _评估日期：2026年8月21日；范围：阶段四场景间对抗性测试代
 
 ## 📋 评估结论
 
-当前代理契约**已完成 Gymnasium 外壳适配、服务器级接口验证、分层场景采样、四类非学习 CARLA 对照和 Stable-Baselines3 低成本训练工程验证**。服务器已安装 Stable-Baselines3 `2.9.0`，PPO 与 SAC 均完成短步数 mock 训练、模型保存、加载和预测。现有核心逻辑已经具备动作校验、34 维观测、奖励分解、失败终止、重复/步数截断和场景库轮转采样。
+当前代理契约**已完成 Gymnasium 外壳适配、服务器级接口验证、分层场景采样、四类非学习 CARLA 对照、Stable-Baselines3 训练工程验证和冻结 27 维风险代理接入**。服务器已安装 Stable-Baselines3 `2.9.0`，PPO 与 SAC 均完成短步数 mock 训练和冻结代理训练、模型保存、加载与预测。现有核心逻辑已经具备动作校验、34 维观测、奖励分解、失败终止、重复/步数截断和场景库轮转采样。
 
 本次训练执行器是确定性 mock 风险函数，不读取 CARLA，也不复用冻结风险代理；输出显式记录 `training_plumbing_only`、`carla_connected=false` 和 `supports_policy_effect_claim=false`。因此当前只证明训练代码链路可运行，不能据此声称 PPO/SAC 已学会提高真实风险。
 
@@ -54,6 +54,10 @@ flowchart LR
 
 适配器已先通过 mock executor 验证 API 状态机，再使用服务器 CARLA 完成单 episode 冒烟。后续仍需单独验证真实 CARLA 的运行失败、超时、路线失败和服务异常是否能稳定落盘。
 
+当前对抗性批次不是只有一个传感器：性能档使用 `RGB + Collision + 逐帧车辆/路线遥测`，其中路线配置将相机设为 `640×360`、`5 Hz`，每个 20 秒场景保存 100 帧 RGB；Depth 和 Semantic 在该档关闭。项目已验证的低频多传感器档会同时启用 RGB、Depth、Semantic 和 Collision，同为 100 帧时传感器目录从约 `21.3 MB` 增加到 `55.5 MB`，约为 `2.6` 倍。当前 `heuristic_v2` 和冻结 27 维代理都不读取图像像素，因此增加 Depth/Semantic 会增强可视证据、深度几何和未来视觉模型输入，但不会自动提高当前风险分的准确性。
+
+完整四策略 CARLA 对照的 60 次运行耗时约 29 分钟，平均约 29 秒/次。当前 PPO/SAC 各 64 步冻结代理冒烟共调用执行器 136 次；若逐次替换为 CARLA，仅这一轮预计约需 66 分钟。若训练 10,000 个动作，按每 8 步重新执行一次基线估算至少需要 11,250 次 CARLA 运行；以当前实测吞吐连续执行约需 91 小时，还不包含失败重试、超参数比较和多随机种子。因此 CARLA 用于训练后独立验收，而不是每个梯度步的在线环境。
+
 ### 依赖边界
 
 服务器项目环境 `/home/zhaozirong/software/envs/Carla666-0916` 已安装 Gymnasium `1.3.0`、Stable-Baselines3 `2.9.0` 和 PyTorch `2.12.1+cu126`。本机开发环境仍不要求安装这些可选训练依赖；`requirements-rl-interface.txt` 保持仅含接口依赖，`requirements-rl-training.txt` 单独锁定训练依赖。服务器短训练生成的模型权重保留在服务器输出目录，不纳入 Git。
@@ -74,7 +78,8 @@ flowchart LR
 6. 增加约束感知重采样并准备共享基线与四策略 CARLA 对照计划（已完成）
 7. 完成 12 个共享基线和 48 个四策略候选的 `60/60` CARLA 严格对照（已完成）
 8. 安装 Stable-Baselines3 `2.9.0`，通过 SB3 `check_env`，完成 PPO/SAC 短训练和模型持久化往返（已完成）
-9. 接入冻结的 27 维风险代理并设计少量 12 分层 CARLA 独立策略评估（下一步）
+9. 接入冻结的 27 维风险代理，校验模型哈希和特征顺序，完成 PPO/SAC 短训练（已完成）
+10. 完成多随机种子代理训练与等预算非学习基线对照，再设计少量 12 分层 CARLA 独立策略评估（下一步）
 
 ## 📌 当前决策
 
@@ -83,7 +88,7 @@ flowchart LR
 | 是否安装 Gymnasium | 已在服务器项目环境安装 `1.3.0` |
 | 是否安装 Stable-Baselines3 | 已在服务器项目环境固定 `2.9.0` |
 | 是否启动训练 | 已完成仅用于工程验证的 PPO/SAC 64 步 mock 短训练；不启动 CARLA 在线训练 |
-| 下一项代码工作 | 冻结 27 维风险代理执行器与少量 CARLA 独立评估计划 |
+| 下一项代码工作 | 多随机种子代理训练、等预算基线对照与少量 CARLA 独立评估计划 |
 | 真实 CARLA 要求 | 服务器优先，仍使用 CARLA 0.9.16 与 `Carla666-0916` |
 
 ## ✅ 已执行验证
@@ -99,6 +104,8 @@ flowchart LR
 同日完成一个 12 分层周期的 CARLA 对照：12 个共享基线加 48 个四策略候选，共 `60/60` 次严格验收通过。rule-guided LHS 在 `10/12` 个 pair 风险升高、`8/12` 次取得四策略最高风险，中位风险增量 `+2.045`；当前仅将其作为主要非学习对照，不声称普遍优势。轻量结果位于 `F:\Carla\project-transfer\server-results\20260821_152924_20260821_155826`。
 
 2026-08-21 服务器任务 `adversarial-sb3-smoke-v1_20260821_165303` 使用 Python `3.12.13`、Gymnasium `1.3.0`、Stable-Baselines3 `2.9.0` 和 PyTorch `2.12.1+cu126` 完成训练工程冒烟。Gymnasium 与 SB3 两套 `check_env` 均通过；PPO 与 SAC 各训练 `64` 步，模型均成功保存、重新加载并产生合法候选预测。结构化摘要回收至 `F:\Carla\project-transfer\server-results\20260821_165304_20260821_165402\training_summary.json`。该任务没有连接 CARLA，PPO/SAC 的单次预测 reward 不用于策略效果比较。
+
+同日服务器任务 `adversarial-sb3-proxy-smoke-v1_20260821_172514` 接入冻结的 V5 物理增强随机森林：模型 SHA-256 `26dd5f56fc3c556cb9691ac2c2922b0ebd44a94f0910452f3bfc92c90153c188`、27 维特征契约和两套 `check_env` 全部通过。PPO/SAC 各训练 `64` 步并完成模型持久化，预测候选代理分分别为 `52.411` 和 `50.940`。代理只预测连续风险分，训练配置将碰撞和事件奖励设为 `0`；摘要位于 `F:\Carla\project-transfer\server-results\20260821_172515_20260821_172622\proxy_training_summary.json`。该结果只支持 `proxy_environment_only` 结论，仍需 CARLA 独立评估。
 
 [^1]: Gymnasium. “Env API.” https://gymnasium.farama.org/api/env/
 [^2]: Stable-Baselines3. “Using Custom Environments.” https://stable-baselines3.readthedocs.io/en/master/guide/custom_env.html
