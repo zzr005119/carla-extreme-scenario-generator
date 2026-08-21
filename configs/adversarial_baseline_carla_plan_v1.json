@@ -1,0 +1,10 @@
+{
+  "format": "adversarial_baseline_carla_plan_v1",
+  "baseline_config_path": "configs/adversarial_baselines_v1.json",
+  "loop_config_path": "configs/adversarial_loop_v1.json",
+  "sample_count": 12,
+  "strategy_order": ["fixed", "random", "lhs", "rule_guided_lhs"],
+  "validate_scene_configs": true,
+  "output_subdirectory": "adversarial_baseline_carla_plan_v1",
+  "runtime_output_subdirectory": "adversarial_baseline_carla_comparison_v1"
+}

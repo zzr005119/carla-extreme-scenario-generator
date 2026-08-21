@@ -9,6 +9,7 @@ from core.adversarial_agent import (
     AdversarialTestAgentV1,
     AgentContractError,
     EpisodeResult,
+    propose_candidate,
 )
 from core.scenario_features import FEATURE_DIM
 from core.scenario_validator import require_valid_scenario
@@ -94,6 +95,59 @@ class RuleGuidedLhsActionStrategy(LatinHypercubeActionStrategy):
             unit = (np.asarray(self.actions[index]) + 1.0) / 2.0
             magnitude = self.minimum_magnitude + unit * (1.0 - self.minimum_magnitude)
             self.actions[index] = (magnitude * self.DIRECTIONS).tolist()
+
+
+def propose_with_retries(
+    record,
+    strategy,
+    observation=None,
+    max_attempts=1,
+    step_index=0,
+    config=None,
+    initial_action=None,
+):
+    """Draw baseline actions until one satisfies the scenario constraints."""
+    if int(max_attempts) <= 0:
+        raise LoopContractError("max_attempts must be greater than 0")
+    if not hasattr(strategy, "select_action"):
+        raise LoopContractError("strategy must provide select_action")
+    observation = observation or {}
+    attempts = []
+    selected = None
+    for attempt_index in range(int(max_attempts)):
+        action = (
+            initial_action
+            if attempt_index == 0 and initial_action is not None
+            else strategy.select_action(step_index, observation)
+        )
+        proposal = propose_candidate(
+            record,
+            action,
+            step_index=step_index,
+            config=config,
+        )
+        attempts.append(
+            {
+                "attempt_index": attempt_index,
+                "action": proposal.get("action"),
+                "valid": bool(proposal["valid"]),
+                "clipped": bool(proposal.get("clipped", False)),
+                "fingerprint": proposal.get("fingerprint"),
+                "error": proposal.get("error"),
+            }
+        )
+        if proposal["valid"]:
+            selected = proposal
+            break
+    return {
+        "valid": selected is not None,
+        "proposal": selected,
+        "attempts": attempts,
+        "attempt_count": len(attempts),
+        "invalid_attempt_count": sum(not item["valid"] for item in attempts),
+        "first_attempt_valid": bool(attempts and attempts[0]["valid"]),
+        "retry_exhausted": selected is None,
+    }
 
 
 @dataclass

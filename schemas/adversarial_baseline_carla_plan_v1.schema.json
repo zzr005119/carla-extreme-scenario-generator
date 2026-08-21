@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "adversarial_baseline_carla_plan_v1.schema.json",
+  "title": "Adversarial Baseline CARLA Plan V1 Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "format",
+    "baseline_config_path",
+    "loop_config_path",
+    "sample_count",
+    "strategy_order",
+    "validate_scene_configs",
+    "output_subdirectory",
+    "runtime_output_subdirectory"
+  ],
+  "properties": {
+    "format": {"const": "adversarial_baseline_carla_plan_v1"},
+    "baseline_config_path": {"type": "string", "minLength": 1},
+    "loop_config_path": {"type": "string", "minLength": 1},
+    "sample_count": {"const": 12},
+    "strategy_order": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": {
+        "enum": ["fixed", "random", "lhs", "rule_guided_lhs"]
+      }
+    },
+    "validate_scene_configs": {"type": "boolean"},
+    "output_subdirectory": {"type": "string", "minLength": 1},
+    "runtime_output_subdirectory": {"type": "string", "minLength": 1}
+  }
+}

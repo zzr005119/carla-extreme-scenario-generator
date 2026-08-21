@@ -5,6 +5,7 @@
   "agent_config_path": "configs/adversarial_agent_v1.json",
   "sample_count": 24,
   "random_seed": 20260821,
+  "retry_seed_offset": 1000003,
   "fixed_action": [
     0.0,
     0.0,
@@ -24,6 +25,12 @@
   ],
   "lhs_batch_size": 24,
   "rule_lhs_minimum_magnitude": 0.25,
+  "max_candidate_attempts": {
+    "fixed": 1,
+    "random": 8,
+    "lhs": 8,
+    "rule_guided_lhs": 8
+  },
   "filters": {
     "generators": ["lhs", "gmm", "cvae"],
     "target_risk_levels": ["low", "medium", "high", "critical"],

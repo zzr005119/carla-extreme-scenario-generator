@@ -11,9 +11,11 @@
     "agent_config_path",
     "sample_count",
     "random_seed",
+    "retry_seed_offset",
     "fixed_action",
     "lhs_batch_size",
     "rule_lhs_minimum_magnitude",
+    "max_candidate_attempts",
     "filters",
     "output_subdirectory"
   ],
@@ -24,6 +26,7 @@
     "agent_config_path": {"type": "string", "minLength": 1},
     "sample_count": {"type": "integer", "minimum": 12},
     "random_seed": {"type": "integer", "minimum": 0},
+    "retry_seed_offset": {"type": "integer", "minimum": 1},
     "fixed_action": {
       "type": "array",
       "minItems": 15,
@@ -35,6 +38,17 @@
       "type": "number",
       "minimum": 0.0,
       "maximum": 1.0
+    },
+    "max_candidate_attempts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fixed", "random", "lhs", "rule_guided_lhs"],
+      "properties": {
+        "fixed": {"type": "integer", "minimum": 1, "maximum": 1},
+        "random": {"type": "integer", "minimum": 1, "maximum": 32},
+        "lhs": {"type": "integer", "minimum": 1, "maximum": 32},
+        "rule_guided_lhs": {"type": "integer", "minimum": 1, "maximum": 32}
+      }
     },
     "filters": {
       "type": "object",

@@ -13,12 +13,14 @@ from core.adversarial_loop import (  # noqa: E402
     LatinHypercubeActionStrategy,
     RandomActionStrategy,
     RuleGuidedLhsActionStrategy,
+    propose_with_retries,
 )
 from core.adversarial_sampling import (  # noqa: E402
     ScenarioLibrarySampler,
     ScenarioSamplingError,
 )
-from core.scenario_validator import require_valid_scenario  # noqa: E402
+from core.adversarial_agent import load_agent_config  # noqa: E402
+from core.scenario_validator import load_json, require_valid_scenario  # noqa: E402
 
 
 LIBRARY_PATH = os.path.join(
@@ -114,6 +116,19 @@ class ScenarioLibrarySamplerTests(unittest.TestCase):
 
 
 class BaselineStrategyTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.record = load_json(
+            os.path.join(
+                PROJECT_ROOT,
+                "data",
+                "scenarios",
+                "seed_v1",
+                "example_record.json",
+            )
+        )
+        cls.agent_config = load_agent_config()
+
     def test_random_actions_are_reproducible_and_bounded(self):
         first = RandomActionStrategy(seed=7)
         second = RandomActionStrategy(seed=7)
@@ -148,6 +163,46 @@ class BaselineStrategyTests(unittest.TestCase):
         self.assertTrue((np.sign(actions) == expected_signs).all())
         self.assertTrue((np.abs(actions) >= 0.25).all())
         self.assertTrue((np.abs(actions) <= 1.0).all())
+
+    def test_constraint_retry_preserves_failed_attempt_before_recovery(self):
+        class SequenceStrategy:
+            def __init__(self):
+                self.actions = [[0.0] * 14, [0.0] * 15]
+
+            def select_action(self, step_index, observation):
+                del step_index, observation
+                return self.actions.pop(0)
+
+        result = propose_with_retries(
+            self.record,
+            SequenceStrategy(),
+            max_attempts=2,
+            config=self.agent_config,
+        )
+        self.assertTrue(result["valid"])
+        self.assertFalse(result["first_attempt_valid"])
+        self.assertEqual(result["attempt_count"], 2)
+        self.assertEqual(result["invalid_attempt_count"], 1)
+        self.assertFalse(result["attempts"][0]["valid"])
+        self.assertTrue(result["attempts"][1]["valid"])
+
+    def test_constraint_retry_reports_exhausted_budget(self):
+        class InvalidStrategy:
+            def select_action(self, step_index, observation):
+                del step_index, observation
+                return [0.0] * 14
+
+        result = propose_with_retries(
+            self.record,
+            InvalidStrategy(),
+            max_attempts=3,
+            config=self.agent_config,
+        )
+        self.assertFalse(result["valid"])
+        self.assertTrue(result["retry_exhausted"])
+        self.assertEqual(result["attempt_count"], 3)
+        self.assertEqual(result["invalid_attempt_count"], 3)
+        self.assertIsNone(result["proposal"])
 
 
 if __name__ == "__main__":
