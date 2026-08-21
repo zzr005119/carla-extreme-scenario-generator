@@ -1,4 +1,4 @@
-"""Analyze paired CARLA results for the four non-learning baselines."""
+"""Analyze paired CARLA results for ordered adversarial strategies."""
 
 import argparse
 import csv
@@ -165,7 +165,7 @@ def analyze_results(rows, expected_strategies=None):
 
 def write_report(path, summary, strategies):
     lines = [
-        "# 对抗性非学习基线 CARLA 成对分析 V1",
+        "# 对抗性策略 CARLA 成对分析 V1",
         "",
         f"- 实机运行：`{summary['total_run_count']}`",
         f"- 严格验收：`{summary['strictly_accepted_run_count']}/{summary['total_run_count']}`",
@@ -188,7 +188,7 @@ def write_report(path, summary, strategies):
         [
             "",
             "均值会受到少数大幅变化的 pair 影响，必须同时查看中位数、风险升高次数和碰撞状态变化。",
-            "每个生成器与目标风险分层当前只有一个 pair，本报告不能证明任一策略具有普遍优势，也不能替代后续 RL 训练对照。",
+            "每个生成器与目标风险分层当前只有一个 pair，本报告不能证明任一策略具有普遍优势。",
             "",
         ]
     )
@@ -198,7 +198,7 @@ def write_report(path, summary, strategies):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Analyze paired adversarial baseline CARLA results"
+        description="Analyze paired adversarial CARLA strategy results"
     )
     parser.add_argument("--results", required=True)
     parser.add_argument("--output-dir", required=True)
