@@ -30,7 +30,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 1. ✅/▶ **基础调研与环境搭建**：CARLA、Python、Git/GitHub 和仿真底座已完成；生成式 AI 文献第一轮收集和模型选型已完成，公开数据集收集与预处理仍需补齐。
 2. ✅ **生成式 AI 模型与物理约束**：场景 Schema、独立校验器、种子数据集、LHS/GMM/CVAE、确定性控制器、严格验收、风险反馈 V1—V5、物理增强代理与配对实机验证均已形成可复现工程基线；潜空间条件 Flow 延后评估，不作为阶段二完成条件。
 3. ✅ **极端场景库与质量评估**：统一条目、来源追踪、哈希去重、真实性/多样性/危险性/可执行性指标、结构化检索索引、质量分析基线、接口回归门槛、软著模块映射、接口规格和 Dashboard 页面级回归均已完成；软著演示截图后置到正式申请准备阶段。
-4. ▶ **仿真平台与对抗性测试代理**：当前阶段。OpenSCENARIO/CARLA 最小适配、对抗性测试代理 V1 契约、单步/多步闭环、异常路径编排测试、Gymnasium 外壳、环境级 CARLA 冒烟、场景库分层采样、四类非学习基线、reward V2、60 次 CARLA 严格对照、Stable-Baselines3 训练工程链路、冻结 27 维风险代理执行器以及多随机种子代理基准均已完成；下一步冻结 SAC 与 rule-guided LHS 的少量 CARLA 独立评估计划，不启动 CARLA 在线训练。
+4. ▶ **仿真平台与对抗性测试代理**：当前阶段。OpenSCENARIO/CARLA 最小适配、对抗性测试代理 V1 契约、单步/多步闭环、异常路径编排测试、Gymnasium 外壳、环境级 CARLA 冒烟、场景库分层采样、四类非学习基线、reward V2、60 次 CARLA 严格对照、Stable-Baselines3 训练工程链路、冻结 27 维风险代理执行器、多随机种子代理基准以及 SAC/rule-guided LHS 的 12 分层 CARLA 独立评估均已完成；当前进入独立集合扩展与重复种子统计，不启动 CARLA 在线训练。
 5. ⏳ **系统集成与成果产出**：整合“生成—管理—测试—评估”平台，完成对比实验、论文/软著和结题材料。
 
 ## 当前 Demo 子阶段
@@ -71,6 +71,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - Stable-Baselines3 低成本训练工程链路已完成：服务器任务 `adversarial-sb3-smoke-v1_20260821_165303` 基于提交 `352e86f` 运行，PPO 与 SAC 各训练 `64` 步，模型文件均成功保存并重新加载，确定性预测均生成合法 15 维候选；两套 `check_env` 均通过。摘要回收至 `F:\Carla\project-transfer\server-results\20260821_165304_20260821_165402\training_summary.json`。执行器为 `deterministic_mock_v1`，`carla_connected=false`、`supports_policy_effect_claim=false`；该证据只证明训练工程链路，不用于比较策略危险性。
 - 冻结 27 维风险代理训练执行器已完成：`core/adversarial_proxy_executor.py` 在反序列化前校验模型 SHA-256，并固定 15 个原始参数 + 12 个 `physical_interaction_v1` 派生特征的顺序。服务器任务 `adversarial-sb3-proxy-smoke-v1_20260821_172514` 基于提交 `069a676` 使用 V5 随机森林模型完成 Gymnasium/SB3 两套 `check_env` 和 PPO/SAC 各 64 步训练；两个模型均保存、加载并生成合法候选，单次代理预测分为 `52.411` 和 `50.940`。代理只提供连续风险通道，专用训练配置将碰撞与事件奖励固定为 `0`；摘要回收至 `F:\Carla\project-transfer\server-results\20260821_172515_20260821_172622\proxy_training_summary.json`。该证据属于 `proxy_environment_only`，不构成 CARLA 策略效果结论。服务器全量 `63/63` 测试通过，另有 1 项缺失 Gymnasium 反向测试按预期跳过。
 - 多随机种子冻结代理基准已完成：服务器任务 `adversarial-sb3-proxy-benchmark-v1_20260821_175339` 基于提交 `a62b48a` 训练 PPO/SAC 各 3 个种子、每模型 `4096` 步，并在同一组 24 个分层场景上与四类非学习策略进行等推理候选预算比较。SAC 的平均风险增量为 `+0.808`、中位增量 `+0.990`、正增量率 `77.8%`，`72/72` 候选有效；rule-guided LHS 对应为 `+0.910`、`+1.972`、`83.3%`。SAC 相对 rule-guided LHS 为 `19` 胜 `53` 负，当前只能作为 CARLA 独立验收的学习候选，不能替代规则基线。PPO 平均增量 `-1.390` 且有 1 个无效候选，不进入首轮实机验收。执行器将随机森林单样本推理线程固定为 `1` 后，完整任务耗时 `12` 分 `13` 秒；结果回收到 `F:\Carla\project-transfer\server-results\20260821_175341_proxy_benchmark_full`，详见 `docs/adversarial_proxy_benchmark_v1.md`。
+- SAC/rule-guided LHS CARLA 独立评估 V1 已完成：服务器任务 `adversarial-policy-carla-full-v1_20260821_203104` 基于计划提交 `776c1e3` 和执行提交 `11f43de`，使用与上一轮代理起始集合不重叠的 12 个分层 pair，共 `36/36` 条严格验收通过；33 次为本任务实际执行、3 次复用已验收运行。SAC 平均风险增量 `-2.017`、中位 `+0.786`、风险升高 `8/12`；rule-guided LHS 平均 `-4.359`、中位 `+0.241`、风险升高 `6/12`。基线碰撞 `3/12`；SAC 候选碰撞 `2/12`（新增 0、消除 1），rule-guided LHS 候选碰撞 `2/12`（新增 1、消除 2）。36 条运行的版本、RGB 100 帧、路线、服务健康和 `heuristic_v2` 门均通过。目标档不匹配为候选描述性结果，不是运行失败；本轮不支持普遍策略优势。完整报告见 `docs/adversarial_policy_carla_evaluation_v1.md`，证据目录为 `F:\Carla\project-transfer\server-results\adversarial_policy_carla_full_v1_20260821_202710`。
 - 2026-08-18 已完成适配器生成 CARLA JSON 的单场景实机冒烟：CARLA 客户端/服务端均为 `0.9.16`，20 秒同步仿真完成，RGB/Depth/Semantic 各保存 `200` 帧，服务健康，事件和 `heuristic_v2` 风险结果均写入 `metadata.json`，无碰撞。该配置未启用路线锁定，因此只计为运行时冒烟，不计为路线严格验收；证据目录为 `F:\Carla\output-0.9.16\adapter_smoke\seed_v1_high_0165\20260818_222032`。
 - 适配器冒烟期间曾发现本机默认 `python` 加载 CARLA `0.9.15`；该残留包已卸除，后续本机连接 CARLA 0.9.16 必须显式使用 `Carla666-0916` 环境。
 - 运行环境规则已收口：服务器优先，SSH/RPC/健康检查失败才回退本机；本机固定使用 `D:\ANACONDA\envs\Carla666-0916`，运行前检查客户端/服务端均为 `0.9.16`。本机 Python 0.9.15 残留包已卸除。
@@ -280,7 +281,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 6. **版本与数据边界**：服务器运行结果必须能够追溯到 Git 提交、配置、随机种子和输出目录。服务器工作区不直接编辑；发现问题后回笔记本修改、提交并重新同步。GitHub `origin` 用于阶段备份和对外同步，内网 `lab` 用于高频开发部署；两者均只接收已验证且不含大文件或敏感信息的提交。
 
 ## 下一步
-1. 准备新的 12 分层 CARLA 独立集合，不复用本轮 24 个代理评估起始场景；冻结 SAC 种子 `20260822` 和 rule-guided LHS 候选，每个分层使用共享基线，共计划 `36` 次运行。
-2. 先完成 36 次计划的 Schema、Scene 04 `--validate-only` 和重复检查，再在服务器执行一个“共享基线 + SAC + rule-guided LHS”三运行 pair 冒烟；通过后才运行完整计划。
-3. CARLA 独立评估恢复风险、碰撞和安全事件三个 reward V2 通道；策略推理后不在线更新，继续执行传感器、路线、版本和服务健康严格验收。
-4. 只有独立评估证明 SAC 候选可执行且具有实测增益后，才讨论扩大 CARLA 预算；继续维护场景库质量门和 Dashboard 回归，软著演示截图后置到正式申请准备阶段。
+1. 将本轮 12 个独立 pair 保留为阶段四第一版 CARLA 验收基线，按独立场景而不是 36 次运行计算后续统计。
+2. 扩展独立集合并增加重复 Traffic Manager 种子，优先复验 `apcv1_pair_02/07/08` 等碰撞状态变化和目标档不匹配样本。
+3. 维持服务器优先、CARLA `0.9.16`、`Carla666-0916`、版本/传感器/路线/服务严格验收门；不启动 CARLA 在线训练。
+4. 只有更大独立集合持续出现实测风险增益且碰撞和路线质量门不恶化时，才讨论增加 SAC 训练预算或进入更高成本的 CARLA 训练研究。

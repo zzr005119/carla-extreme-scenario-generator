@@ -27,4 +27,4 @@
 
 ## 当前边界
 
-本版本已使用 Stable-Baselines3 `2.9.0` 完成训练工程冒烟，以及 SAC/PPO 各 3 个种子、每模型 `4096` 步的冻结 27 维风险代理训练与等预算基准。SAC 在代理环境优于 fixed、random 和 LHS，但尚未超过 rule-guided LHS；PPO 暂不进入首轮 CARLA 验收。服务器项目环境同时固定 Gymnasium `1.3.0`；可选环境外壳、两套 `check_env`、真实 CARLA 环境冒烟、场景库分层采样、有限约束重试和 60 次 CARLA 非学习策略对照均已完成。代理训练只启用连续风险通道，碰撞和事件奖励为 `0`，证据明确标记为 `proxy_environment_only`。边界和证据见 `docs/adversarial_gymnasium_evaluation_v1.md` 与 `docs/adversarial_proxy_benchmark_v1.md`；下一步冻结 SAC 与 rule-guided LHS 的少量 CARLA 独立评估，不启动高成本 CARLA 在线训练。
+本版本已使用 Stable-Baselines3 `2.9.0` 完成训练工程冒烟，以及 SAC/PPO 各 3 个种子、每模型 `4096` 步的冻结 27 维风险代理训练与等预算基准。SAC 在代理环境优于 fixed、random 和 LHS，但尚未超过 rule-guided LHS；PPO 暂不进入首轮 CARLA 验收。服务器项目环境同时固定 Gymnasium `1.3.0`；可选环境外壳、两套 `check_env`、真实 CARLA 环境冒烟、场景库分层采样、有限约束重试和 60 次 CARLA 非学习策略对照均已完成。代理训练只启用连续风险通道，碰撞和事件奖励为 `0`，证据明确标记为 `proxy_environment_only`。随后已完成冻结 SAC 与 rule-guided LHS 的 12 分层 CARLA 独立评估，`36/36` 条运行严格验收通过；该轮只支持有限成对描述，不支持普遍策略优势。边界和证据见 `docs/adversarial_gymnasium_evaluation_v1.md`、`docs/adversarial_proxy_benchmark_v1.md` 与 `docs/adversarial_policy_carla_evaluation_v1.md`；不启动高成本 CARLA 在线训练。

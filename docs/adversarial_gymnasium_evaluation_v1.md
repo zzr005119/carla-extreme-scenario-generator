@@ -80,7 +80,7 @@ flowchart LR
 8. 安装 Stable-Baselines3 `2.9.0`，通过 SB3 `check_env`，完成 PPO/SAC 短训练和模型持久化往返（已完成）
 9. 接入冻结的 27 维风险代理，校验模型哈希和特征顺序，完成 PPO/SAC 短训练（已完成）
 10. 完成多随机种子代理训练与等预算非学习基线对照（已完成）
-11. 冻结 SAC 与 rule-guided LHS 的少量 12 分层 CARLA 独立策略评估（下一步）
+11. 冻结 SAC 与 rule-guided LHS 的少量 12 分层 CARLA 独立策略评估（已完成，见 `docs/adversarial_policy_carla_evaluation_v1.md`）
 
 ## 📌 当前决策
 
@@ -89,7 +89,8 @@ flowchart LR
 | 是否安装 Gymnasium | 已在服务器项目环境安装 `1.3.0` |
 | 是否安装 Stable-Baselines3 | 已在服务器项目环境固定 `2.9.0` |
 | 是否启动训练 | 已完成 PPO/SAC 各 3 个种子、每模型 4096 步冻结代理训练；不启动 CARLA 在线训练 |
-| 下一项代码工作 | SAC 与 rule-guided LHS 的 12 分层 CARLA 独立评估计划 |
+| 当前阶段结果 | 12 分层、36 次 CARLA 独立评估 `36/36` 严格通过；仅支持本轮成对描述，不支持普遍策略优势 |
+| 下一项代码工作 | 扩展独立场景与重复种子统计口径，不启动 CARLA 在线训练 |
 | 真实 CARLA 要求 | 服务器优先，仍使用 CARLA 0.9.16 与 `Carla666-0916` |
 
 ## ✅ 已执行验证
@@ -109,6 +110,8 @@ flowchart LR
 同日服务器任务 `adversarial-sb3-proxy-smoke-v1_20260821_172514` 接入冻结的 V5 物理增强随机森林：模型 SHA-256 `26dd5f56fc3c556cb9691ac2c2922b0ebd44a94f0910452f3bfc92c90153c188`、27 维特征契约和两套 `check_env` 全部通过。PPO/SAC 各训练 `64` 步并完成模型持久化，预测候选代理分分别为 `52.411` 和 `50.940`。代理只预测连续风险分，训练配置将碰撞和事件奖励设为 `0`；摘要位于 `F:\Carla\project-transfer\server-results\20260821_172515_20260821_172622\proxy_training_summary.json`。该结果只支持 `proxy_environment_only` 结论，仍需 CARLA 独立评估。
 
 服务器任务 `adversarial-sb3-proxy-benchmark-v1_20260821_175339` 随后完成 PPO/SAC 各 3 个种子、每模型 `4096` 步的正式代理基准。SAC 的跨种子平均风险增量为 `+0.808`，rule-guided LHS 为 `+0.910`；SAC 相对 rule-guided LHS 为 `19` 胜 `53` 负，但相对 fixed、random 和 LHS 分别为 `45/27`、`55/17` 和 `47/25`。因此 SAC 进入 CARLA 独立验收，rule-guided LHS 保持主要非学习对照，PPO 暂不进入。详细设计、边界和结果见 `docs/adversarial_proxy_benchmark_v1.md`。
+
+2026-08-21 完成冻结 SAC 与 rule-guided LHS 的 CARLA 独立评估：使用新的 12 分层集合、12 个共享基线和 24 个候选，共 `36/36` 条运行严格验收通过。SAC 平均风险增量 `-2.017`、中位数 `+0.786`、风险升高 `8/12`；rule-guided LHS 平均风险增量 `-4.359`、中位数 `+0.241`、风险升高 `6/12`。共享基线碰撞 `3/12`，SAC 候选碰撞 `2/12`（新增 `0`、消除 `1`），rule-guided LHS 候选碰撞 `2/12`（新增 `1`、消除 `2`）。所有运行均满足 CARLA `0.9.16` 版本匹配、RGB 100 帧、路线、服务健康和 `heuristic_v2` 风险方法门；结果只支持本轮 12 个独立 pair 的描述性结论。完整报告见 `docs/adversarial_policy_carla_evaluation_v1.md`，轻量证据目录为 `F:\Carla\project-transfer\server-results\adversarial_policy_carla_full_v1_20260821_202710`。
 
 [^1]: Gymnasium. “Env API.” https://gymnasium.farama.org/api/env/
 [^2]: Stable-Baselines3. “Using Custom Environments.” https://stable-baselines3.readthedocs.io/en/master/guide/custom_env.html
