@@ -79,7 +79,8 @@ flowchart LR
 7. 完成 12 个共享基线和 48 个四策略候选的 `60/60` CARLA 严格对照（已完成）
 8. 安装 Stable-Baselines3 `2.9.0`，通过 SB3 `check_env`，完成 PPO/SAC 短训练和模型持久化往返（已完成）
 9. 接入冻结的 27 维风险代理，校验模型哈希和特征顺序，完成 PPO/SAC 短训练（已完成）
-10. 完成多随机种子代理训练与等预算非学习基线对照，再设计少量 12 分层 CARLA 独立策略评估（下一步）
+10. 完成多随机种子代理训练与等预算非学习基线对照（已完成）
+11. 冻结 SAC 与 rule-guided LHS 的少量 12 分层 CARLA 独立策略评估（下一步）
 
 ## 📌 当前决策
 
@@ -87,8 +88,8 @@ flowchart LR
 |---|---|
 | 是否安装 Gymnasium | 已在服务器项目环境安装 `1.3.0` |
 | 是否安装 Stable-Baselines3 | 已在服务器项目环境固定 `2.9.0` |
-| 是否启动训练 | 已完成仅用于工程验证的 PPO/SAC 64 步 mock 短训练；不启动 CARLA 在线训练 |
-| 下一项代码工作 | 多随机种子代理训练、等预算基线对照与少量 CARLA 独立评估计划 |
+| 是否启动训练 | 已完成 PPO/SAC 各 3 个种子、每模型 4096 步冻结代理训练；不启动 CARLA 在线训练 |
+| 下一项代码工作 | SAC 与 rule-guided LHS 的 12 分层 CARLA 独立评估计划 |
 | 真实 CARLA 要求 | 服务器优先，仍使用 CARLA 0.9.16 与 `Carla666-0916` |
 
 ## ✅ 已执行验证
@@ -106,6 +107,8 @@ flowchart LR
 2026-08-21 服务器任务 `adversarial-sb3-smoke-v1_20260821_165303` 使用 Python `3.12.13`、Gymnasium `1.3.0`、Stable-Baselines3 `2.9.0` 和 PyTorch `2.12.1+cu126` 完成训练工程冒烟。Gymnasium 与 SB3 两套 `check_env` 均通过；PPO 与 SAC 各训练 `64` 步，模型均成功保存、重新加载并产生合法候选预测。结构化摘要回收至 `F:\Carla\project-transfer\server-results\20260821_165304_20260821_165402\training_summary.json`。该任务没有连接 CARLA，PPO/SAC 的单次预测 reward 不用于策略效果比较。
 
 同日服务器任务 `adversarial-sb3-proxy-smoke-v1_20260821_172514` 接入冻结的 V5 物理增强随机森林：模型 SHA-256 `26dd5f56fc3c556cb9691ac2c2922b0ebd44a94f0910452f3bfc92c90153c188`、27 维特征契约和两套 `check_env` 全部通过。PPO/SAC 各训练 `64` 步并完成模型持久化，预测候选代理分分别为 `52.411` 和 `50.940`。代理只预测连续风险分，训练配置将碰撞和事件奖励设为 `0`；摘要位于 `F:\Carla\project-transfer\server-results\20260821_172515_20260821_172622\proxy_training_summary.json`。该结果只支持 `proxy_environment_only` 结论，仍需 CARLA 独立评估。
+
+服务器任务 `adversarial-sb3-proxy-benchmark-v1_20260821_175339` 随后完成 PPO/SAC 各 3 个种子、每模型 `4096` 步的正式代理基准。SAC 的跨种子平均风险增量为 `+0.808`，rule-guided LHS 为 `+0.910`；SAC 相对 rule-guided LHS 为 `19` 胜 `53` 负，但相对 fixed、random 和 LHS 分别为 `45/27`、`55/17` 和 `47/25`。因此 SAC 进入 CARLA 独立验收，rule-guided LHS 保持主要非学习对照，PPO 暂不进入。详细设计、边界和结果见 `docs/adversarial_proxy_benchmark_v1.md`。
 
 [^1]: Gymnasium. “Env API.” https://gymnasium.farama.org/api/env/
 [^2]: Stable-Baselines3. “Using Custom Environments.” https://stable-baselines3.readthedocs.io/en/master/guide/custom_env.html

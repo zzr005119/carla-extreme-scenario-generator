@@ -56,10 +56,10 @@ test -d "`$source_directory"
 mkdir -p "`$(dirname "`$archive_path")"
 cd "`$source_directory"
 if [ "`$include_images" = '1' ]; then
-    find . -type f -size -"`$max_size_mb"M \( -name '*.csv' -o -name '*.json' -o -name '*.md' -o -name '*.txt' -o -name '*.log' -o -name '*.yaml' -o -name '*.yml' -o -name '*.png' -o -name '*.jpg' -o -name '*.jpeg' \) -print0 |
+    find . -type f -size -"`$max_size_mb"M \( -name '*.csv' -o -name '*.json' -o -name '*.jsonl' -o -name '*.md' -o -name '*.txt' -o -name '*.log' -o -name '*.yaml' -o -name '*.yml' -o -name '*.png' -o -name '*.jpg' -o -name '*.jpeg' \) -print0 |
         sort -z | tar --null -T - -czf "`$archive_path"
 else
-    find . -type f -size -"`$max_size_mb"M \( -name '*.csv' -o -name '*.json' -o -name '*.md' -o -name '*.txt' -o -name '*.log' -o -name '*.yaml' -o -name '*.yml' \) -print0 |
+    find . -type f -size -"`$max_size_mb"M \( -name '*.csv' -o -name '*.json' -o -name '*.jsonl' -o -name '*.md' -o -name '*.txt' -o -name '*.log' -o -name '*.yaml' -o -name '*.yml' \) -print0 |
         sort -z | tar --null -T - -czf "`$archive_path"
 fi
 echo "[FETCH] archive=`$archive_path"
