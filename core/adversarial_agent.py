@@ -110,17 +110,37 @@ def load_agent_config(
             "termination.max_consecutive_duplicates 必须大于 0"
         )
     required_rewards = (
+        "comparison_mode",
         "risk_delta_weight",
         "collision_event_reward",
         "event_reward",
         "invalid_candidate_penalty",
         "duplicate_penalty",
         "run_failure_penalty",
+        "event_types",
     )
     missing = [name for name in required_rewards if name not in reward]
     if missing:
         raise AgentContractError(f"缺少奖励配置: {missing}")
+    if reward["comparison_mode"] != "relative_capped_delta":
+        raise AgentContractError("reward.comparison_mode 必须为 relative_capped_delta")
     return config
+
+
+def count_reward_events(events, config=None):
+    """Count distinct configured safety-event signatures for reward input."""
+    config = config or load_agent_config()
+    allowed_types = set(config["reward"]["event_types"])
+    signatures = set()
+    for event in events or []:
+        if not isinstance(event, dict):
+            continue
+        event_type = str(event.get("type") or "").strip()
+        if event_type not in allowed_types:
+            continue
+        reason = str(event.get("reason") or "").strip()
+        signatures.add((event_type, reason))
+    return len(signatures)
 
 
 def action_space_spec(config=None):
@@ -513,12 +533,24 @@ class AdversarialTestAgentV1:
                 )
         collision_cap = max(1, int(reward_config.get("collision_event_cap", 1)))
         event_cap = max(1, int(reward_config.get("event_cap", 4)))
-        breakdown["collision_event"] = min(result.collision_count, collision_cap) * float(
+        previous_collision_count = (
+            self.last_result.collision_count if self.last_result is not None else 0
+        )
+        previous_event_count = (
+            self.last_result.event_count if self.last_result is not None else 0
+        )
+        collision_delta = (
+            min(result.collision_count, collision_cap)
+            - min(previous_collision_count, collision_cap)
+        )
+        event_delta = (
+            min(result.event_count, event_cap)
+            - min(previous_event_count, event_cap)
+        )
+        breakdown["collision_event"] = collision_delta * float(
             reward_config["collision_event_reward"]
         )
-        breakdown["event"] = min(result.event_count, event_cap) * float(
-            reward_config["event_reward"]
-        )
+        breakdown["event"] = event_delta * float(reward_config["event_reward"])
         return breakdown
 
     def record_result(self, episode_result):

@@ -66,7 +66,7 @@ class AdversarialBaselineCarlaPlanTests(unittest.TestCase):
         }
         metadata = {
             "result": {"risk_evaluation": {"method": "heuristic_v2"}},
-            "events": [{"type": "lead_brake"}],
+            "events": [{"type": "ego_safety_brake", "reason": "ttc"}],
         }
         result = _result_payload(row, metadata, process_returncode=2)
         self.assertEqual(result["status"], "failed")
@@ -89,15 +89,17 @@ class AdversarialBaselineCarlaPlanTests(unittest.TestCase):
             "candidate_fingerprint": canonical_parameter_fingerprint(candidate_record),
         }
         baseline = EpisodeResult(
-            observed_risk_score=30.0,
-            observed_risk_level="medium",
+            observed_risk_score=94.0,
+            observed_risk_level="critical",
+            collision_count=42,
+            event_count=4,
             run_dir="/tmp/baseline",
         )
         candidate = EpisodeResult(
-            observed_risk_score=55.0,
-            observed_risk_level="high",
-            collision_count=1,
-            event_count=2,
+            observed_risk_score=87.0,
+            observed_risk_level="critical",
+            collision_count=309,
+            event_count=4,
             run_dir="/tmp/candidate",
         )
         comparison = build_candidate_comparison(
@@ -108,14 +110,11 @@ class AdversarialBaselineCarlaPlanTests(unittest.TestCase):
             candidate,
             self.agent_config,
         )
-        self.assertEqual(comparison["risk_delta"], 25.0)
-        self.assertAlmostEqual(comparison["reward_breakdown"]["risk_delta"], 0.25)
-        self.assertAlmostEqual(
-            comparison["reward_breakdown"]["collision_event"],
-            0.5,
-        )
-        self.assertAlmostEqual(comparison["reward_breakdown"]["event"], 0.1)
-        self.assertAlmostEqual(comparison["reward"], 0.85)
+        self.assertEqual(comparison["risk_delta"], -7.0)
+        self.assertAlmostEqual(comparison["reward_breakdown"]["risk_delta"], -0.07)
+        self.assertEqual(comparison["reward_breakdown"]["collision_event"], 0.0)
+        self.assertEqual(comparison["reward_breakdown"]["event"], 0.0)
+        self.assertAlmostEqual(comparison["reward"], -0.07)
 
 
 if __name__ == "__main__":

@@ -15,6 +15,7 @@ from core.adversarial_agent import (  # noqa: E402
     action_space_spec,
     build_observation,
     canonical_parameter_fingerprint,
+    count_reward_events,
     load_agent_config,
     observation_space_spec,
     propose_candidate,
@@ -109,8 +110,77 @@ class AdversarialAgentTests(unittest.TestCase):
         )
         self.assertAlmostEqual(second.reward_breakdown["risk_delta"], 0.3)
         self.assertAlmostEqual(second.reward_breakdown["collision_event"], 0.5)
-        self.assertAlmostEqual(second.reward_breakdown["event"], 0.1)
+        self.assertAlmostEqual(second.reward_breakdown["event"], 0.05)
         self.assertGreater(second.reward, 0.0)
+
+    def test_existing_collision_and_events_are_not_rewarded_again(self):
+        agent = AdversarialTestAgentV1(self.config)
+        agent.reset(
+            self.record,
+            {
+                "status": "completed",
+                "observed_risk_score": 94.0,
+                "observed_risk_level": "critical",
+                "collision_count": 42,
+                "event_count": 4,
+                "strict_acceptance_passed": True,
+                "run_dir": "F:\\Carla\\baseline",
+            },
+        )
+        transition = agent.step(
+            [0.01] * 15,
+            {
+                "status": "completed",
+                "observed_risk_score": 87.0,
+                "observed_risk_level": "critical",
+                "collision_count": 309,
+                "event_count": 4,
+                "strict_acceptance_passed": True,
+                "run_dir": "F:\\Carla\\candidate",
+            },
+        )
+        self.assertAlmostEqual(transition.reward_breakdown["risk_delta"], -0.07)
+        self.assertEqual(transition.reward_breakdown["collision_event"], 0.0)
+        self.assertEqual(transition.reward_breakdown["event"], 0.0)
+        self.assertAlmostEqual(transition.reward, -0.07)
+
+    def test_removing_baseline_collision_is_penalized_symmetrically(self):
+        agent = AdversarialTestAgentV1(self.config)
+        agent.reset(
+            self.record,
+            {
+                "status": "completed",
+                "observed_risk_score": 50.0,
+                "observed_risk_level": "high",
+                "collision_count": 1,
+                "strict_acceptance_passed": True,
+                "run_dir": "F:\\Carla\\baseline",
+            },
+        )
+        transition = agent.step(
+            [0.01] * 15,
+            {
+                "status": "completed",
+                "observed_risk_score": 50.0,
+                "observed_risk_level": "high",
+                "collision_count": 0,
+                "strict_acceptance_passed": True,
+                "run_dir": "F:\\Carla\\candidate",
+            },
+        )
+        self.assertEqual(transition.reward_breakdown["collision_event"], -0.5)
+        self.assertEqual(transition.reward, -0.5)
+
+    def test_reward_event_count_filters_planned_events_and_deduplicates_reason(self):
+        events = [
+            {"type": "pedestrian_started"},
+            {"type": "lead_vehicle_brake"},
+            {"type": "collision", "frame": 1},
+            {"type": "ego_safety_brake", "reason": "ttc"},
+            {"type": "ego_safety_brake", "reason": "ttc"},
+            {"type": "ego_safety_brake", "reason": "pedestrian"},
+        ]
+        self.assertEqual(count_reward_events(events, self.config), 2)
 
     def test_failed_run_terminates(self):
         agent = AdversarialTestAgentV1(self.config)

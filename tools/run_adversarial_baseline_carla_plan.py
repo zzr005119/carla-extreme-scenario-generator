@@ -21,10 +21,12 @@ from core.adversarial_agent import (  # noqa: E402
     AdversarialTestAgentV1,
     EpisodeResult,
     canonical_parameter_fingerprint,
+    count_reward_events,
     load_agent_config,
 )
 from core.scenario_validator import load_json, require_valid_scenario  # noqa: E402
 from tools.collect_carla_repeatability import collect_row  # noqa: E402
+from tools.evaluate_adversarial_baselines import git_state  # noqa: E402
 
 
 SCENE_RUNNER = os.path.join(
@@ -67,7 +69,9 @@ def _write_csv(path, rows):
         "risk_delta",
         "reward",
         "collision_count",
+        "collision_observed",
         "event_count",
+        "raw_event_count",
         "sensor_status",
         "rgb_frames",
         "server_status",
@@ -141,8 +145,16 @@ def _load_metadata(row):
     return load_json(path)
 
 
-def _result_payload(row, metadata, process_returncode=0, timed_out=False):
+def _result_payload(
+    row,
+    metadata,
+    agent_config=None,
+    process_returncode=0,
+    timed_out=False,
+):
     risk = ((metadata.get("result") or {}).get("risk_evaluation") or {})
+    events = metadata.get("events") or []
+    collision_count = int(row.get("collision_count") or 0)
     failures = [
         value
         for value in str(row.get("acceptance_failures") or "").split(";")
@@ -169,8 +181,10 @@ def _result_payload(row, metadata, process_returncode=0, timed_out=False):
         "observed_risk_score": row.get("risk_score"),
         "observed_risk_level": row.get("observed_risk_level"),
         "risk_method": risk.get("method"),
-        "collision_count": int(row.get("collision_count") or 0),
-        "event_count": len(metadata.get("events") or []),
+        "collision_count": collision_count,
+        "event_count": count_reward_events(events, agent_config),
+        "raw_event_count": len(events),
+        "collision_observed": collision_count > 0,
         "run_valid": bool(row.get("runtime_verified")) and status == "completed",
         "strict_acceptance_passed": strict_passed,
         "carla_service_healthy": row.get("server_status") == "healthy",
@@ -196,6 +210,7 @@ def execute_planned_run(
     acceptance_requirements,
     traffic_manager_port,
     timeout_seconds,
+    agent_config,
     force=False,
 ):
     collection_run = _collection_run(run)
@@ -263,6 +278,7 @@ def execute_planned_run(
     result = _result_payload(
         existing,
         metadata,
+        agent_config=agent_config,
         process_returncode=process_returncode,
         timed_out=timed_out,
     )
@@ -281,6 +297,8 @@ def execute_planned_run(
         "acceptance_failures": result["failure_reason"] or "",
         "risk_method": result["risk_method"],
         "event_count": result["event_count"],
+        "raw_event_count": result["raw_event_count"],
+        "collision_observed": result["collision_observed"],
         "metadata_snapshot_path": snapshot_path,
         "result": result,
     }
@@ -454,6 +472,7 @@ def execute_plan(
             acceptance,
             traffic_manager_port,
             timeout_seconds,
+            agent_config,
             force=force,
         )
         baseline_row["risk_delta"] = None
@@ -490,6 +509,7 @@ def execute_plan(
                 acceptance,
                 traffic_manager_port,
                 timeout_seconds,
+                agent_config,
                 force=force,
             )
             candidate_result = EpisodeResult.from_mapping(candidate_row["result"])
@@ -549,6 +569,7 @@ def execute_plan(
         "completed_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "source_plan": plan_path,
         "source_git": plan["summary"].get("source_git"),
+        "execution_git": git_state(),
         "selected_pair_ids": pair_ids,
         "selected_pair_count": len(pair_ids),
         "selected_run_count": len(selected),

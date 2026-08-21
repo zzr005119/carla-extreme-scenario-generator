@@ -42,6 +42,7 @@
     ]
   },
   "reward": {
+    "comparison_mode": "relative_capped_delta",
     "risk_delta_weight": 1.0,
     "collision_event_reward": 0.5,
     "event_reward": 0.05,
@@ -49,7 +50,8 @@
     "duplicate_penalty": -0.25,
     "run_failure_penalty": -1.0,
     "collision_event_cap": 1,
-    "event_cap": 4
+    "event_cap": 4,
+    "event_types": ["ego_safety_brake"]
   },
   "termination": {
     "max_steps": 16,

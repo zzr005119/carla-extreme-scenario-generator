@@ -17,6 +17,7 @@ if PROJECT_ROOT not in sys.path:
 
 from core.adversarial_agent import (  # noqa: E402
     AdversarialTestAgentV1,
+    count_reward_events,
     load_agent_config,
 )
 from core.adversarial_loop import (  # noqa: E402
@@ -216,6 +217,7 @@ class CarlaSceneExecutor:
         traffic_manager_port,
         timeout_seconds,
         episode_id,
+        agent_config,
     ):
         self.artifact_dir = artifact_dir
         self.runtime_output_root = runtime_output_root
@@ -225,6 +227,7 @@ class CarlaSceneExecutor:
         self.traffic_manager_port = int(traffic_manager_port)
         self.timeout_seconds = int(timeout_seconds)
         self.episode_id = _safe_name(episode_id)
+        self.agent_config = agent_config
 
     def __call__(self, record, phase, step_index):
         phase_index = 0 if phase == "baseline" else int(step_index) + 1
@@ -343,7 +346,10 @@ class CarlaSceneExecutor:
             "observed_risk_level": row.get("observed_risk_level"),
             "risk_method": risk.get("method"),
             "collision_count": int(row.get("collision_count") or 0),
-            "event_count": len(metadata.get("events") or []),
+            "event_count": count_reward_events(
+                metadata.get("events") or [],
+                self.agent_config,
+            ),
             "run_valid": bool(row.get("runtime_verified")),
             "strict_acceptance_passed": strict_passed,
             "carla_service_healthy": row.get("server_status") == "healthy",
@@ -388,9 +394,8 @@ def prepare_validation(
     route_profile,
     traffic_manager_port,
 ):
-    agent = AdversarialTestAgentV1(
-        load_agent_config(_project_path(config["agent_config_path"]))
-    )
+    agent_config = load_agent_config(_project_path(config["agent_config_path"]))
+    agent = AdversarialTestAgentV1(agent_config)
     initial_observation = agent.reset(record)
     proposal = agent.propose(config["fixed_action"])
     if not proposal["valid"]:
@@ -487,9 +492,8 @@ def main():
         print(f"[RESULT_DIR] {episode_dir}")
         return 0 if summary["status"] == "completed" else 1
 
-    agent = AdversarialTestAgentV1(
-        load_agent_config(_project_path(config["agent_config_path"]))
-    )
+    agent_config = load_agent_config(_project_path(config["agent_config_path"]))
+    agent = AdversarialTestAgentV1(agent_config)
     strategy = FixedActionStrategy(tuple(config["fixed_action"]))
     if args.mode == "mock":
         executor = MockSceneExecutor(episode_dir)
@@ -504,6 +508,7 @@ def main():
             traffic_manager_port,
             config["runtime"]["scene_timeout_seconds"],
             episode_id,
+            agent_config,
         )
         evidence_kind = "carla_runtime"
 
