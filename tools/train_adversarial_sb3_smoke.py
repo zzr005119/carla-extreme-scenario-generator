@@ -188,9 +188,19 @@ def _model_kwargs(name, env, seed, total_timesteps, device):
     return common
 
 
-def run_algorithm(name, record, output_root, total_timesteps, seed, max_steps, device):
+def run_algorithm(
+    name,
+    record,
+    output_root,
+    total_timesteps,
+    seed,
+    max_steps,
+    device,
+    env_factory=None,
+):
     algorithm = _algorithm_class(name)
-    env, training_executor = _make_env(record, max_steps)
+    make_env = env_factory or (lambda: _make_env(record, max_steps))
+    env, training_executor = make_env()
     model = algorithm(
         **_model_kwargs(name, env, seed, total_timesteps, device)
     )
@@ -202,7 +212,7 @@ def run_algorithm(name, record, output_root, total_timesteps, seed, max_steps, d
     finally:
         env.close()
 
-    prediction_env, prediction_executor = _make_env(record, max_steps)
+    prediction_env, prediction_executor = make_env()
     loaded = algorithm.load(model_path, env=prediction_env, device=device)
     try:
         observation, reset_info = prediction_env.reset(seed=int(seed) + 1000)
@@ -221,6 +231,11 @@ def run_algorithm(name, record, output_root, total_timesteps, seed, max_steps, d
         "model_exists": os.path.isfile(model_path),
         "training_executor_call_count": len(training_executor.calls),
         "prediction_executor_call_count": len(prediction_executor.calls),
+        "prediction_executor_last_call": (
+            prediction_executor.calls[-1]
+            if prediction_executor.calls
+            else None
+        ),
         "prediction": {
             "reset_sample_id": reset_info["sample_id"],
             "action": np.asarray(action, dtype=np.float32).tolist(),
@@ -233,16 +248,17 @@ def run_algorithm(name, record, output_root, total_timesteps, seed, max_steps, d
     }
 
 
-def run_checks(record, max_steps):
+def run_checks(record, max_steps, env_factory=None):
     from gymnasium.utils.env_checker import check_env as gymnasium_check_env
     from stable_baselines3.common.env_checker import check_env as sb3_check_env
 
-    gym_env, _ = _make_env(record, max_steps)
+    make_env = env_factory or (lambda: _make_env(record, max_steps))
+    gym_env, _ = make_env()
     try:
         gymnasium_check_env(gym_env, skip_render_check=True)
     finally:
         gym_env.close()
-    sb3_env, _ = _make_env(record, max_steps)
+    sb3_env, _ = make_env()
     try:
         sb3_check_env(sb3_env, warn=True)
     finally:

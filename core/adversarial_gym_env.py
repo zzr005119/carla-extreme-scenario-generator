@@ -162,6 +162,14 @@ class AdversarialEnvCore:
             "action_clipped": bool(proposal.get("clipped", False)),
             "duplicate_count": transition["info"]["duplicate_count"],
             "failure_reason": transition["info"].get("failure_reason"),
+            "evidence_kind": transition["info"].get("evidence_kind"),
+            "requires_carla_service": transition["info"].get(
+                "requires_carla_service"
+            ),
+            "reward_channels_available": transition["info"].get(
+                "reward_channels_available",
+                [],
+            ),
             "reward_breakdown": transition["reward_breakdown"],
             "termination_reason": transition["reason"],
         }

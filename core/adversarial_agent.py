@@ -337,7 +337,7 @@ def build_observation(record, feedback=None, config=None):
 
 @dataclass(frozen=True)
 class EpisodeResult:
-    """一次外部 CARLA 执行的最小结构化结果。"""
+    """一次外部执行器评估的最小结构化结果。"""
 
     status: str = "completed"
     observed_risk_score: float | None = None
@@ -350,6 +350,13 @@ class EpisodeResult:
     carla_service_healthy: bool = True
     run_dir: str | None = None
     failure_reason: str | None = None
+    evidence_kind: str = "carla_runtime"
+    requires_carla_service: bool = True
+    reward_channels_available: tuple[str, ...] = (
+        "risk",
+        "collision",
+        "event",
+    )
 
     @classmethod
     def from_mapping(cls, value):
@@ -378,6 +385,26 @@ class EpisodeResult:
         risk_method = value.get("risk_method", value.get("method", "heuristic_v2"))
         if risk_method is not None:
             risk_method = str(risk_method).strip() or None
+        evidence_kind = str(value.get("evidence_kind", "carla_runtime")).strip()
+        if not evidence_kind:
+            raise AgentContractError("episode_result.evidence_kind 不能为空")
+        reward_channels = value.get(
+            "reward_channels_available",
+            ["risk", "collision", "event"],
+        )
+        if not isinstance(reward_channels, (list, tuple)):
+            raise AgentContractError("reward_channels_available 必须是数组")
+        reward_channels = tuple(str(item).strip() for item in reward_channels)
+        allowed_channels = {"risk", "collision", "event"}
+        if (
+            not reward_channels
+            or any(not item for item in reward_channels)
+            or len(set(reward_channels)) != len(reward_channels)
+            or not set(reward_channels).issubset(allowed_channels)
+        ):
+            raise AgentContractError(
+                "reward_channels_available 只能包含 risk/collision/event 且不能重复"
+            )
         return cls(
             status=status,
             observed_risk_score=score,
@@ -396,6 +423,12 @@ class EpisodeResult:
             ),
             run_dir=value.get("run_dir"),
             failure_reason=value.get("failure_reason"),
+            evidence_kind=evidence_kind,
+            requires_carla_service=_as_bool(
+                value.get("requires_carla_service"),
+                True,
+            ),
+            reward_channels_available=reward_channels,
         )
 
     @property
@@ -404,7 +437,10 @@ class EpisodeResult:
             self.status == "completed"
             and self.run_valid
             and self.strict_acceptance_passed
-            and self.carla_service_healthy
+            and (
+                not self.requires_carla_service
+                or self.carla_service_healthy
+            )
             and self.observed_risk_score is not None
             and self.observed_risk_level is not None
             and self.risk_method is not None
@@ -629,6 +665,13 @@ class AdversarialTestAgentV1:
             "duplicate_count": proposal.get("duplicate_count", 0),
             "action_clipped": proposal.get("clipped", False),
             "failure_reason": result.failure_reason if result else proposal.get("error"),
+            "evidence_kind": result.evidence_kind if result else None,
+            "requires_carla_service": (
+                result.requires_carla_service if result else None
+            ),
+            "reward_channels_available": (
+                list(result.reward_channels_available) if result else []
+            ),
         }
         return AgentTransition(
             observation=observation,

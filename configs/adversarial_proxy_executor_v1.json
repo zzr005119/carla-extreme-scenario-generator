@@ -1,0 +1,70 @@
+{
+  "format": "adversarial_proxy_executor_v1",
+  "executor_id": "risk_proxy_v5_physical",
+  "model": {
+    "root_env": "PROJECT_MODEL_ROOT",
+    "relative_path": "artifacts/risk_proxy_v5_physical/20260817_140802/selected_model.joblib",
+    "sha256": "26dd5f56fc3c556cb9691ac2c2922b0ebd44a94f0910452f3bfc92c90153c188",
+    "class": "sklearn.ensemble._forest.RandomForestRegressor"
+  },
+  "feature_contract": {
+    "feature_space": "physical_enhanced",
+    "physical_feature_version": "physical_interaction_v1",
+    "baseline_feature_count": 15,
+    "derived_feature_count": 12,
+    "feature_count": 27,
+    "feature_names": [
+      "weather.cloudiness",
+      "weather.precipitation",
+      "weather.precipitation_deposits",
+      "weather.wind_intensity",
+      "weather.fog_density",
+      "weather.fog_distance",
+      "weather.sun_altitude_angle",
+      "weather.wetness",
+      "lead_vehicle.initial_distance_m",
+      "lead_vehicle.brake_trigger_seconds",
+      "lead_vehicle.brake_intensity",
+      "pedestrian.forward_distance_m",
+      "pedestrian.roadside_offset_m",
+      "pedestrian.trigger_seconds",
+      "pedestrian.speed_mps",
+      "derived_ego_time_to_lead_s",
+      "derived_lead_distance_at_brake_m",
+      "derived_lead_brake_time_margin_s",
+      "derived_ego_time_to_pedestrian_s",
+      "derived_pedestrian_distance_at_trigger_m",
+      "derived_pedestrian_trigger_time_margin_s",
+      "derived_hazard_trigger_gap_s",
+      "derived_hazard_trigger_gap_ratio",
+      "derived_pedestrian_speed_ratio",
+      "derived_lead_braking_demand_index",
+      "derived_hazard_spatial_gap_m",
+      "derived_weather_visibility_severity"
+    ]
+  },
+  "training_evidence": {
+    "dataset": "/home/zhaozirong/software/output/carla-0.9.16/risk_feedback_v5/20260817_140802/dataset/dataset.csv",
+    "dataset_sha256": "402179ae9fbd0c713ae1ee1c7c0e23dc848244fa12831916f4f8aafc9ebd8c0e",
+    "independent_scenario_count": 117,
+    "target_column": "observed_risk_score_mean",
+    "target_risk_level_used_as_input": false,
+    "generator_used_as_input": false,
+    "selected_model_metrics": {
+      "mae": 11.472146418213127,
+      "rmse": 13.911362356574337,
+      "spearman": 0.7371008107419562,
+      "high_or_critical_recall": 0.9861111111111112
+    }
+  },
+  "prediction": {
+    "minimum_score": 0.0,
+    "maximum_score": 100.0,
+    "levels": {
+      "medium": 25.0,
+      "high": 50.0,
+      "critical": 75.0
+    }
+  },
+  "reward_channels_available": ["risk"]
+}
