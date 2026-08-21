@@ -69,27 +69,30 @@ flowchart LR
 3. 在服务器项目环境安装 `requirements-rl-interface.txt`，运行 Gymnasium `check_env`（已完成）；Stable-Baselines3 仍不安装
 4. 用服务器 CARLA 完成一个基线加两个候选的环境级冒烟，并回收 `info` 与终止状态（已完成）
 5. 增加分层场景采样器并完成固定、随机、LHS、规则引导 LHS 的离线候选对照（已完成，见 `docs/adversarial_sampling_baselines_v1.md`）
-6. 增加约束感知重采样并完成小规模 CARLA 基线对照后，才评估 Stable-Baselines3
+6. 增加约束感知重采样并准备共享基线与四策略 CARLA 对照计划（已完成静态计划，尚未实机）
+7. 服务器执行单 pair 的 1 基线 + 4 候选冒烟；通过后再决定完整对照和 Stable-Baselines3
 
 ## 📌 当前决策
 
 | 项目 | 当前决定 |
 |---|---|
 | 是否安装 Gymnasium | 已在服务器项目环境安装 `1.3.0` |
-| 是否立即安装 Stable-Baselines3 | 否，先完成约束感知重采样和真实 CARLA 小规模基线对照 |
+| 是否立即安装 Stable-Baselines3 | 否，先完成单 pair 真实 CARLA 基线冒烟 |
 | 是否启动训练 | 否 |
-| 下一项代码工作 | 约束感知重采样和四策略 CARLA 对照计划 |
+| 下一项代码工作 | CARLA 计划执行与结果聚合入口 |
 | 真实 CARLA 要求 | 服务器优先，仍使用 CARLA 0.9.16 与 `Carla666-0916` |
 
 ## ✅ 已执行验证
 
 2026-08-20 服务器任务 `check-adversarial-gymnasium_20260820_214522` 使用 Gymnasium `1.3.0` 通过标准 `check_env`。mock executor 验证了观测 `(34,)`、动作 `(15,)`、`float32` 类型、首次 step 返回和非终止状态；该任务不连接 CARLA。Gymnasium 检查器仅提示环境未通过 `gymnasium.make()` 注册，因而不检查备用渲染模式；项目环境没有渲染需求，该提示不影响接口检查。
 
-服务器全量 `unittest` 任务 `server-gymnasium-full-tests_20260820_214610` 未通过，原因是既有场景库分析测试导入 `matplotlib`，而服务器项目环境尚未安装该非本任务依赖。失败发生在 `analysis/analyze_scenario_library.py --validate-only`，不涉及 Gymnasium 适配；本机加入分层采样测试后全量 `49/49` 通过，服务器 Gymnasium 专项检查已独立通过。
+服务器全量 `unittest` 任务 `server-gymnasium-full-tests_20260820_214610` 未通过，原因是既有场景库分析测试导入 `matplotlib`，而服务器项目环境尚未安装该非本任务依赖。失败发生在 `analysis/analyze_scenario_library.py --validate-only`，不涉及 Gymnasium 适配；本机加入分层采样与约束重试测试后全量 `51/51` 通过，服务器 Gymnasium 专项检查已独立通过。
 
 2026-08-20 服务器任务 `adversarial-gymnasium-smoke-v1_20260820_215156` 完成真实 CARLA 环境冒烟：Gymnasium `1.3.0` 执行一次 `reset()` 基线和两次 `step()` 候选，`3/3` 次严格验收通过。风险序列为 `27.764 → 28.899 → 30.353`，transition reward 为 `0.21135`、`0.21454`；三次均无碰撞、RGB 各 `100` 帧、路线双车在途率 `1.0`、CARLA 服务健康、客户端/服务端均为 `0.9.16`，两次返回均为 `terminated=false`、`truncated=false`。证据目录：`F:\Carla\project-transfer\server-results\20260820_215156_20260820_215411`。该证据只证明环境外壳与真实 executor 的闭环回填可用，不支持策略学习或 RL 有效性结论。
 
-2026-08-21 完成分层采样与离线基线：24 个独立场景覆盖全部 12 个“生成器 × 目标风险档”组合，三个 Traffic Manager 种子各 8 次；fixed/random/LHS/rule-guided LHS 的候选有效率分别为 `100.0%/87.5%/87.5%/91.7%`，所有有效候选均唯一。无效项均为天气标签约束不再满足；候选未运行 CARLA，因此不能把有效率解释为风险提升率。结果目录：`F:\Carla\output-0.9.16\adversarial_baselines_v1\20260821_130208`。
+2026-08-21 完成分层采样、四类离线基线和独立重试动作流：24 个独立场景覆盖全部 12 个“生成器 × 目标风险档”组合，三个 Traffic Manager 种子各 8 次；fixed/random/LHS/rule-guided LHS 原始首轮有效数为 `24/21/21/22`，额外使用 `0/3/3/2` 次动作后四组均补齐 `24/24`，没有重试预算耗尽。最终离线结果目录为 `F:\Carla\output-0.9.16\adversarial_baselines_v1\20260821_132033`。候选未运行 CARLA，因此不能把约束有效率解释为风险提升率。
+
+同日完成一个 12 分层周期的 CARLA 静态对照计划：12 个共享基线加 48 个四策略候选，共 `60` 个计划运行，60/60 场景与配置通过 Scene 04 `--validate-only`。计划目录为 `F:\Carla\output-0.9.16\adversarial_baseline_carla_plan_v1\20260821_132000`。该结果未连接 CARLA，不构成真实风险、奖励或严格运行验收证据。
 
 [^1]: Gymnasium. “Env API.” https://gymnasium.farama.org/api/env/
 [^2]: Stable-Baselines3. “Using Custom Environments.” https://stable-baselines3.readthedocs.io/en/master/guide/custom_env.html
