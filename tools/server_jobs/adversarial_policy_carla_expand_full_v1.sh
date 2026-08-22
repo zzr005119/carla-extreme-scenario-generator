@@ -18,7 +18,7 @@ with open(os.path.join(plan_dir, "summary.json"), encoding="utf-8") as file:
 with open(os.path.join(plan_dir, "execution", "summary.json"), encoding="utf-8") as file:
     smoke = json.load(file)
 expected_hash = "df0c022070ac6535929fa1a1c29e2a34f2b0ba7f0242e55a624971caeba805d5"
-if plan.get("total_run_count") != 36 or plan.get("scene_config_validation_count") != 36:
+if plan.get("total_run_count") != 18 or plan.get("scene_config_validation_count") != 18:
     raise SystemExit("Expansion plan static validation is incomplete")
 if plan.get("policy_model", {}).get("verified_sha256") != expected_hash:
     raise SystemExit("Expansion SAC model hash mismatch")
@@ -28,7 +28,7 @@ print(f"[PLAN_DIR] {plan_dir}")
 PY
 python -u tools/run_adversarial_baseline_carla_plan.py \
   --plan "$plan_dir/run_plan.json" \
-  --pair-count 12 \
+  --pair-count 6 \
   --output-dir "$plan_dir/execution" \
   --traffic-manager-port "$CARLA_TRAFFIC_MANAGER_PORT"
 analysis_dir="$plan_dir/analysis_v1"

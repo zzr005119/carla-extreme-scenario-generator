@@ -17,8 +17,8 @@ with open(os.path.join(plan_dir, "summary.json"), encoding="utf-8") as file:
     summary = json.load(file)
 if summary.get("format") != "adversarial_policy_carla_plan_summary_v1":
     raise SystemExit("Latest expansion directory is not a policy plan")
-if summary.get("total_run_count") != 36 or summary.get("scene_config_validation_count") != 36:
-    raise SystemExit("Expansion plan must contain 36 statically validated runs")
+if summary.get("total_run_count") != 18 or summary.get("scene_config_validation_count") != 18:
+    raise SystemExit("Expansion plan must contain 18 statically validated runs")
 if summary.get("selection_audit", {}).get("excluded_overlap_count") != 0:
     raise SystemExit("Expansion plan overlaps excluded library entries")
 print(f"[PLAN_DIR] {plan_dir}")

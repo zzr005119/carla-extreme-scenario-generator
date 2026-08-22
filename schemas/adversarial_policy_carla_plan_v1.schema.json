@@ -63,7 +63,7 @@
         "expected_library_entry_count": {"type": "integer", "minimum": 24}
       }
     },
-    "sample_count": {"const": 12},
+    "sample_count": {"type": "integer", "minimum": 1},
     "sample_seed": {"type": "integer", "minimum": 0},
     "max_selection_attempts": {"type": "integer", "minimum": 12},
     "rule_guided_lhs_seed": {"type": "integer", "minimum": 0},

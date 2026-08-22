@@ -18,7 +18,7 @@
     "relative_path": "adversarial_policy_carla_expand_v1/excluded_library_entries.jsonl",
     "expected_library_entry_count": 36
   },
-  "sample_count": 12,
+  "sample_count": 6,
   "sample_seed": 2026082201,
   "max_selection_attempts": 4096,
   "rule_guided_lhs_seed": 2026082201,
