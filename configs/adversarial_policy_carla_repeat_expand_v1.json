@@ -1,0 +1,15 @@
+{
+  "format": "adversarial_policy_carla_repeat_plan_v1",
+  "source_plan": {
+    "root_env": "PROJECT_OUTPUT_ROOT",
+    "relative_path": "adversarial_policy_carla_expand_v1/20260822_135901/run_plan.json"
+  },
+  "selected_pair_ids": [
+    "apcv1_pair_01",
+    "apcv1_pair_04"
+  ],
+  "traffic_manager_seeds": [20260827, 20260828, 20260829],
+  "validate_scene_configs": true,
+  "output_subdirectory": "adversarial_policy_carla_repeat_expand_plan_v1",
+  "runtime_output_subdirectory": "adversarial_policy_carla_repeat_expand_v1"
+}
