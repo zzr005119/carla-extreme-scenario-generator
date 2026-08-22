@@ -39,6 +39,53 @@ if [[ -e "$analysis_dir" ]]; then
   exit 1
 fi
 
+python - "$plan_dir" <<'PY'
+import copy
+import json
+import os
+import sys
+
+plan_dir = sys.argv[1]
+plan_path = os.path.join(plan_dir, "run_plan.json")
+manifest_path = os.path.join(plan_dir, "source_manifest.json")
+with open(plan_path, encoding="utf-8") as file:
+    plan = json.load(file)
+with open(manifest_path, encoding="utf-8") as file:
+    manifest = json.load(file)
+with open(plan["summary"]["source_plan"], encoding="utf-8") as file:
+    source_plan = json.load(file)
+
+source_rows = {row["run_id"]: row for row in source_plan["runs"]}
+source_run_ids = {row["run_id"]: row["source_run_id"] for row in manifest["runs"]}
+fields = (
+    "selected_action",
+    "candidate_fingerprint",
+    "policy_model_sha256",
+    "policy_seed",
+    "attempts",
+    "attempt_count",
+    "invalid_attempt_count",
+    "first_attempt_valid",
+)
+changed = False
+for row in plan["runs"]:
+    if row.get("phase") != "candidate":
+        continue
+    source_row = source_rows[source_run_ids[row["run_id"]]]
+    for field in fields:
+        if field in source_row and row.get(field) != source_row[field]:
+            row[field] = copy.deepcopy(source_row[field])
+            changed = True
+plan["summary"]["strategy_order"] = ["sac_policy", "rule_guided_lhs"]
+if changed or plan["summary"].get("strategy_order") != ["sac_policy", "rule_guided_lhs"]:
+    with open(plan_path, "w", encoding="utf-8") as file:
+        json.dump(plan, file, ensure_ascii=False, indent=2)
+        file.write("\n")
+    print("[PLAN] restored candidate actions from source policy plan")
+else:
+    print("[PLAN] candidate actions already present")
+PY
+
 python -u tools/run_adversarial_baseline_carla_plan.py \
   --plan "$plan_dir/run_plan.json" \
   --pair-count 9 \

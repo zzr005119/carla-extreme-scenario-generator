@@ -18,6 +18,9 @@ from tools.prepare_adversarial_policy_carla_plan import (  # noqa: E402
     load_policy_plan_config,
     select_independent_samples,
 )
+from tools.prepare_adversarial_policy_carla_repeat_plan import (  # noqa: E402
+    copy_candidate_plan_fields,
+)
 from tools.run_adversarial_baseline_carla_plan import (  # noqa: E402
     load_run_plan,
 )
@@ -126,6 +129,19 @@ class AdversarialPolicyCarlaPlanTests(unittest.TestCase):
                 load_run_plan(path)["format"],
                 "adversarial_policy_carla_repeat_run_plan_v1",
             )
+
+    def test_repeat_plan_preserves_candidate_action_fields(self):
+        source_row = {
+            "run_id": "source_sac",
+            "phase": "candidate",
+            "selected_action": [0.1, 0.2],
+            "candidate_fingerprint": "abc",
+        }
+        repeat_row = copy_candidate_plan_fields(
+            {"run_id": "repeat_sac", "phase": "candidate"}, source_row
+        )
+        self.assertEqual(repeat_row["selected_action"], [0.1, 0.2])
+        self.assertEqual(repeat_row["candidate_fingerprint"], "abc")
 
     def test_analysis_infers_two_strategy_order(self):
         rows = []

@@ -30,6 +30,23 @@ DEFAULT_SCHEMA_PATH = os.path.join(
     PROJECT_ROOT, "schemas", "adversarial_policy_carla_repeat_plan_v1.schema.json"
 )
 STRATEGY_SUFFIXES = {"sac_policy": "sac", "rule_guided_lhs": "rulelhs"}
+CANDIDATE_PLAN_FIELDS = (
+    "selected_action",
+    "candidate_fingerprint",
+    "policy_model_sha256",
+    "policy_seed",
+    "attempts",
+    "attempt_count",
+    "invalid_attempt_count",
+    "first_attempt_valid",
+)
+
+
+def copy_candidate_plan_fields(target, source):
+    for field in CANDIDATE_PLAN_FIELDS:
+        if field in source:
+            target[field] = copy.deepcopy(source[field])
+    return target
 
 
 def _rooted_path(spec):
@@ -167,6 +184,7 @@ def prepare_repeat_plan(
                     "traffic_manager_seed": int(seed),
                     **artifacts,
                 }
+                copy_candidate_plan_fields(run, source_row)
                 runs.append(run)
                 manifest.append({"source_run_id": source_row["run_id"], **run})
     summary = {
