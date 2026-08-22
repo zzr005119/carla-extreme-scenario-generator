@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "adversarial_policy_carla_repeat_plan_v1.schema.json",
+  "title": "Adversarial Policy CARLA Repeat Plan V1 Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "source_plan", "selected_pair_ids", "traffic_manager_seeds", "validate_scene_configs", "output_subdirectory", "runtime_output_subdirectory"],
+  "properties": {
+    "format": {"const": "adversarial_policy_carla_repeat_plan_v1"},
+    "source_plan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["root_env", "relative_path"],
+      "properties": {"root_env": {"type": "string", "minLength": 1}, "relative_path": {"type": "string", "minLength": 1}}
+    },
+    "selected_pair_ids": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "traffic_manager_seeds": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {"type": "integer", "minimum": 0}
+    },
+    "validate_scene_configs": {"type": "boolean"},
+    "output_subdirectory": {"type": "string", "minLength": 1},
+    "runtime_output_subdirectory": {"type": "string", "minLength": 1}
+  }
+}
