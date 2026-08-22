@@ -1,0 +1,14 @@
+{
+  "format": "lhs_high_independent_carla_plan_v1",
+  "records_path": "data/scenarios/lhs_high_boundary_v1/independent_candidates.jsonl",
+  "metadata_path": "data/scenarios/lhs_high_boundary_v1/independent_candidates.csv",
+  "expected_sample_ids": [
+    "lhs_high_20260817_0203",
+    "lhs_high_20260817_0022",
+    "lhs_high_20260817_0041"
+  ],
+  "loop_config_path": "configs/adversarial_loop_v1.json",
+  "validate_scene_configs": true,
+  "output_subdirectory": "lhs_high_independent_carla_plan_v1",
+  "runtime_output_subdirectory": "lhs_high_independent_carla_runtime_v1"
+}

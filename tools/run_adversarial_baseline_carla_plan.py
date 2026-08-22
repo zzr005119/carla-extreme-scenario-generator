@@ -44,6 +44,7 @@ SUPPORTED_PLAN_FORMATS = {
     "adversarial_baseline_carla_run_plan_v1",
     "adversarial_policy_carla_run_plan_v1",
     "adversarial_policy_carla_repeat_run_plan_v1",
+    "lhs_high_independent_carla_run_plan_v1",
 }
 
 
@@ -125,6 +126,8 @@ def select_pair_ids(plan, requested_pair_ids=None, pair_count=None):
         if missing:
             raise ValueError(f"Unknown pair_id: {', '.join(missing)}")
         return list(dict.fromkeys(requested_pair_ids))
+    if pair_count is None and plan.get("summary", {}).get("execution_mode") == "independent":
+        return available
     count = 1 if pair_count is None else int(pair_count)
     if count < 1:
         raise ValueError("pair_count must be greater than zero")
@@ -406,6 +409,156 @@ def _write_report(path, summary, rows):
         file.write("\n".join(lines))
 
 
+def _write_independent_report(path, summary, rows):
+    lines = [
+        "# LHS/high Independent CARLA Runtime Report V1",
+        "",
+        f"- Evidence: `{summary['evidence_kind']}`",
+        f"- Independent candidates: `{summary['selected_run_count']}`",
+        f"- Strictly accepted: `{summary['strictly_accepted_run_count']}`",
+        f"- Runtime gate: `{'passed' if summary['runtime_gate_passed'] else 'failed'}`",
+        f"- CARLA version check: `{'passed' if summary['carla_version_check_passed'] else 'failed'}`",
+        f"- Risk method check: `{'passed' if summary['risk_method_check_passed'] else 'failed'}`",
+        "",
+        "These are independent frozen boundary scenes. No shared baseline, repeated pair, or online training was executed.",
+        "",
+        "| Candidate | Acceptance | Risk | Collisions | Run directory |",
+        "| --- | --- | ---: | ---: | --- |",
+    ]
+    for row in rows:
+        lines.append(
+            "| {sample_id} | {acceptance} | {risk} | {collisions} | {run_dir} |".format(
+                sample_id=row.get("sample_id"),
+                acceptance=row.get("acceptance_status"),
+                risk="" if row.get("risk_score") is None else f"{row['risk_score']:.3f}",
+                collisions=row.get("collision_count"),
+                run_dir=row.get("run_dir") or "",
+            )
+        )
+    with open(path, "w", encoding="utf-8", newline="\n") as file:
+        file.write("\n".join(lines) + "\n")
+
+
+def execute_independent_plan(
+    plan_path,
+    output_dir,
+    requested_pair_ids=None,
+    pair_count=None,
+    agent_config_path=DEFAULT_AGENT_CONFIG,
+    traffic_manager_port=None,
+    timeout_seconds=240,
+    pause_seconds=10.0,
+    force=False,
+):
+    """Execute each frozen candidate once without inventing a baseline pair."""
+    plan_path = os.path.abspath(plan_path)
+    plan_dir = os.path.dirname(plan_path)
+    plan = load_run_plan(plan_path)
+    pair_ids = select_pair_ids(plan, requested_pair_ids, pair_count)
+    selected = [
+        run for run in sorted(plan["runs"], key=lambda row: int(row["run_order"]))
+        if run["pair_id"] in pair_ids
+    ]
+    if not selected:
+        raise ValueError("Independent plan selection contains no runs")
+    acceptance = plan["acceptance_requirements"]
+    traffic_manager_port = int(
+        traffic_manager_port
+        or os.environ.get("CARLA_TRAFFIC_MANAGER_PORT")
+        or plan["summary"]["traffic_manager_port"]
+    )
+    agent_config = load_agent_config(os.path.abspath(agent_config_path))
+    os.makedirs(output_dir, exist_ok=True)
+    state_path = os.path.join(output_dir, "execution_state.json")
+    results = []
+    aborted_for_service_health = False
+
+    def persist(status):
+        _write_json(
+            state_path,
+            {
+                "format": "lhs_high_independent_carla_execution_state_v1",
+                "status": status,
+                "plan_path": plan_path,
+                "selected_pair_ids": pair_ids,
+                "updated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+                "runs": results,
+            },
+        )
+
+    persist("running")
+    for run in selected:
+        record = load_json(_resolve_plan_path(plan_dir, run["record_path"]))
+        require_valid_scenario(record)
+        row = execute_planned_run(
+            run,
+            plan_dir,
+            output_dir,
+            acceptance,
+            traffic_manager_port,
+            timeout_seconds,
+            agent_config,
+            force=force,
+        )
+        results.append(row)
+        persist("running")
+        if pause_seconds > 0:
+            time.sleep(pause_seconds)
+        if not row["result"]["strict_acceptance_passed"] and not row["result"]["carla_service_healthy"]:
+            aborted_for_service_health = True
+            break
+
+    accepted_count = sum(row.get("strict_acceptance_passed") is True for row in results)
+    risk_method_check = bool(results) and all(row.get("risk_method") == "heuristic_v2" for row in results)
+    version_check = bool(results) and all(
+        row.get("carla_client_version") == "0.9.16"
+        and row.get("carla_server_version") == "0.9.16"
+        and row.get("carla_version_match") is True
+        for row in results
+    )
+    runtime_gate = (
+        len(results) == len(selected)
+        and accepted_count == len(selected)
+        and risk_method_check
+        and version_check
+    )
+    summary = {
+        "format": "lhs_high_independent_carla_runtime_summary_v1",
+        "evidence_kind": "carla_runtime",
+        "execution_mode": "independent",
+        "completed_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "source_plan": plan_path,
+        "source_git": plan["summary"].get("source_git"),
+        "execution_git": git_state(),
+        "selected_pair_ids": pair_ids,
+        "selected_run_count": len(selected),
+        "collected_run_count": len(results),
+        "executed_run_count": sum(row["execution_disposition"] == "executed" for row in results),
+        "skipped_existing_run_count": sum(row["execution_disposition"] == "skipped_existing" for row in results),
+        "strictly_accepted_run_count": accepted_count,
+        "acceptance_failed_run_count": len(results) - accepted_count,
+        "strategy_result_counts": dict(Counter(row.get("strategy") for row in results)),
+        "risk_method_check_passed": risk_method_check,
+        "carla_version_check_passed": version_check,
+        "runtime_gate_passed": runtime_gate,
+        "aborted_for_service_health": aborted_for_service_health,
+        "runtime_boundary": "Measured risk is reported for three independent LHS/high boundary scenes only; this does not establish strategy superiority, repeatability, or online-training effectiveness.",
+        "artifacts": {
+            "run_results_json": "run_results.json",
+            "run_results_csv": "run_results.csv",
+            "report_markdown": "report.md",
+            "execution_state_json": "execution_state.json",
+        },
+    }
+    flat_rows = [_execution_row(row) for row in results]
+    _write_json(os.path.join(output_dir, "run_results.json"), results)
+    _write_csv(os.path.join(output_dir, "run_results.csv"), flat_rows)
+    _write_json(os.path.join(output_dir, "summary.json"), summary)
+    _write_independent_report(os.path.join(output_dir, "report.md"), summary, flat_rows)
+    persist("completed" if runtime_gate else "failed")
+    return summary
+
+
 def execute_plan(
     plan_path,
     output_dir,
@@ -655,7 +808,9 @@ def main():
     output_dir = os.path.abspath(
         args.output_dir or os.path.join(os.path.dirname(plan_path), "execution")
     )
-    summary = execute_plan(
+    plan = load_run_plan(plan_path)
+    executor = execute_independent_plan if plan.get("summary", {}).get("execution_mode") == "independent" else execute_plan
+    summary = executor(
         plan_path,
         output_dir,
         requested_pair_ids=args.pair_ids,

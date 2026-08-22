@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "lhs_high_independent_carla_plan_v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "records_path", "metadata_path", "expected_sample_ids", "loop_config_path", "validate_scene_configs", "output_subdirectory", "runtime_output_subdirectory"],
+  "properties": {
+    "format": {"const": "lhs_high_independent_carla_plan_v1"},
+    "records_path": {"type": "string", "minLength": 1},
+    "metadata_path": {"type": "string", "minLength": 1},
+    "expected_sample_ids": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string", "minLength": 3}},
+    "loop_config_path": {"type": "string", "minLength": 1},
+    "validate_scene_configs": {"type": "boolean"},
+    "output_subdirectory": {"type": "string", "minLength": 1},
+    "runtime_output_subdirectory": {"type": "string", "minLength": 1}
+  }
+}
