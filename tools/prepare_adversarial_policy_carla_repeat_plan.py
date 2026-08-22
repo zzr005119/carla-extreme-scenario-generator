@@ -183,6 +183,7 @@ def prepare_repeat_plan(
         "scene_config_validation_count": sum(row["validation_status"] == "completed" for row in runs),
         "selected_pair_ids": list(grouped),
         "traffic_manager_seeds": [int(seed) for seed in config["traffic_manager_seeds"]],
+        "strategy_order": ["sac_policy", "rule_guided_lhs"],
         "carla_runtime_executed": False,
         "runtime_boundary": "Repeated configs passed static validation only; no CARLA scene was executed by this planning command.",
         "runtime_output_root": os.path.abspath(runtime_output_root),

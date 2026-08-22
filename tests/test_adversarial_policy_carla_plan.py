@@ -96,6 +96,37 @@ class AdversarialPolicyCarlaPlanTests(unittest.TestCase):
                 "adversarial_policy_carla_run_plan_v1",
             )
 
+    def test_runner_accepts_repeated_policy_plan_and_infers_strategy_order(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "run_plan.json")
+            with open(path, "w", encoding="utf-8") as file:
+                json.dump(
+                    {
+                        "format": "adversarial_policy_carla_repeat_run_plan_v1",
+                        "summary": {},
+                        "runs": [
+                            {"run_order": 1, "pair_id": "pair_01", "phase": "baseline"},
+                            {
+                                "run_order": 2,
+                                "pair_id": "pair_01",
+                                "phase": "candidate",
+                                "strategy": "sac_policy",
+                            },
+                            {
+                                "run_order": 3,
+                                "pair_id": "pair_01",
+                                "phase": "candidate",
+                                "strategy": "rule_guided_lhs",
+                            },
+                        ],
+                    },
+                    file,
+                )
+            self.assertEqual(
+                load_run_plan(path)["format"],
+                "adversarial_policy_carla_repeat_run_plan_v1",
+            )
+
     def test_analysis_infers_two_strategy_order(self):
         rows = []
         for pair_index in (1, 2):

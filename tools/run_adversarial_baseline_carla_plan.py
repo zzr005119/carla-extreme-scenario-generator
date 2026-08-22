@@ -43,6 +43,7 @@ DEFAULT_STRATEGIES = ("fixed", "random", "lhs", "rule_guided_lhs")
 SUPPORTED_PLAN_FORMATS = {
     "adversarial_baseline_carla_run_plan_v1",
     "adversarial_policy_carla_run_plan_v1",
+    "adversarial_policy_carla_repeat_run_plan_v1",
 }
 
 
@@ -419,9 +420,16 @@ def execute_plan(
     plan_path = os.path.abspath(plan_path)
     plan_dir = os.path.dirname(plan_path)
     plan = load_run_plan(plan_path)
-    expected_strategies = tuple(
-        plan["summary"].get("strategy_order") or DEFAULT_STRATEGIES
-    )
+    expected_strategies = tuple(plan["summary"].get("strategy_order") or ())
+    if not expected_strategies:
+        first_pair_id = select_pair_ids(plan, pair_count=1)[0]
+        expected_strategies = tuple(
+            run["strategy"]
+            for run in sorted(plan["runs"], key=lambda row: int(row["run_order"]))
+            if run["pair_id"] == first_pair_id and run["phase"] == "candidate"
+        )
+    if not expected_strategies:
+        expected_strategies = DEFAULT_STRATEGIES
     if not expected_strategies or len(set(expected_strategies)) != len(
         expected_strategies
     ):
