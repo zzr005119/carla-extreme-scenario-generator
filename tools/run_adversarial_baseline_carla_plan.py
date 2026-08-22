@@ -134,14 +134,14 @@ def select_pair_ids(plan, requested_pair_ids=None, pair_count=None):
     return available[:count]
 
 
-def _collection_run(run):
+def _collection_run(run, source="adversarial_baseline_carla_plan_v1"):
     return {
         "run_id": run["run_id"],
         "sample_id": run["sample_id"],
         "target_risk_level": run["target_risk_level"],
         "traffic_manager_seed": run["traffic_manager_seed"],
         "repeat_round": run["run_order"],
-        "source": "adversarial_baseline_carla_plan_v1",
+        "source": source,
         "expected_run_root": run["expected_run_root"],
     }
 
@@ -220,8 +220,9 @@ def execute_planned_run(
     timeout_seconds,
     agent_config,
     force=False,
+    source="adversarial_baseline_carla_plan_v1",
 ):
-    collection_run = _collection_run(run)
+    collection_run = _collection_run(run, source=source)
     existing = collect_row(
         collection_run,
         route_lock_required=True,
@@ -499,6 +500,7 @@ def execute_independent_plan(
             timeout_seconds,
             agent_config,
             force=force,
+            source="lhs_high_independent_carla_plan_v1",
         )
         results.append(row)
         persist("running")
