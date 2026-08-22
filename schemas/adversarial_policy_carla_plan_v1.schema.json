@@ -60,7 +60,7 @@
       "properties": {
         "root_env": {"type": "string", "minLength": 1},
         "relative_path": {"type": "string", "minLength": 1},
-        "expected_library_entry_count": {"const": 24}
+        "expected_library_entry_count": {"type": "integer", "minimum": 24}
       }
     },
     "sample_count": {"const": 12},

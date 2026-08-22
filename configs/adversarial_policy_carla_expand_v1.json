@@ -1,0 +1,29 @@
+{
+  "format": "adversarial_policy_carla_plan_v1",
+  "baseline_config_path": "configs/adversarial_baselines_v1.json",
+  "loop_config_path": "configs/adversarial_loop_v1.json",
+  "proxy_executor_config_path": "configs/adversarial_proxy_executor_v1.json",
+  "proxy_agent_config_path": "configs/adversarial_agent_proxy_training_v1.json",
+  "policy_model": {
+    "algorithm": "sac",
+    "seed": 20260822,
+    "root_env": "PROJECT_OUTPUT_ROOT",
+    "relative_path": "adversarial_proxy_benchmark_v1/20260821_175341/models/sac_seed_20260822.zip",
+    "sha256": "df0c022070ac6535929fa1a1c29e2a34f2b0ba7f0242e55a624971caeba805d5",
+    "device": "cpu",
+    "deterministic": true
+  },
+  "excluded_proxy_evaluation": {
+    "root_env": "PROJECT_OUTPUT_ROOT",
+    "relative_path": "adversarial_policy_carla_expand_v1/excluded_library_entries.jsonl",
+    "expected_library_entry_count": 36
+  },
+  "sample_count": 12,
+  "sample_seed": 2026082201,
+  "max_selection_attempts": 4096,
+  "rule_guided_lhs_seed": 2026082201,
+  "strategy_order": ["sac_policy", "rule_guided_lhs"],
+  "validate_scene_configs": true,
+  "output_subdirectory": "adversarial_policy_carla_expand_v1",
+  "runtime_output_subdirectory": "adversarial_policy_carla_expand_runtime_v1"
+}
