@@ -156,8 +156,10 @@ def analyze_results(rows, expected_strategies=None):
             bool(row.get("collision_observed")) for row in baseline_rows
         ),
         "runtime_boundary": (
-            "Each generator-target stratum contains one pair. Results describe this "
-            "12-pair plan and do not establish general strategy superiority."
+            f"Results describe {len(pair_ids)} pair measurements from this plan and "
+            "do not establish general strategy superiority. When repeated Traffic "
+            "Manager seeds reuse a source scene, those pairs are repeated measurements "
+            "rather than independent samples."
         ),
     }
     return summary, strategy_rows, comparisons

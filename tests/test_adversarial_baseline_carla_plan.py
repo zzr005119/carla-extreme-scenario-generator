@@ -152,6 +152,8 @@ class AdversarialBaselineCarlaPlanTests(unittest.TestCase):
                 )
         summary, strategies, comparisons = analyze_results(rows)
         self.assertEqual(summary["strictly_accepted_run_count"], 10)
+        self.assertIn("2 pair measurements", summary["runtime_boundary"])
+        self.assertIn("repeated measurements", summary["runtime_boundary"])
         self.assertEqual(len(comparisons), 8)
         random_row = next(row for row in strategies if row["strategy"] == "random")
         self.assertEqual(random_row["collision_introduced_count"], 1)
