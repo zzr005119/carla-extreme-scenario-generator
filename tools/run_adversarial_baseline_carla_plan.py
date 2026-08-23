@@ -544,7 +544,7 @@ def execute_independent_plan(
         "carla_version_check_passed": version_check,
         "runtime_gate_passed": runtime_gate,
         "aborted_for_service_health": aborted_for_service_health,
-        "runtime_boundary": "Measured risk is reported for three independent LHS/high boundary scenes only; this does not establish strategy superiority, repeatability, or online-training effectiveness.",
+        "runtime_boundary": f"Measured risk is reported for {len(selected)} independent LHS/high boundary scenes only; this does not establish strategy superiority, repeatability, or online-training effectiveness.",
         "artifacts": {
             "run_results_json": "run_results.json",
             "run_results_csv": "run_results.csv",

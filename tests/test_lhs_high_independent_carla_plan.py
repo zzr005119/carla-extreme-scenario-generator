@@ -26,6 +26,45 @@ class LhsHighIndependentPlanTests(unittest.TestCase):
             "lhs_high_20260817_0041",
         ])
 
+    def test_v2_config_freezes_six_stratified_candidates(self):
+        config_path = os.path.join(
+            PROJECT_ROOT, "configs", "lhs_high_independent_carla_plan_v2.json"
+        )
+        config = load_plan_config(config_path)
+        self.assertEqual(config["pair_id_prefix"], "lhs_high_boundary_v2")
+        self.assertEqual(config["expected_sample_ids"], [
+            "lhs_high_20260817_0192",
+            "lhs_high_20260817_0112",
+            "lhs_high_20260817_0120",
+            "lhs_high_20260817_0099",
+            "lhs_high_20260817_0103",
+            "lhs_high_20260817_0048",
+        ])
+
+    def test_prepare_v2_plan_emits_six_ordered_independent_runs(self):
+        config_path = os.path.join(
+            PROJECT_ROOT, "configs", "lhs_high_independent_carla_plan_v2.json"
+        )
+        config = load_plan_config(config_path)
+        with tempfile.TemporaryDirectory() as directory:
+            plan_root = os.path.join(directory, "plan")
+            summary = prepare_plan(
+                config,
+                plan_root,
+                os.path.join(directory, "runtime"),
+                traffic_manager_port=8100,
+                validate_runner=False,
+            )
+            plan = load_run_plan(os.path.join(plan_root, "run_plan.json"))
+            self.assertEqual(summary["independent_run_count"], 6)
+            self.assertEqual(summary["plan_config_format"], "lhs_high_independent_carla_plan_v2")
+            self.assertEqual(summary["pair_id_prefix"], "lhs_high_boundary_v2")
+            self.assertEqual(
+                select_pair_ids(plan),
+                [f"lhs_high_boundary_v2_{index:02d}" for index in range(1, 7)],
+            )
+            self.assertIn("6 frozen LHS/high", summary["runtime_boundary"])
+
     def test_prepare_plan_emits_independent_runs_without_baselines(self):
         config = load_plan_config()
         with tempfile.TemporaryDirectory() as directory:

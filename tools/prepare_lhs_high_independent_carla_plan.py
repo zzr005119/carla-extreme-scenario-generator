@@ -1,4 +1,4 @@
-"""Prepare CARLA configs for the three frozen LHS/high boundary candidates."""
+"""Prepare CARLA configs for a frozen batch of independent LHS/high candidates."""
 
 import argparse
 import csv
@@ -21,7 +21,10 @@ from tools.prepare_adversarial_baseline_carla_plan import (
 from tools.run_adversarial_episode import load_loop_config
 
 DEFAULT_CONFIG_PATH = os.path.join(PROJECT_ROOT, "configs", "lhs_high_independent_carla_plan_v1.json")
-DEFAULT_SCHEMA_PATH = os.path.join(PROJECT_ROOT, "schemas", "lhs_high_independent_carla_plan_v1.schema.json")
+SCHEMA_PATHS = {
+    "lhs_high_independent_carla_plan_v1": os.path.join(PROJECT_ROOT, "schemas", "lhs_high_independent_carla_plan_v1.schema.json"),
+    "lhs_high_independent_carla_plan_v2": os.path.join(PROJECT_ROOT, "schemas", "lhs_high_independent_carla_plan_v2.schema.json"),
+}
 
 
 def _project_path(path):
@@ -71,8 +74,12 @@ def _load_metadata(path, expected_ids):
     return {sample_id: by_id[sample_id] for sample_id in expected_ids}
 
 
-def load_plan_config(path=DEFAULT_CONFIG_PATH, schema_path=DEFAULT_SCHEMA_PATH):
+def load_plan_config(path=DEFAULT_CONFIG_PATH, schema_path=None):
     config = load_json(os.path.abspath(path))
+    if schema_path is None:
+        schema_path = SCHEMA_PATHS.get(config.get("format"))
+    if schema_path is None:
+        raise ValueError(f"Unsupported LHS/high plan config format: {config.get('format')}")
     schema = load_json(os.path.abspath(schema_path))
     errors = validate_schema_value(config, schema)
     if errors:
@@ -92,11 +99,12 @@ def prepare_plan(plan_config, plan_root, runtime_output_root, traffic_manager_po
     if validate_runner is None:
         validate_runner = bool(plan_config["validate_scene_configs"])
     os.makedirs(plan_root, exist_ok=False)
+    pair_id_prefix = plan_config.get("pair_id_prefix", "lhs_high_boundary_v1")
     runs = []
     manifest = []
     for index, record in enumerate(records, 1):
         sample_id = record["sample_id"]
-        pair_id = f"lhs_high_boundary_v1_{index:02d}"
+        pair_id = f"{pair_id_prefix}_{index:02d}"
         run_id = f"{pair_id}_independent"
         artifacts = _write_run_artifacts(
             plan_root, runtime_output_root, record, run_id, base_config,
@@ -125,12 +133,14 @@ def prepare_plan(plan_config, plan_root, runtime_output_root, traffic_manager_po
         "execution_mode": "independent",
         "prepared_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "source_git": git_state(),
+        "plan_config_format": plan_config["format"],
+        "pair_id_prefix": pair_id_prefix,
         "candidate_count": len(records),
         "independent_run_count": len(runs),
         "scene_config_validation_count": sum(row["validation_status"] == "completed" for row in runs),
         "traffic_manager_port": traffic_manager_port,
         "carla_runtime_executed": False,
-        "runtime_boundary": "Three frozen LHS/high boundary candidates are planned as independent scenes; no shared baseline, repeated pair, or online training is included.",
+        "runtime_boundary": f"{len(records)} frozen LHS/high boundary candidates are planned as independent scenes; no shared baseline, repeated pair, or online training is included.",
         "source_records": os.path.relpath(records_path, PROJECT_ROOT).replace("\\", "/"),
         "source_metadata": os.path.relpath(metadata_path, PROJECT_ROOT).replace("\\", "/"),
         "runtime_output_root": os.path.abspath(runtime_output_root),
@@ -152,6 +162,7 @@ def prepare_plan(plan_config, plan_root, runtime_output_root, traffic_manager_po
 def parse_args():
     parser = argparse.ArgumentParser(description="Prepare independent LHS/high boundary CARLA configs")
     parser.add_argument("--config", default=DEFAULT_CONFIG_PATH)
+    parser.add_argument("--schema")
     parser.add_argument("--output-dir")
     parser.add_argument("--runtime-output-root")
     parser.add_argument("--traffic-manager-port", type=int)
@@ -161,7 +172,7 @@ def parse_args():
 
 def main():
     args = parse_args()
-    config = load_plan_config(args.config)
+    config = load_plan_config(args.config, args.schema)
     plan_root = os.path.abspath(args.output_dir or _default_root(config))
     runtime_root = os.path.abspath(args.runtime_output_root or _default_root(config, runtime=True))
     summary = prepare_plan(config, plan_root, runtime_root, args.traffic_manager_port, not args.skip_runner_validation)
