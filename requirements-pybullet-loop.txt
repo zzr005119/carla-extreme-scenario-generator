@@ -1,0 +1,2 @@
+# Optional discrete geometry validation for the differentiable Torch surrogate.
+pybullet>=3.2

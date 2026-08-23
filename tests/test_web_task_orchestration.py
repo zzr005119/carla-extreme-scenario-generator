@@ -88,6 +88,20 @@ class WebTaskOrchestrationTests(unittest.TestCase):
         self.assertEqual(result_status, 200)
         self.assertTrue(result["valid"])
 
+    def test_validation_jsonl_returns_per_record_results(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "records.jsonl"
+            record = json.loads(RECORD_PATH.read_text(encoding="utf-8"))
+            path.write_text(json.dumps(record, ensure_ascii=False) + "\n" + json.dumps(record, ensure_ascii=False) + "\n", encoding="utf-8")
+            status, task = self.request_json(
+                "POST", "/api/tasks", {"kind": "validation", "payload": {"record_path": str(path)}}
+            )
+            self.assertEqual(status, 202)
+            completed = self.wait_for(task["task_id"], "completed")
+            self.assertEqual(completed["result"]["record_count"], 2)
+            self.assertEqual(len(completed["result"]["items"]), 2)
+            self.assertTrue(completed["result"]["valid"])
+
     def test_generation_task_runs_cpu_lhs(self):
         status, task = self.request_json(
             "POST",

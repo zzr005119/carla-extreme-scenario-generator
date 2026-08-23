@@ -64,11 +64,28 @@ BASE_STYLE = """
   .links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
   .links a { color: var(--primary); border: 1px solid var(--line); border-radius: 7px; padding: 12px; text-decoration: none; background: #fff; }
   .links a:hover { border-color: var(--primary); background: #eff6ff; }
+  form { display: grid; gap: 8px; }
+  label { color: var(--muted); font-size: 13px; font-weight: 600; }
+  input, select, textarea, button { font: inherit; border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; min-height: 38px; }
+  input, select, textarea { width: 100%; background: #fff; color: var(--ink); }
+  textarea { resize: vertical; min-height: 120px; font-family: Consolas, "Courier New", monospace; font-size: 12px; }
+  button { width: fit-content; cursor: pointer; background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 700; }
+  button.secondary { background: #fff; color: var(--primary); }
+  .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .field { display: grid; gap: 5px; min-width: 0; }
+  .check { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 13px; }
+  .check input { width: auto; min-height: auto; }
+  .result { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 16px; }
+  .result pre { margin: 0; padding: 12px; max-height: 420px; overflow: auto; background: #0f172a; color: #e2e8f0; border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .status-line { min-height: 24px; color: var(--muted); }
+  .status-line.error { color: #b91c1c; }
+  .status-line.success { color: #15803d; }
+  .workflow-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
   table { width: 100%; border-collapse: collapse; }
   th, td { padding: 9px 7px; border-bottom: 1px solid #edf1f7; text-align: left; vertical-align: top; }
   th { color: var(--muted); width: 30%; font-weight: 500; }
   code { overflow-wrap: anywhere; }
-  @media (max-width: 700px) { .facts, .links { grid-template-columns: 1fr; } }
+  @media (max-width: 700px) { .facts, .links, .form-grid { grid-template-columns: 1fr; } }
 </style>
 """
 
@@ -115,15 +132,111 @@ def _detail_page(record):
     return _page("场景详情", content, subtitle="场景库 V1 · 只读证据视图")
 
 
-def _placeholder_page(title, module, status="接口边界已预留"):
-    content = (
-        '<section class="panel"><h2>'
-        f"{html.escape(module)}</h2><p class=\"muted\">当前状态：{html.escape(status)}。"
-        "首期不执行 CARLA、不写入场景库；接入前先补齐输入输出契约、任务状态和验收证据。</p>"
-        '<div class="links"><a href="/dashboard">查看 Dashboard</a>'
-        '<a href="/scenarios">查看场景库</a><a href="/healthz">查看服务健康</a></div></section>'
-    )
-    return _page(title, content, subtitle="阶段五 Web 管理系统 · 模块边界")
+def _workflow_page(kind):
+    """Render one complete submit -> poll -> result workflow."""
+    configs = {
+        "generation": {
+            "title": "场景生成",
+            "subtitle": "M01 · CPU 离线生成任务",
+            "fields": """
+              <div class="form-grid">
+                <div class="field"><label for="model">生成器</label><select id="model"><option value="lhs">LHS</option><option value="gmm">GMM</option><option value="cvae">CVAE</option><option value="diffusion">Diffusion</option></select></div>
+                <div class="field"><label for="risk">目标风险档</label><select id="risk"><option>low</option><option selected>medium</option><option>high</option><option>critical</option></select></div>
+                <div class="field"><label for="weather_tags">天气标签</label><input id="weather_tags" placeholder="night,heavy_rain"></div>
+                <div class="field"><label for="count">生成数量</label><input id="count" type="number" min="1" max="64" value="1"></div>
+                <div class="field"><label for="seed">随机种子</label><input id="seed" type="number" value="20260823"></div>
+                <div class="field"><label for="artifact">模型产物路径（GMM/CVAE/Diffusion）</label><input id="artifact" placeholder="F:\\Carla\\models\\checkpoint.pt"></div>
+              </div>
+            """,
+        },
+        "validation": {
+            "title": "场景校验",
+            "subtitle": "M02 · Schema、语义和物理约束",
+            "fields": f"""
+              <div class="field"><label for="record_path">记录路径（JSON/JSONL）</label><input id="record_path" value="{html.escape(str(PROJECT_ROOT / 'data' / 'scenarios' / 'seed_v1' / 'example_record.json'))}"></div>
+              <div class="field"><label for="record_json">或粘贴单条 JSON 记录</label><textarea id="record_json" placeholder="与记录路径二选一"></textarea></div>
+              <div class="field"><label for="base_config_path">基础 CARLA 配置</label><input id="base_config_path" value="{html.escape(str(PROJECT_ROOT / 'configs' / 'multi_hazard_rainy_night.json'))}"></div>
+              <label class="check"><input id="compile" type="checkbox" checked> 校验通过后编译 CARLA 配置</label>
+            """,
+        },
+        "risk_analysis": {
+            "title": "风险分析",
+            "subtitle": "M05 · 遥测风险与可追溯诊断",
+            "fields": """
+              <div class="field"><label for="run_dir">运行目录（含 telemetry.csv / metadata.json）</label><input id="run_dir" placeholder="F:\\Carla\\output-0.9.16\\...\\run"></div>
+              <div class="form-grid">
+                <div class="field"><label for="telemetry_path">遥测 CSV（可选）</label><input id="telemetry_path"></div>
+                <div class="field"><label for="metadata_path">metadata.json（可选）</label><input id="metadata_path"></div>
+                <div class="field"><label for="config_path">场景配置（可选）</label><input id="config_path"></div>
+                <div class="field"><label for="collision_count">碰撞事件数（可选）</label><input id="collision_count" type="number" min="0" placeholder="优先读取 metadata"></div>
+              </div>
+            """,
+        },
+    }
+    config = configs[kind]
+    script = f"""
+    <script>
+      const kind = {json.dumps(kind)};
+      const esc = value => String(value ?? "").replace(/[&<>'"]/g, c => ({{"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\\\"":"&quot;"}}[c]));
+      const message = (text, tone="") => {{ const node = document.getElementById("status"); node.textContent = text; node.className = `status-line ${{tone}}`; }};
+      let pollTimer = null;
+      function readPayload() {{
+        if (kind === "generation") return {{model: model.value, risk: risk.value, weather_tags: weather_tags.value, count: Number(count.value), seed: Number(seed.value), artifact: artifact.value || undefined}};
+        if (kind === "validation") {{
+          const payload = {{compile: compile.checked, base_config_path: base_config_path.value}};
+          if (record_json.value.trim()) payload.record = JSON.parse(record_json.value);
+          else payload.record_path = record_path.value;
+          return payload;
+        }}
+        const payload = {{run_dir: run_dir.value, telemetry_path: telemetry_path.value, metadata_path: metadata_path.value, config_path: config_path.value}};
+        if (collision_count.value !== "") payload.collision_count = Number(collision_count.value);
+        return payload;
+      }}
+      function resultHeadline(task) {{
+        if (!task.result) return "";
+        if (kind === "generation") return `已生成 ${{task.result.summary?.accepted_count ?? "—"}} 条，产物：${{task.result.output_path || "—"}}`;
+        if (kind === "validation") return `校验 ${{task.result.valid ? "通过" : "未通过"}}，记录 ${{task.result.record_count ?? 1}} 条`;
+        const risk = task.result.observed_risk || {{}};
+        return `实测风险：${{risk.level || "—"}} / ${{risk.score ?? "—"}}，方法：${{risk.method || "—"}}`;
+      }}
+      function renderResult(task) {{
+        const box = document.getElementById("result");
+        if (!task.result && !task.error) {{ box.innerHTML = ""; return; }}
+        const payload = task.result || {{error: task.error}};
+        box.innerHTML = `<div class="result"><h3>任务结果</h3><p class="muted">${{esc(resultHeadline(task))}}</p><pre>${{esc(JSON.stringify(payload, null, 2))}}</pre></div>`;
+      }}
+      async function getTask(taskId) {{
+        const response = await fetch(`/api/tasks/${{encodeURIComponent(taskId)}}`);
+        const task = await response.json();
+        if (!response.ok) throw new Error(task.error || "任务状态读取失败");
+        message(`任务 ${{task.task_id}}：${{task.status}}`);
+        renderResult(task);
+        if (["completed","failed","cancelled"].includes(task.status)) {{ clearInterval(pollTimer); pollTimer = null; message(`任务 ${{task.task_id}}：${{task.status}}`, task.status === "completed" ? "success" : "error"); }}
+      }}
+      document.getElementById("workflow-form").addEventListener("submit", async event => {{
+        event.preventDefault();
+        try {{
+          message("正在提交任务...");
+          const response = await fetch("/api/tasks", {{method:"POST", headers:{{"Content-Type":"application/json"}}, body:JSON.stringify({{kind, payload:readPayload()}})}});
+          const task = await response.json();
+          if (!response.ok) throw new Error(task.error || "任务提交失败");
+          if (pollTimer) clearInterval(pollTimer);
+          await getTask(task.task_id);
+          pollTimer = setInterval(() => getTask(task.task_id).catch(error => message(error.message, "error")), 700);
+        }} catch (error) {{ message(error.message, "error"); }}
+      }});
+    </script>
+    """
+    content = f"""
+    <section class="panel">
+      <h2>{html.escape(config['title'])}</h2>
+      <form id="workflow-form">{config['fields']}<div class="workflow-actions"><button type="submit">提交任务</button><button type="reset" class="secondary">清空</button><a href="/tasks" style="padding:9px 0">查看全部任务</a></div></form>
+      <p id="status" class="status-line" role="status">等待提交</p>
+      <div id="result"></div>
+    </section>
+    {script}
+    """
+    return _page(config["title"], content, subtitle=config["subtitle"])
 
 
 def _tasks_page():
@@ -260,16 +373,15 @@ class WebAppHandler(DashboardHandler):
             self._send_page(_detail_page(record))
             return
         pages = {
-            "/generation": ("场景生成", "生成模块"),
-            "/validation": ("场景校验", "校验模块"),
-            "/risk": ("风险分析", "风险分析模块"),
+            "/generation": "generation",
+            "/validation": "validation",
+            "/risk": "risk_analysis",
         }
         if request_path == "/tasks":
             self._send_page(_tasks_page())
             return
         if request_path in pages:
-            title, module = pages[request_path]
-            self._send_page(_placeholder_page(title, module))
+            self._send_page(_workflow_page(pages[request_path]))
             return
         self._send_json(404, {"error": "未找到页面"})
 

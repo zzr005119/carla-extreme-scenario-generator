@@ -64,7 +64,7 @@ flowchart LR
 | M04 | 仿真执行与多传感器采集 | 已验证实现 / 原型 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py`、`batch_runner.py` | CARLA 0.9.16 实机回归；RGB、Depth、SemSeg、Collision；确定性路线控制已验证 |
 | M05 | 风险评估与结果分析 | 已验证实现 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2`、TTC、车距、碰撞和遥测分析；风险反馈 V5 与 27 维代理冻结 |
 | M06 | 实验编排与复现管理 | 已验证实现 / 原型 | `batch_runner.py`、`core/web_task_orchestrator.py`、`tools/measure_stage5_metrics.py`、`tools/server_*.cmd`、`configs/` | 批次调度、种子、配置哈希、服务器工作流、质量门和阶段五指标基线；Web 离线任务状态/结果持久化；CARLA 任务仅显式确认后登记外部执行 |
-| M07 | 可视化管理界面 | 已实现首期 Web MVP / 任务原型 | `tools/web_app.py`、`tools/web_app.cmd`、`tools/scenario_dashboard.py`、`tools/scenario_dashboard.cmd` | 统一 Web 入口支持 Dashboard、场景库、独立详情、健康检查、受控查询和任务状态页；不含多用户、权限或 Web 内隐式启动 CARLA |
+| M07 | 可视化管理界面 | 已实现首期 Web 工作流 | `tools/web_app.py`、`tools/web_app.cmd`、`tools/scenario_dashboard.py`、`tools/scenario_dashboard.cmd` | 统一 Web 入口支持 Dashboard、场景库、独立详情、健康检查、受控查询，以及生成/校验/风险分析表单、任务轮询和结构化结果；不含多用户、权限或 Web 内隐式启动 CARLA |
 | M08 | 阶段五最小演示编排 | 已验证实现 / 离线原型 | `tools/stage5_minimal_demo.py`、`tools/stage5_demo.cmd` | M01–M08 离线组合、静态适配、历史证据读取和 `demo_manifest.json` 已通过；默认不连接 CARLA |
 
 ## 🔗 详细模块映射
@@ -131,7 +131,7 @@ flowchart LR
 - **职责：** 提供场景筛选、场景详情、运行证据、风险结果、质量指标和任务状态/结果的本地管理界面。
 - **输入：** M03 输出的场景库索引、M05 输出的风险分析、M06 输出的批次汇总。
 - **输出：** 场景列表、详情页、风险分布图、运行证据状态、任务状态和任务结果 JSON。
-- **当前状态：** 已完成首期本地 Web 管理入口和 M06 任务原型，可访问 Dashboard、场景库列表、独立场景详情、受控查询、健康检查和任务页面；尚未形成多用户服务、权限或产品化部署能力。
+- **当前状态：** 已完成首期本地 Web 管理入口和三个可操作工作流，可访问 Dashboard、场景库列表、独立场景详情、受控查询、健康检查、生成/校验/风险分析表单、任务轮询和结果 JSON；尚未形成多用户服务、权限或生产部署能力。
 - **实现映射：** `tools/web_app.py`、`tools/web_app.cmd` 复用 `scenario_dashboard.py` 的数据加载器和 API，`core/web_task_orchestrator.py` 提供任务状态/结果契约，回归见 `tests/test_web_app.py`、`tests/test_web_task_orchestration.py`。
 
 ### M08 阶段五最小演示编排
@@ -200,7 +200,7 @@ sequenceDiagram
 ## ⚠️ 当前不可宣称内容
 
 - 软著申请或登记已经完成；当前只完成系统模块映射前置工作。
-- 已实现完整的 Web/桌面可视化管理产品；当前只有基于 Python 标准库的本地只读原型，主要业务入口仍是命令行和文件接口。
+- 已实现多用户生产级 Web/桌面产品；当前是基于 Python 标准库的单机 Web 首期，CARLA、RL 和 GPU 任务仍通过显式外部入口执行。
 - 已证明强化学习策略具有普遍 CARLA 泛化优势；阶段四只完成工程链路和有限独立评估。
 - 已实现完整 OpenSCENARIO 导入、导出和跨仿真器兼容；当前核心配置是项目自定义 JSON 与 CARLA 运行器。
 - 生成样本已经等价于真实道路样本；场景库真实性目前保持 `not_assessed`。

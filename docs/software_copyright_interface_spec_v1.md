@@ -26,7 +26,7 @@ _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1
 | M04 | `scene_04_parameterized.py`、`batch_runner.py` | JSON 配置、CARLA 服务、运行参数 | `metadata.json`、`telemetry.csv`、传感器帧 | 已验证实现 / 原型 |
 | M05 | `risk_metrics.py`、`analysis/` | 遥测、事件、运行元数据 | 风险分数、等级、分析报告 | 已验证实现 |
 | M06 | `batch_runner.py`、`core/web_task_orchestrator.py`、`tools/server_*.cmd` | 实验计划、Git 提交、服务器资源或 Web 任务请求 | 批次汇总、日志、轻量结果、任务状态/结果 JSON | 已验证实现 / 原型 |
-| M07 | `web_app.py`、`web_app.cmd`、`scenario_dashboard.py`、`scenario_dashboard.cmd` | 场景库索引、条目、汇总和任务状态 | Web 页面、筛选结果、详情页、任务状态/结果、健康检查 | 首期 Web MVP / 任务原型 |
+| M07 | `web_app.py`、`web_app.cmd`、`scenario_dashboard.py`、`scenario_dashboard.cmd` | 场景库索引、条目、汇总和任务状态 | Web 页面、筛选结果、详情页、生成/校验/风险分析表单、任务状态/结果、健康检查 | 首期 Web 工作流 |
 | M08 | `stage5_minimal_demo.py`、`stage5_demo.cmd` | M01 记录、M03 库、M02 基础配置 | 静态配置、`.xosc`、适配清单、`demo_manifest.json` | 已验证实现 / 离线原型 |
 
 ## ⚙️ 数据契约
@@ -308,11 +308,13 @@ HTTP 接口：
 | `GET` | `/api/scenarios` | 场景索引列表 | 否 |
 | `GET` | `/api/scenarios/{library_id}` | 单个场景完整条目 | 否 |
 | `GET` | `/healthz` | Web 服务状态和数据计数 | 否 |
-| `GET` | `/generation`、`/validation`、`/risk` | 模块边界页 | 否 |
+| `GET` | `/generation` | 场景生成表单、任务轮询和 JSONL 结果 | 生成任务目录 |
+| `GET` | `/validation` | JSON/JSONL 校验、物理约束和配置编译表单 | 校验任务目录 |
+| `GET` | `/risk` | 运行目录/遥测风险分析表单和诊断结果 | 风险任务目录 |
 | `GET` | `/tasks` | Web 任务提交与状态页面 | 任务状态文件 |
 | `GET`/`POST` | `/api/tasks...` | 任务提交、状态、结果和显式确认 | 任务目录 JSON |
 
-页面读取场景库只读文件，并通过独立任务目录保存 Web 任务状态；不修改场景库。离线任务仅使用本机 CPU worker，CARLA 任务不由 Web 进程启动，必须显式确认并转交外部服务器入口。当前只支持本机访问和单进程服务，尚未提供用户认证、权限管理或多用户部署。
+页面读取场景库只读文件，并通过独立任务目录保存 Web 任务状态；不修改场景库。`/generation`、`/validation` 和 `/risk` 已提供参数表单、任务轮询、终态结果和错误展示；离线任务仅使用本机 CPU worker，CARLA 任务不由 Web 进程启动，必须显式确认并转交外部服务器入口。当前只支持本机访问和单进程服务，尚未提供用户认证、权限管理或多用户部署。
 
 ## 🧭 M08 阶段五最小演示编排接口
 
@@ -359,7 +361,7 @@ M08 默认必须写入 `carla_connected=false`、`execution_mode=offline_static_
 ## 🎯 后续实现顺序
 
 1. 用本文接口矩阵作为后续改动的验收清单。
-2. 保持 M07 只读 Dashboard 的页面级回归，不改变当前仿真和风险计算逻辑。
+2. 保持 M07 Dashboard 和生成/校验/风险三条 Web 工作流回归，不改变当前仿真和风险计算逻辑；产品化流程见 `docs/stage5_web_product_flow_v2.md`。
 3. 以 M08 离线演示和 `demo_manifest.json` 作为阶段五接口集成门。
 4. 系统集成完成后，基于最终冻结提交统一更新说明书、截图和申请材料。
 

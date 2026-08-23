@@ -49,6 +49,17 @@ class WebAppHttpTests(unittest.TestCase):
             self.assertEqual(headers.get_content_type(), "text/html", path)
             self.assertIn("/scenarios", body.decode("utf-8"), path)
 
+    def test_workflow_pages_are_operational_forms(self):
+        expected = {
+            "/generation": ("/api/tasks", "生成数量", "提交任务"),
+            "/validation": ("/api/tasks", "记录路径", "编译 CARLA 配置"),
+            "/risk": ("/api/tasks", "运行目录", "遥测 CSV"),
+        }
+        for path, markers in expected.items():
+            body = self.get_bytes(path)[2].decode("utf-8")
+            for marker in markers:
+                self.assertIn(marker, body, f"{path} 缺少 {marker}")
+
     def test_detail_page_and_health_contract(self):
         status, headers, body = self.get_bytes(f"/scenarios/{self.first_library_id}")
         self.assertEqual(status, 200)

@@ -228,12 +228,27 @@ class CarlaSceneExecutor:
         self.timeout_seconds = int(timeout_seconds)
         self.episode_id = _safe_name(episode_id)
         self.agent_config = agent_config
+        self._episode_index = 0
+        self._active_artifact_dir = None
 
     def __call__(self, record, phase, step_index):
+        if phase == "baseline":
+            self._episode_index += 1
+            if self._episode_index == 1:
+                self._active_artifact_dir = self.artifact_dir
+            else:
+                self._active_artifact_dir = os.path.join(
+                    self.artifact_dir,
+                    "episodes",
+                    f"{self.episode_id}_{self._episode_index:04d}",
+                )
+                os.makedirs(self._active_artifact_dir, exist_ok=False)
+        if self._active_artifact_dir is None:
+            raise RuntimeError("CARLA executor 必须先收到 baseline episode")
         phase_index = 0 if phase == "baseline" else int(step_index) + 1
         scenario_name = f"{self.episode_id}_{phase}_{phase_index:02d}"
         step_dir = os.path.join(
-            self.artifact_dir,
+            self._active_artifact_dir,
             "steps",
             f"{phase_index:02d}_{phase}",
         )

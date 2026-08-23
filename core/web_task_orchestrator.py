@@ -45,6 +45,25 @@ def _load_json(path):
         return json.load(file)
 
 
+def _load_records(path):
+    """Load one JSON record or every non-empty record from a JSONL file."""
+    path = Path(path)
+    if path.suffix.lower() != ".jsonl":
+        return [_load_json(path)]
+    records = []
+    with path.open("r", encoding="utf-8") as file:
+        for line_number, line in enumerate(file, start=1):
+            if not line.strip():
+                continue
+            try:
+                records.append((line_number, json.loads(line)))
+            except json.JSONDecodeError as error:
+                raise TaskError(f"JSONL 第 {line_number} 行无法解析: {error}") from error
+    if not records:
+        raise TaskError(f"记录文件为空: {path}")
+    return records
+
+
 def _write_json(path, payload):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -341,30 +360,55 @@ class TaskManager:
 
     def _record_from_payload(self, payload):
         if "record" in payload:
-            return payload["record"], None
+            return [(1, payload["record"])], None
         path = Path(payload["record_path"])
-        return _load_json(path), path
+        records = _load_records(path)
+        if records and not isinstance(records[0], tuple):
+            records = [(1, records[0])]
+        return records, path
 
     def _run_validation(self, task):
         from core.physical_constraints import build_physical_constraint_report
         from core.scenario_validator import compile_carla_config, load_json, validate_scenario_record
 
         payload = task["payload"]
-        record, source_path = self._record_from_payload(payload)
-        validation = validate_scenario_record(record)
-        physical = build_physical_constraint_report(
-            [(1, record)], source=source_path
-        )
+        records, source_path = self._record_from_payload(payload)
+        validations = []
+        for line_number, record in records:
+            validations.append(
+                {
+                    "line": line_number,
+                    "result": validate_scenario_record(record),
+                }
+            )
+        physical = build_physical_constraint_report(records, source=source_path)
+        validation = validations[0]["result"] if len(validations) == 1 else {
+            "valid": all(item["result"]["valid"] for item in validations),
+            "errors": [
+                {"line": item["line"], "errors": item["result"]["errors"]}
+                for item in validations
+                if item["result"]["errors"]
+            ],
+            "warnings": [
+                {"line": item["line"], "warnings": item["result"]["warnings"]}
+                for item in validations
+                if item["result"]["warnings"]
+            ],
+        }
         result = {
             "kind": "validation",
             "execution_mode": "offline_cpu",
             "schema_semantic": validation,
+            "record_count": len(records),
+            "items": validations,
             "physical_constraints": physical,
-            "valid": bool(validation["valid"] and physical["valid_count"] == 1),
+            "valid": bool(validation["valid"] and physical["valid_count"] == len(records)),
         }
+        if payload["compile"] and result["valid"] and len(records) != 1:
+            raise TaskError("JSONL 批量校验不能直接编译单个 CARLA 配置，请提交单条 JSON 记录")
         if payload["compile"] and result["valid"]:
             base_path = Path(payload.get("base_config_path") or (PROJECT_ROOT / "configs" / "multi_hazard_rainy_night.json"))
-            compiled = compile_carla_config(record, load_json(base_path))
+            compiled = compile_carla_config(records[0][1], load_json(base_path))
             output = self._task_output_dir(task) / "compiled_carla_config.json"
             _write_json(output, compiled)
             result["compiled_config_path"] = str(output)

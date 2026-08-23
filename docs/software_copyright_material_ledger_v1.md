@@ -15,7 +15,7 @@ _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1
 | 拟登记软件名称 | 基于CARLA的自动驾驶极端场景生成与仿真测试系统 V1.0 | 与最终软件界面、说明书和申请表统一核对 |
 | 当前工程基线 | 由 `tools/check_stage5_freeze.cmd` 读取的 Git `HEAD`；当前材料基线为阶段五 M08 链路 | 功能完成后记录并冻结最终 V1.0 提交 |
 | 当前运行基线 | CARLA 0.9.16、`Carla666-0916` | 冻结版本后重新做一次环境和版本核对 |
-| 当前软件形态 | Python 命令行、JSON/CSV 文件接口、本地只读 Web 管理入口 | 说明书按实际交付形态描述，不虚构多用户产品 |
+| 当前软件形态 | Python 命令行、JSON/CSV 文件接口、本地单进程 Web 管理入口；Web 已含生成/校验/风险三条任务流程 | 说明书按实际交付形态描述，不虚构多用户产品 |
 | 当前主演示 | `tools/stage5_demo.cmd`，默认离线、`carla_connected=false` | 冻结版本重新运行并归档最终 `demo_manifest.json` |
 | 当前场景库 | 117 个独立场景、351 次来源批次严格验收证据 | 复核库快照、证据等级和路径是否仍与冻结版本一致 |
 
@@ -29,7 +29,7 @@ _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1
 | M04 仿真采集 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py` | CARLA 0.9.16 运行证据、`metadata.json`、`telemetry.csv`、传感器状态 | 已验证实现 / 原型 | 选一条可复核的实机展示记录，重新采集最终截图 |
 | M05 风险评估 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2` 分解、风险报告、批次统计 | 已验证实现 | 说明书中标注这是仿真遥测启发式指标，不是事故概率 |
 | M06 实验复现 | `batch_runner.py`、`tools/server_*.cmd`、`configs/` | 计划、种子、配置哈希、服务器任务和轻量汇总 | 已验证实现 / 原型 | 整理一条最小复现路径，隐藏服务器内部细节 |
-| M07 只读 Web 管理入口 | `tools/web_app.py`、`tools/web_app.cmd`、`tools/scenario_dashboard.py` | 页面级回归、HTTP 接口、场景库列表和详情展示 | 首期 Web MVP / 只读原型 | 冻结版本采集页面截图；不宣称多用户、权限和写入能力 |
+| M07 Web 管理入口 | `tools/web_app.py`、`tools/web_app.cmd`、`tools/scenario_dashboard.py`、`core/web_task_orchestrator.py` | 页面级回归、HTTP 接口、场景库列表/详情、生成/校验/风险表单和任务结果 | 首期 Web 工作流 | 冻结版本采集页面截图；不宣称多用户、权限和场景库写入能力 |
 | M08 最小演示编排 | `tools/stage5_minimal_demo.py`、`tools/stage5_demo.cmd` | `demo_manifest.json`、配置、`.xosc`、适配清单、2 项单元测试 | 阶段五已建立 / 离线原型 | 冻结版本重新运行，作为说明书的总入口和证据索引 |
 
 ## 本轮整理验收
