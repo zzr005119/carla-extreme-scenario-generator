@@ -55,9 +55,9 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 
 1. ⏸ **S5-WEB-03 Web 展示取证**：在功能冻结后采集 Dashboard、场景列表、详情和关键结果页面截图，登记到软著材料台账；当前不提前制作最终截图。
 2. ⏸ **S5-SCALE-01 10,000 场景扩库**：降级为可扩展流水线设计和当前规模质量验证，不作为阶段五阻塞项。
-3. ▶ **S5-RL-01 CARLA 在线 RL**：`tools/train_carla_rl.py` 已建立 Gymnasium/SB3 预检和显式训练门；待服务器 CARLA 0.9.16 服务在线后完成低步数真实训练和独立评估。
-4. ▶ **S5-XOSC-01 ScenarioRunner 直执行**：`tools/run_scenario_runner.py` 已建立 XOSC 预检和显式执行命令；当前服务器未部署 ScenarioRunner，待安装/指定版本后做单场景直执行。
-5. ▶ **S5-PYBULLET-01 可微闭环**：`core/differentiable_closed_loop.py` 已完成 Torch 可微运动学和可选 PyBullet 离散校验；待安装 PyBullet 后补离散接触验证，真实 PyBullet 可微物理仍不宣称完成。
+3. ▶ **S5-RL-01 CARLA 在线 RL**：已完成服务器 GPU1 上 PPO `2` 步真实 CARLA 在线链路冒烟，baseline/candidate 均严格验收通过；仍待多场景、多种子独立评估，不能写成 RL 泛化结论。证据见 `docs/carla_online_rl_smoke_v1.md`。
+4. ▶ **S5-XOSC-01 ScenarioRunner 直执行**：`tools/run_scenario_runner.py` 已建立 XOSC 预检和显式执行命令；当前服务器未部署 ScenarioRunner，直执行仍阻塞，完成条件和边界见 `docs/scenario_runner_direct_execution_v1.md`。
+5. ▶ **S5-PYBULLET-01 可微闭环**：`core/differentiable_closed_loop.py` 已完成 Torch 可微运动学；服务器 `Carla666-0916` 已安装 PyBullet 3.2.7，`tests.test_runtime_adapters` 的梯度和 DIRECT 离散校验 `4/4` 通过。真实 PyBullet 可微物理仍不宣称完成，边界见 `docs/differentiable_closed_loop_v1.md`。
 6. ⏸ **S5-ABL-01 完整消融实验与结题报告**：放在 Web、在线 RL、ScenarioRunner 和可微闭环证据收口后统一设计、执行和写作。
 
 ## 计划书目标映射
