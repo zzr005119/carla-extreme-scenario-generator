@@ -56,6 +56,7 @@ class RuntimeAdapterTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as output_dir:
             plan = build_training_plan(LOOP_CONFIG, RECORD, output_dir, steps=2)
         self.assertEqual(plan["algorithm"], "PPO")
+        self.assertEqual(plan["carla_episode_budget"], 3)
         self.assertFalse(plan["carla_server_started_by_script"])
         self.assertIn(plan["status"], ("ready", "blocked_optional_dependency"))
 

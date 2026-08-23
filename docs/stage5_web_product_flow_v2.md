@@ -33,7 +33,7 @@
 
 ## 研究能力入口
 
-- `tools/train_carla_rl.py`：在线 RL 预检/训练入口。默认 `--dry-run`，只有 `--allow-online-carla` 才可能启动环境；缺少 Gymnasium 或 SB3 时保持阻塞状态。
+- `tools/train_carla_rl.py`：在线 RL 预检/训练入口。默认 `--dry-run`，只有 `--allow-online-carla` 才可能启动环境；PPO rollout 长度受 `--steps` 显式预算约束，不会因为算法默认值偷偷扩展 CARLA episode；缺少 Gymnasium 或 SB3 时保持阻塞状态。
 - `tools/run_scenario_runner.py`：XOSC 解析、ScenarioRunner 路径预检和显式 `--execute` 入口。默认只生成 dry-run manifest。
 - `core/differentiable_closed_loop.py`：Torch 可微运动学闭环和损失梯度；PyBullet 仅作为可选离散校验，不能称为可微 PyBullet 训练。
 

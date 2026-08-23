@@ -7,6 +7,7 @@ import importlib.util
 import json
 from pathlib import Path
 import sys
+from datetime import datetime
 
 import numpy as np
 
@@ -44,6 +45,7 @@ def build_training_plan(config_path, record_path, output_root, *, algorithm="PPO
         "format": "carla_online_rl_training_plan_v1",
         "algorithm": algorithm.upper(),
         "requested_steps": int(steps),
+        "carla_episode_budget": int(steps) + 1,
         "record_sample_id": record["sample_id"],
         "output_root": str(Path(output_root).expanduser().resolve()),
         "dependency_status": dependency_status(),
@@ -65,7 +67,7 @@ def train(plan, config_path, record_path, *, allow_online_carla=False):
     record = load_record(record_path)
     output_root = Path(plan["output_root"])
     output_root.mkdir(parents=True, exist_ok=True)
-    episode_id = _safe_name(f"rl_{record['sample_id']}")
+    episode_id = _safe_name(f"rl_{record['sample_id']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}")
     episode_dir = output_root / "episodes" / episode_id
     episode_dir.mkdir(parents=True, exist_ok=False)
     runtime_root = output_root / "runtime" / episode_id
@@ -81,7 +83,17 @@ def train(plan, config_path, record_path, *, allow_online_carla=False):
     algorithm = plan["algorithm"]
     model_cls = PPO if algorithm == "PPO" else SAC
     try:
-        model = model_cls("MlpPolicy", env, verbose=1, device="auto", seed=record["scenario"]["traffic_manager_seed"])
+        model_kwargs = {
+            "verbose": 1,
+            "device": "auto",
+            "seed": record["scenario"]["traffic_manager_seed"],
+        }
+        if algorithm == "PPO":
+            # PPO collects a rollout before learning; keep that rollout within
+            # the explicit CARLA budget instead of silently using 2048 steps.
+            rollout_steps = max(2, min(int(plan["requested_steps"]), 16))
+            model_kwargs.update({"n_steps": rollout_steps, "batch_size": rollout_steps})
+        model = model_cls("MlpPolicy", env, **model_kwargs)
         model.learn(total_timesteps=plan["requested_steps"])
         model_path = output_root / f"{episode_id}_{algorithm.lower()}"
         model.save(str(model_path))
