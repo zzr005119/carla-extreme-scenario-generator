@@ -62,6 +62,14 @@ D:\ANACONDA\envs\Carla666-0916\python.exe tools\web_app.py --validate-only
 
 页面支持 Dashboard、场景库筛选、独立详情和历史风险/证据查看；生成、校验、任务和风险分析入口当前为边界占位，不提供写入、删除、提交 CARLA 任务或权限管理。
 
+参数级物理约束检查：
+
+```powershell
+D:\ANACONDA\envs\Carla666-0916\python.exe tools\check_physical_constraints.py data\scenarios\seed_v1\scenarios.jsonl --output F:\Carla\project-transfer\physical_constraints_v1\seed_report.json --strict
+```
+
+该命令只做 CPU 静态参数检查，不启动 CARLA、不占用 GPU；warning 是名义速度下的危险边界提示，不是实测风险。
+
 ### 3.3 查询命令行结果
 
 ```powershell

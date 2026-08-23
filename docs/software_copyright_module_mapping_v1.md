@@ -59,7 +59,7 @@ flowchart LR
 | 编号 | 系统模块 | 当前状态 | 主要代码入口 | 现有证据 |
 | --- | --- | --- | --- | --- |
 | M01 | 场景生成与条件编译 | 已验证实现 / 原型 | `tools/generate_seed_dataset.py`、`tools/generate_with_model.py`、`models/`、`training/` | LHS、条件 GMM、条件表格 CVAE 已完成离线生成与对照；生成模型仍属于研究分支 |
-| M02 | 场景约束与校验 | 已验证实现 | `core/scenario_validator.py`、`schemas/` | Schema、语义校验和 CARLA 配置编译；256 条种子记录全部通过 |
+| M02 | 场景约束与校验 | 已验证实现 | `core/scenario_validator.py`、`core/physical_constraints.py`、`tools/check_physical_constraints.py`、`schemas/` | Schema、语义校验、参数级物理约束和 CARLA 配置编译；256 条种子记录硬约束全部通过 |
 | M03 | 场景库管理 | 已验证实现 | `core/scenario_library.py`、`tools/build_scenario_library.py`、`tools/query_scenario_library.py` | 场景库 V1 收录 117 个独立场景、351 次来源批次严格验收运行；查询和质量门回归通过 |
 | M04 | 仿真执行与多传感器采集 | 已验证实现 / 原型 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py`、`batch_runner.py` | CARLA 0.9.16 实机回归；RGB、Depth、SemSeg、Collision；确定性路线控制已验证 |
 | M05 | 风险评估与结果分析 | 已验证实现 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2`、TTC、车距、碰撞和遥测分析；风险反馈 V5 与 27 维代理冻结 |
@@ -84,7 +84,7 @@ flowchart LR
 - **输入：** 生成场景记录、`schemas/generated_scenario.schema.json`、基础 CARLA 配置。
 - **处理：** Schema 递归校验、语义约束校验、天气标签推导、参数合并和输出目录重定位。
 - **输出：** 校验结果、错误路径信息，以及可直接交给 Scene 04 运行器的 JSON 配置。
-- **实现映射：** `core/scenario_validator.py` 的 `validate_scenario_record`、`require_valid_scenario`、`compile_carla_config` 和 `rebase_output_root`。
+- **实现映射：** `core/scenario_validator.py` 的 `validate_scenario_record`、`require_valid_scenario`、`compile_carla_config` 和 `rebase_output_root`；`core/physical_constraints.py` 的参数级检查和 `tools/check_physical_constraints.py` 的 JSON 报告入口。
 - **证据边界：** 已验证的是参数级配置合法性和 CARLA 配置编译；它不等价于 CARLA 实机一定成功，实机可执行性由 M04 的运行和严格验收负责。
 
 ### M03 场景库管理

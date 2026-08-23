@@ -47,7 +47,7 @@ Get-FileHash artifacts\stage5_minimal_demo_v1\demo_manifest.json -Algorithm SHA2
 | 模块 | 主要代码入口 | 当前可引用材料 | 证据等级 | 当前边界 |
 |---|---|---|---|---|
 | M01 场景生成 | `tools/generate_seed_dataset.py`、`tools/generate_with_model.py`、`models/`、`training/` | `data/scenarios/seed_v1/`、生成测试、模型选型报告 | E2 | 参数生成和离线对照，不代表实测风险控制 |
-| M02 约束校验 | `core/scenario_validator.py`、`schemas/` | Schema、语义校验、Scene 04 配置编译、负例测试 | E2 | 静态通过不等于 CARLA 运行通过 |
+| M02 约束校验 | `core/scenario_validator.py`、`core/physical_constraints.py`、`tools/check_physical_constraints.py`、`schemas/` | Schema、语义校验、参数级物理约束、Scene 04 配置编译、负例测试和 JSON 报告 | E2 | 静态通过不等于 CARLA 运行通过；物理指标为运行前近似 |
 | M03 场景库 | `core/scenario_library.py`、`tools/build_scenario_library.py`、`tools/query_scenario_library.py` | `entries.jsonl`、`index.csv`、质量报告、查询回归 | E2/E4（历史） | `117` 个独立场景、`351` 条来源证据；真实性为 `not_assessed` |
 | M04 仿真采集 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py` | 0.9.16 `metadata.json`、`telemetry.csv`、传感器和路线验收 | E4（历史） | 真实运行必须单独启动并重新检查版本、服务和严格验收 |
 | M05 风险评估 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2` 分解、历史风险报告和批次统计 | E4（历史） | 启发式仿真指标，不是事故概率；M08 不产生新风险 |

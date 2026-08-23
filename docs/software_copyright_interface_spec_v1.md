@@ -21,7 +21,7 @@ _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1
 | 模块 | 主入口 | 输入 | 输出 | 当前状态 |
 | --- | --- | --- | --- | --- |
 | M01 | `generate_seed_dataset.py`、`generate_with_model.py` | 条件、生成器、种子、模型工件 | 场景 JSON/JSONL | 已验证实现 / 原型 |
-| M02 | `scenario_validator.py` | 场景记录、Schema、基础配置 | 校验结果、编译配置 | 已验证实现 |
+| M02 | `scenario_validator.py`、`physical_constraints.py`、`check_physical_constraints.py` | 场景记录、Schema、基础配置 | Schema/语义校验、参数级物理约束结果、编译配置、JSON 报告 | 已验证实现 |
 | M03 | `build_scenario_library.py`、`query_scenario_library.py` | 来源清单、运行证据、质量门 | 场景库、索引、查询结果 | 已验证实现 |
 | M04 | `scene_04_parameterized.py`、`batch_runner.py` | JSON 配置、CARLA 服务、运行参数 | `metadata.json`、`telemetry.csv`、传感器帧 | 已验证实现 / 原型 |
 | M05 | `risk_metrics.py`、`analysis/` | 遥测、事件、运行元数据 | 风险分数、等级、分析报告 | 已验证实现 |
