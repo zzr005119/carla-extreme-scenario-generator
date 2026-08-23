@@ -51,7 +51,7 @@ _验收日期：2026-08-23；以下结果属于当前工程底稿，正式申请
 - 输入、输出和失败边界。
 - 测试命令、测试结果和提交哈希。
 - CARLA 实机证据的目录、版本、种子和严格验收字段。
-- M08 `demo_manifest.json` 及其限制字段。
+- M08 `demo_manifest.json` 及其限制字段；阶段五成果索引见 `docs/stage5_material_index_v1.md`。
 - 未完成能力清单：ScenarioRunner 直执行、RL 泛化、真实性评估、多用户产品化。
 
 ### 正式申请前冻结
