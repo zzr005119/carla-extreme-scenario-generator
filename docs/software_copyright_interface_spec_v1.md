@@ -25,8 +25,8 @@ _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1
 | M03 | `build_scenario_library.py`、`query_scenario_library.py`、`core/scenario_query.py` | 来源清单、运行证据、质量门、结构化查询条件 | 场景库、索引、受控查询结果 | 已验证实现 |
 | M04 | `scene_04_parameterized.py`、`batch_runner.py` | JSON 配置、CARLA 服务、运行参数 | `metadata.json`、`telemetry.csv`、传感器帧 | 已验证实现 / 原型 |
 | M05 | `risk_metrics.py`、`analysis/` | 遥测、事件、运行元数据 | 风险分数、等级、分析报告 | 已验证实现 |
-| M06 | `batch_runner.py`、`tools/server_*.cmd` | 实验计划、Git 提交、服务器资源 | 批次汇总、日志、轻量结果 | 已验证实现 / 原型 |
-| M07 | `web_app.py`、`web_app.cmd`、`scenario_dashboard.py`、`scenario_dashboard.cmd` | 场景库索引、条目和汇总 | Web 页面、筛选结果、详情页、详情 JSON、健康检查 | 首期 Web MVP / 只读 |
+| M06 | `batch_runner.py`、`core/web_task_orchestrator.py`、`tools/server_*.cmd` | 实验计划、Git 提交、服务器资源或 Web 任务请求 | 批次汇总、日志、轻量结果、任务状态/结果 JSON | 已验证实现 / 原型 |
+| M07 | `web_app.py`、`web_app.cmd`、`scenario_dashboard.py`、`scenario_dashboard.cmd` | 场景库索引、条目、汇总和任务状态 | Web 页面、筛选结果、详情页、任务状态/结果、健康检查 | 首期 Web MVP / 任务原型 |
 | M08 | `stage5_minimal_demo.py`、`stage5_demo.cmd` | M01 记录、M03 库、M02 基础配置 | 静态配置、`.xosc`、适配清单、`demo_manifest.json` | 已验证实现 / 离线原型 |
 
 ## ⚙️ 数据契约
@@ -241,6 +241,26 @@ flowchart TB
 - `tools\server_job_status.cmd`：查询服务器任务状态。
 - `tools\server_fetch_results.cmd`：回收轻量汇总，不默认下载大模型、原始帧和 NPY。
 
+### Web 任务编排接口
+
+- `core.web_task_orchestrator.TaskManager.submit(kind, payload)`：提交 `generation`、`validation`、`risk_analysis` 或 `carla` 任务并返回任务状态。
+- `TaskManager.get(task_id)`、`list_tasks()`：读取持久化任务状态和结果摘要。
+- `TaskManager.confirm(task_id, confirmed)`：处理 CARLA 任务的显式确认；确认只登记 `manual_external`，不启动 CARLA。
+- `TaskManager.cancel(task_id)`：取消尚未结束的任务。
+
+HTTP 接口：
+
+| 方法 | 路径 | 返回/行为 |
+| --- | --- | --- |
+| `GET` | `/api/tasks` | 任务列表和数量 |
+| `GET` | `/api/tasks/{task_id}` | 单个任务状态、错误和结果摘要 |
+| `GET` | `/api/tasks/{task_id}/result` | 已完成任务结果；未完成返回 HTTP `409` |
+| `POST` | `/api/tasks` | 提交任务；成功返回 HTTP `202` |
+| `POST` | `/api/tasks/{task_id}/confirm` | `{"confirmed": true/false}`；只适用于 CARLA 任务 |
+| `POST` | `/api/tasks/{task_id}/cancel` | 取消任务 |
+
+任务状态至少包括 `queued`、`running`、`completed`、`failed`、`cancelled`、`awaiting_confirmation` 和 `confirmed_manual`。generation、validation、risk_analysis 使用 `offline_cpu`；CARLA 任务使用 `manual_external`，任务结果必须明确 `carla_connected=false` 和 `execution_started=false`，真实执行仍由 `server_run.cmd` 或专用 CARLA 入口承担。
+
 ### 复现最小字段
 
 每个实验至少保存：Git 提交哈希、配置快照及哈希、生成器和种子、Traffic Manager 种子、CARLA 版本、输出目录、运行状态和结果汇总。缺少其中任一关键字段时，应降低证据等级而不是补写未知值。
@@ -259,7 +279,7 @@ flowchart TB
 | M04.1 格式适配 | 适配器 `--validate-only` + XML 结构回归 | 输入、映射、XOSC 结构和 CARLA 配置形状通过 |
 | M04 仿真执行 | 单场景 CARLA 实机运行 | 状态完成、传感器写盘完成、服务健康 |
 | M05 风险分析 | 检查 `metadata.json` 和离线报告 | 存在 `observed_risk`，指标来源可追溯 |
-| M06 复现管理 | 检查批次汇总和服务器任务目录 | 配置、提交、种子和结果可关联 |
+| M06 复现管理 | 检查批次汇总、服务器任务目录和 Web 任务状态 | 配置、提交、种子、任务状态和结果可关联 |
 
 ## 📡 M07 只读可视化接口
 
@@ -284,9 +304,11 @@ flowchart TB
 | `GET` | `/api/scenarios` | 场景索引列表 | 否 |
 | `GET` | `/api/scenarios/{library_id}` | 单个场景完整条目 | 否 |
 | `GET` | `/healthz` | Web 服务状态和数据计数 | 否 |
-| `GET` | `/generation`、`/validation`、`/tasks`、`/risk` | 后续模块占位页 | 否 |
+| `GET` | `/generation`、`/validation`、`/risk` | 模块边界页 | 否 |
+| `GET` | `/tasks` | Web 任务提交与状态页面 | 任务状态文件 |
+| `GET`/`POST` | `/api/tasks...` | 任务提交、状态、结果和显式确认 | 任务目录 JSON |
 
-页面只读取 `index.csv`、`entries.jsonl`、`summary.json` 和质量分析摘要，不修改场景库、不启动 CARLA、不提交实验任务。当前只支持本机访问和单进程服务，尚未提供用户认证、权限管理或多用户部署；占位页不代表对应业务已实现。
+页面读取场景库只读文件，并通过独立任务目录保存 Web 任务状态；不修改场景库。离线任务仅使用本机 CPU worker，CARLA 任务不由 Web 进程启动，必须显式确认并转交外部服务器入口。当前只支持本机访问和单进程服务，尚未提供用户认证、权限管理或多用户部署。
 
 ## 🧭 M08 阶段五最小演示编排接口
 

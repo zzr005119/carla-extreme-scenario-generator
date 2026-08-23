@@ -60,7 +60,21 @@ tools\web_app.cmd
 D:\ANACONDA\envs\Carla666-0916\python.exe tools\web_app.py --validate-only
 ```
 
-页面支持 Dashboard、场景库筛选、独立详情和历史风险/证据查看；生成、校验、任务和风险分析入口当前为边界占位，不提供写入、删除、提交 CARLA 任务或权限管理。
+页面支持 Dashboard、场景库筛选、独立详情和历史风险/证据查看；任务页可提交 CPU 离线生成、校验和风险分析，并登记需要显式确认的 CARLA 外部任务。页面不直接启动 CARLA，不提供场景库删除、权限管理或多用户部署。
+
+任务接口示例：
+
+```powershell
+# 提交一个 CPU LHS 生成任务
+Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/api/tasks `
+  -ContentType 'application/json' `
+  -Body '{"kind":"generation","payload":{"model":"lhs","risk":"medium","count":1,"seed":20260823}}'
+
+# 查询任务列表
+Invoke-RestMethod http://127.0.0.1:8765/api/tasks
+```
+
+CARLA 任务提交后先处于 `awaiting_confirmation`；确认只登记外部执行，不会从 Web 进程启动 CARLA，正式运行仍使用服务器任务入口。
 
 参数级物理约束检查：
 

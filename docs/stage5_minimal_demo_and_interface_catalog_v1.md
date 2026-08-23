@@ -77,8 +77,8 @@ D:\ANACONDA\envs\Carla666-0916\python.exe tools\stage5_minimal_demo.py
 | M04 仿真采集 | `scenes/scene_04_parameterized.py`、`batch_runner.py` | CARLA JSON、CARLA 服务 | `metadata.json`、`telemetry.csv`、传感器证据 | 单独实机入口 | E4（历史） |
 | M04 交换适配 | `tools/convert_scenario_to_openscenario.py` | 场景记录、映射、基础配置 | `.xosc`、`.carla.json`、适配清单 | 静态 | E2/E3 |
 | M05 风险评估 | `core.risk_metrics.evaluate_telemetry_risk`、`evaluate_risk_v2` | 遥测、事件、参数、风险配置 | `observed_risk` 分数/等级/分量 | 运行后离线 | E4（历史） |
-| M06 实验复现 | `tools/server_sync.cmd`、`tools/server_run.cmd`、`tools/server_fetch_results.cmd` | 提交、配置、任务和资源 | 任务元数据、轻量汇总 | 服务器 | E4（历史） |
-| M07 Dashboard | `tools/scenario_dashboard.py`、`tools/scenario_dashboard.cmd` | 场景库索引和条目 | 只读页面、JSON 查询接口 | 本地只读 | E2 |
+| M06 实验复现/任务编排 | `core.web_task_orchestrator`、`tools/server_sync.cmd`、`tools/server_run.cmd`、`tools/server_fetch_results.cmd` | 提交、配置、任务和资源 | 任务状态/结果、任务元数据、轻量汇总 | 本机 CPU / 服务器外部 | E2/E4（历史） |
+| M07 Dashboard/任务页 | `tools/web_app.py`、`tools/scenario_dashboard.py`、`tools/web_app.cmd` | 场景库索引、条目和任务状态 | 页面、JSON 查询接口、任务结果 | 本地 Web | E2 |
 | M08 最小编排 | `tools/stage5_minimal_demo.py`、`tools/stage5_demo.cmd` | M01 记录、M03 库、M02 基础配置 | `demo_manifest.json` 和演示产物 | 离线默认 | E2 |
 
 ### M03 受控查询契约
@@ -92,6 +92,10 @@ GET /api/scenarios/search?target_risk=high&weather_tag=night&keyword=lhs&sort=ri
 ```
 
 该接口只读现有 `entries.jsonl`，不修改索引、不生成新的风险证据、不连接 CARLA，也不把自然语言句子解释为查询条件。
+
+### M06/M07 Web 任务契约
+
+`POST /api/tasks` 接受四类任务：`generation`、`validation`、`risk_analysis` 和 `carla`。前三类在本机 CPU worker 中执行并将状态写入 `F:\Carla\output-0.9.16\web_tasks`（可由 `--task-dir` 覆盖）；后者默认状态为 `awaiting_confirmation`。调用 `POST /api/tasks/{task_id}/confirm` 后只生成 `confirmed_manual` 登记结果，不启动 CARLA，结果明确包含 `carla_connected=false`、`execution_started=false`。任务状态和结果可通过 `/api/tasks`、`/api/tasks/{task_id}`、`/api/tasks/{task_id}/result` 查询。
 
 ## 关键代码契约
 
@@ -125,6 +129,8 @@ M04 实机运行必须同时检查运行状态、传感器写盘、CARLA 服务�
 | Dashboard 页面 | `tools/scenario_dashboard.cmd` | 否 | 浏览场景库和历史证据 |
 | 单场景实机回归 | `scenes/scene_04_parameterized.py --config <path>` | 是 | 产生新的 CARLA 运行证据 |
 | 服务器批次实验 | `tools/server_run.cmd` + 专用任务入口 | 是/按任务 | 正式实验，需资源和版本检查 |
+| Web 离线任务 | `tools/web_app.cmd` 的 `/tasks` 页面或 `/api/tasks` | 否 | 生成、校验、历史风险分析；CPU worker |
+| Web CARLA 任务登记 | `/api/tasks` + `/confirm` | 否（登记） | 显式确认后转交服务器或专用 CARLA 入口 |
 
 任何实机入口都不由 M08 隐式调用。需要真实 CARLA 证据时，必须单独建立任务、记录提交哈希、配置、种子、CARLA 版本和严格验收结果。
 

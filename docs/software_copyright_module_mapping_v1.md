@@ -63,8 +63,8 @@ flowchart LR
 | M03 | 场景库管理 | 已验证实现 | `core/scenario_library.py`、`core/scenario_query.py`、`tools/build_scenario_library.py`、`tools/query_scenario_library.py` | 场景库 V1 收录 117 个独立场景、351 次来源批次严格验收运行；结构化条件/白名单关键词查询、Web API 和质量门回归通过 |
 | M04 | 仿真执行与多传感器采集 | 已验证实现 / 原型 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py`、`batch_runner.py` | CARLA 0.9.16 实机回归；RGB、Depth、SemSeg、Collision；确定性路线控制已验证 |
 | M05 | 风险评估与结果分析 | 已验证实现 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2`、TTC、车距、碰撞和遥测分析；风险反馈 V5 与 27 维代理冻结 |
-| M06 | 实验编排与复现管理 | 已验证实现 / 原型 | `batch_runner.py`、`tools/server_*.cmd`、`configs/` | 批次调度、种子、配置哈希、服务器工作流和质量门；服务器模型权重不进入 Git |
-| M07 | 可视化管理界面 | 已实现首期 Web MVP / 只读原型 | `tools/web_app.py`、`tools/web_app.cmd`、`tools/scenario_dashboard.py`、`tools/scenario_dashboard.cmd` | 统一 Web 入口已支持 Dashboard、场景库、独立详情、健康检查和后续模块边界；不含多用户、权限、写入或 CARLA 隐式启动 |
+| M06 | 实验编排与复现管理 | 已验证实现 / 原型 | `batch_runner.py`、`core/web_task_orchestrator.py`、`tools/server_*.cmd`、`configs/` | 批次调度、种子、配置哈希、服务器工作流和质量门；Web 离线任务状态/结果持久化；CARLA 任务仅显式确认后登记外部执行 |
+| M07 | 可视化管理界面 | 已实现首期 Web MVP / 任务原型 | `tools/web_app.py`、`tools/web_app.cmd`、`tools/scenario_dashboard.py`、`tools/scenario_dashboard.cmd` | 统一 Web 入口支持 Dashboard、场景库、独立详情、健康检查、受控查询和任务状态页；不含多用户、权限或 Web 内隐式启动 CARLA |
 | M08 | 阶段五最小演示编排 | 已验证实现 / 离线原型 | `tools/stage5_minimal_demo.py`、`tools/stage5_demo.cmd` | M01–M08 离线组合、静态适配、历史证据读取和 `demo_manifest.json` 已通过；默认不连接 CARLA |
 
 ## 🔗 详细模块映射
@@ -120,18 +120,19 @@ flowchart LR
 
 - **职责：** 管理批次计划、配置快照、随机种子、服务器任务、结果回收和质量门检查。
 - **输入：** 场景配置集合、实验计划、Git 提交、服务器运行参数和 GPU/CARLA 资源状态。
-- **处理：** 分批调度、逐次日志、运行状态记录、配置哈希追踪、服务器同步、结果回收和质量门验证。
-- **输出：** `batch_summary.csv`、运行明细、配置快照、服务器任务日志、轻量汇总和可追溯的提交哈希。
-- **实现映射：** `batch_runner.py`、`tools/server_sync.cmd`、`tools/server_run.cmd`、`tools/server_job_status.cmd`、`tools/server_fetch_results.cmd`、`configs/scenario_library_quality_gate_v1.json`。
+- **处理：** 分批调度、逐次日志、运行状态记录、配置哈希追踪、服务器同步、结果回收、离线 Web worker 和质量门验证。
+- **输出：** `batch_summary.csv`、运行明细、配置快照、服务器任务日志、轻量汇总、`task_<id>.json` 状态文件和可追溯的提交哈希。
+- **实现映射：** `batch_runner.py`、`core/web_task_orchestrator.py`、`tools/server_sync.cmd`、`tools/server_run.cmd`、`tools/server_job_status.cmd`、`tools/server_fetch_results.cmd`、`configs/scenario_library_quality_gate_v1.json`。
+- **Web 任务边界：** generation、validation、risk_analysis 在本机 CPU worker 执行；carla 任务只保存配置路径和确认结果，确认后仍需 `server_run.cmd` 或专用入口执行，不在 HTTP 线程内启动 CARLA。
 - **证据边界：** 笔记本—服务器工作流已实测；服务器模型权重、原始传感器帧和大体积输出不进入 Git，软著材料应引用轻量汇总和代码入口。
 
 ### M07 可视化管理界面
 
-- **职责：** 提供场景筛选、场景详情、运行证据、风险结果和质量指标的只读展示。
+- **职责：** 提供场景筛选、场景详情、运行证据、风险结果、质量指标和任务状态/结果的本地管理界面。
 - **输入：** M03 输出的场景库索引、M05 输出的风险分析、M06 输出的批次汇总。
-- **输出：** 场景列表、详情页、风险分布图和运行证据状态。
-- **当前状态：** 已完成首期本地 Web 管理入口，可访问 Dashboard、场景库列表、独立场景详情和健康检查，并保留生成、校验、任务、风险分析路由边界；尚未形成多用户服务、权限、写入操作或产品化部署能力。
-- **实现映射：** `tools/web_app.py`、`tools/web_app.cmd` 复用 `scenario_dashboard.py` 的数据加载器和 API，页面及接口回归见 `tests/test_web_app.py`。
+- **输出：** 场景列表、详情页、风险分布图、运行证据状态、任务状态和任务结果 JSON。
+- **当前状态：** 已完成首期本地 Web 管理入口和 M06 任务原型，可访问 Dashboard、场景库列表、独立场景详情、受控查询、健康检查和任务页面；尚未形成多用户服务、权限或产品化部署能力。
+- **实现映射：** `tools/web_app.py`、`tools/web_app.cmd` 复用 `scenario_dashboard.py` 的数据加载器和 API，`core/web_task_orchestrator.py` 提供任务状态/结果契约，回归见 `tests/test_web_app.py`、`tests/test_web_task_orchestration.py`。
 
 ### M08 阶段五最小演示编排
 
@@ -192,8 +193,8 @@ sequenceDiagram
 | 场景库建立与检索 | M03 | 场景库条目、CSV 索引、查询命令和质量报告 |
 | 仿真场景运行 | M04 | Scene 04 配置、CARLA 运行日志、`metadata.json`、传感器状态 |
 | 风险评估与统计分析 | M05 | 风险指标代码、`telemetry.csv`、分析报告和图表 |
-| 批量实验与复现 | M06 | 批次计划、配置哈希、汇总 CSV、服务器任务日志 |
-| 可视化界面 | M07 | Dashboard 页面回归和冻结版本截图；仅描述本地只读原型 |
+| 批量实验与复现 | M06 | 批次计划、配置哈希、汇总 CSV、服务器任务日志和 Web 任务状态文件 |
+| 可视化界面 | M07 | Dashboard/任务页面回归和冻结版本截图；CARLA 任务仍需显式外部执行 |
 | 一键演示与结果索引 | M08 | `demo_manifest.json`、静态配置、适配清单和用户操作说明 |
 
 ## ⚠️ 当前不可宣称内容
@@ -208,8 +209,8 @@ sequenceDiagram
 ## 🎯 后续落地顺序
 
 1. 固化 M01–M08 的模块接口、输入输出和异常处理说明。
-2. 以 `tools/stage5_demo.cmd` 作为当前最小操作闭环，维护 `demo_manifest.json` 证据入口。
-3. 保持 M07 只读原型和页面级回归稳定；正式截图后置到最终版本冻结和申请准备阶段。
+2. 以 `tools/stage5_demo.cmd` 和 Web 任务页作为当前最小操作闭环，维护 `demo_manifest.json` 与任务状态证据入口。
+3. 保持 M07 页面级回归和 M06 离线任务边界稳定；正式截图后置到最终版本冻结和申请准备阶段。
 4. 在阶段五系统集成完成后，统一模块名称、用户操作说明、软件版本和证据索引。
 5. 最终冻结软件版本、重新运行全量回归并采集截图，再进入软著登记准备。
 
