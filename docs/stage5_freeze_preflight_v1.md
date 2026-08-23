@@ -33,7 +33,7 @@ tools\check_stage5_freeze.cmd --require-clean
 
 ## 本轮结果
 
-2026-08-23 在当前工程基线上运行 `tools\check_stage5_freeze.cmd`：`30 PASS / 0 FAIL / 3 PENDING`。这表示当前工程可以进入“指定最终提交并执行冻结”的操作阶段，但尚未完成正式 V1.0 封版。
+2026-08-23 在当前工程基线上运行 `tools\check_stage5_freeze.cmd`：`30 PASS / 0 FAIL / 3 PENDING`；提交后使用 `--require-clean` 为 `31 PASS / 0 FAIL / 3 PENDING`。这表示当前工程可以进入“指定最终提交并执行冻结”的操作阶段，但尚未完成正式 V1.0 封版。
 
 ## 当前结果解释
 
