@@ -265,7 +265,7 @@ def _tasks_page():
       <div class="table-wrap"><table><thead><tr><th>任务 ID</th><th>类型</th><th>状态</th><th>创建时间</th><th>结果</th><th>操作</th></tr></thead><tbody id="task-rows"></tbody></table></div>
     </section>
     <script>
-      const esc = value => String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[c]));
+      const esc = value => String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
       const message = text => document.getElementById("task-message").textContent = text;
       function renderTasks(items) {
         document.getElementById("task-rows").innerHTML = items.map(task => {

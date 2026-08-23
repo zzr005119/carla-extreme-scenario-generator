@@ -65,6 +65,8 @@ class WebAppHttpTests(unittest.TestCase):
         self.assertIn('transition(button.dataset.cancel, "cancel")', body)
         self.assertNotIn('transition(button.dataset.cancel, "confirm"', body)
         self.assertIn('.table-wrap { overflow-x: auto;', body)
+        self.assertIn("'" + '"' + "':\"" + "&quot;" + '"', body)
+        self.assertNotIn('"":', body)
 
     def test_detail_page_and_health_contract(self):
         status, headers, body = self.get_bytes(f"/scenarios/{self.first_library_id}")
