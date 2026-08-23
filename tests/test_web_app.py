@@ -65,6 +65,9 @@ class WebAppHttpTests(unittest.TestCase):
         self.assertIn('transition(button.dataset.cancel, "cancel")', body)
         self.assertNotIn('transition(button.dataset.cancel, "confirm"', body)
         self.assertIn('.table-wrap { overflow-x: auto;', body)
+        self.assertIn('class="task-table"', body)
+        self.assertIn('class="task-result"', body)
+        self.assertIn('text-overflow: ellipsis;', body)
         self.assertIn("'" + '"' + "':\"" + "&quot;" + '"', body)
         self.assertNotIn('"":', body)
 

@@ -83,6 +83,15 @@ BASE_STYLE = """
   .workflow-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
   table { width: 100%; border-collapse: collapse; }
   .table-wrap { overflow-x: auto; width: 100%; max-width: 100%; }
+  .task-table { table-layout: fixed; min-width: 780px; }
+  .task-table th:nth-child(1), .task-table td:nth-child(1) { width: 22%; }
+  .task-table th:nth-child(2), .task-table td:nth-child(2) { width: 12%; }
+  .task-table th:nth-child(3), .task-table td:nth-child(3) { width: 12%; }
+  .task-table th:nth-child(4), .task-table td:nth-child(4) { width: 19%; }
+  .task-table th:nth-child(5), .task-table td:nth-child(5) { width: 19%; }
+  .task-table th:nth-child(6), .task-table td:nth-child(6) { width: 16%; }
+  .task-table .task-id, .task-table .task-created, .task-table .task-result { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .task-table .task-result { cursor: help; }
   th, td { padding: 9px 7px; border-bottom: 1px solid #edf1f7; text-align: left; vertical-align: top; }
   th { color: var(--muted); width: 30%; font-weight: 500; }
   code { overflow-wrap: anywhere; }
@@ -262,7 +271,7 @@ def _tasks_page():
     </section>
     <section class="panel" style="margin-top:18px">
       <h2>任务状态</h2>
-      <div class="table-wrap"><table><thead><tr><th>任务 ID</th><th>类型</th><th>状态</th><th>创建时间</th><th>结果</th><th>操作</th></tr></thead><tbody id="task-rows"></tbody></table></div>
+      <div class="table-wrap"><table class="task-table"><colgroup><col><col><col><col><col><col></colgroup><thead><tr><th>任务 ID</th><th>类型</th><th>状态</th><th>创建时间</th><th>结果</th><th>操作</th></tr></thead><tbody id="task-rows"></tbody></table></div>
     </section>
     <script>
       const esc = value => String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
@@ -272,7 +281,7 @@ def _tasks_page():
           const result = task.result ? JSON.stringify(task.result) : (task.error ? task.error.message : "—");
           const action = task.status === "awaiting_confirmation"
             ? `<button data-confirm="${esc(task.task_id)}">确认外部任务</button><button class="secondary" data-cancel="${esc(task.task_id)}">取消</button>` : "";
-          return `<tr><td><code>${esc(task.task_id)}</code></td><td>${esc(task.kind)}</td><td>${esc(task.status)}</td><td>${esc(task.created_at)}</td><td><code>${esc(result)}</code></td><td>${action}</td></tr>`;
+          return `<tr><td><code class="task-id" title="${esc(task.task_id)}">${esc(task.task_id)}</code></td><td>${esc(task.kind)}</td><td>${esc(task.status)}</td><td><span class="task-created" title="${esc(task.created_at)}">${esc(task.created_at)}</span></td><td><code class="task-result" title="${esc(result)}">${esc(result)}</code></td><td>${action}</td></tr>`;
         }).join("");
         document.querySelectorAll("[data-confirm]").forEach(button => button.addEventListener("click", () => transition(button.dataset.confirm, "confirm", true)));
         document.querySelectorAll("[data-cancel]").forEach(button => button.addEventListener("click", () => transition(button.dataset.cancel, "cancel")));

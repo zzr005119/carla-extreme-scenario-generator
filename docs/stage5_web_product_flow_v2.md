@@ -21,6 +21,7 @@
 - CARLA 边界：CARLA 任务提交后为 `awaiting_confirmation`；确认只登记 `confirmed_manual`，取消为 `cancelled`，两者均明确 `execution_started=false`、`carla_connected=false`，Web 进程不启动 CARLA。
 - 移动端：任务表容器启用横向滚动，避免窄视口下任务 ID、结果和操作列溢出。
 - 浏览器执行：任务页内联脚本已通过 Edge 无界面浏览器实际加载；已有任务能从 `/api/tasks` 渲染到表格，提交和“刷新状态”均使用同一加载函数。
+- 任务表展示：结果列使用固定布局和单行省略号，完整 JSON 保留在单元格悬浮提示中；任务 ID、时间和操作列不会被长结果挤压成竖排。
 - 验证命令：`D:\ANACONDA\envs\Carla666-0916\python.exe -m unittest discover -s tests -p "test_*.py" -v`，结果 `126 passed / 1 skipped`；`compileall` 和 `git diff --check` 通过。
 
 ## API 契约
