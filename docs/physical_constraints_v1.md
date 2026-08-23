@@ -32,4 +32,4 @@ D:\ANACONDA\envs\Carla666-0916\python.exe tools\check_physical_constraints.py `
 
 ## 当前验收
 
-2026-08-23：种子数据集 `256/256` 条硬约束通过，`0` 条非法；报告已生成到 `F:\Carla\project-transfer\physical_constraints_v1\seed_report.json`。该结果属于静态参数验证，不产生新的 CARLA 风险结果，也不需要 GPU 或服务器训练。
+2026-08-23：本机和服务器 `Carla666-0916` 环境均对种子数据集完成 `256/256` 条硬约束通过、`0` 条非法的报告；本机报告为 `F:\Carla\project-transfer\physical_constraints_v1\seed_report.json`，服务器报告为 `/home/zhaozirong/software/output/carla-0.9.16/physical_constraints_v1/seed_report.json`。该结果属于静态参数验证，不产生新的 CARLA 风险结果，也不需要 GPU 或服务器训练。
