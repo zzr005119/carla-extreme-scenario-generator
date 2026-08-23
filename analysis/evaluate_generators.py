@@ -17,6 +17,7 @@ if PROJECT_ROOT not in sys.path:
 
 from core.scenario_features import (  # noqa: E402
     FEATURE_NAMES,
+    RISK_LEVELS,
     encode_record,
     load_jsonl,
     parameter_vector,
@@ -41,6 +42,12 @@ def parse_args():
     parser.add_argument(
         "--output-dir",
         default=os.path.join(PROJECT_ROOT, "artifacts", "evaluation"),
+    )
+    parser.add_argument(
+        "--risk-proxy",
+        help=(
+            "可选 joblib 风险代理；仅用于统一候选排序，不产生 observed_risk。"
+        ),
     )
     return parser.parse_args()
 
@@ -112,7 +119,7 @@ def generation_summary(path):
         return json.load(file)
 
 
-def evaluate_file(path, reference_records, reference_by_level):
+def evaluate_file(path, reference_records, reference_by_level, risk_proxy=None):
     records = load_jsonl(path)
     validations = [validate_scenario_record(record) for record in records]
     valid_count = sum(result["valid"] for result in validations)
@@ -157,6 +164,16 @@ def evaluate_file(path, reference_records, reference_by_level):
             )
         )
     summary = generation_summary(path)
+    proxy_summary = None
+    if risk_proxy is not None and len(values):
+        predictions = np.asarray(risk_proxy.predict(values), dtype=np.float64)
+        proxy_summary = {
+            "method": "frozen_joblib_risk_proxy_for_ranking_only",
+            "mean_predicted_risk": float(np.mean(predictions)),
+            "std_predicted_risk": float(np.std(predictions)),
+            "minimum_predicted_risk": float(np.min(predictions)),
+            "maximum_predicted_risk": float(np.max(predictions)),
+        }
     return {
         "name": os.path.splitext(os.path.basename(path))[0],
         "path": os.path.abspath(path),
@@ -185,6 +202,7 @@ def evaluate_file(path, reference_records, reference_by_level):
                 for tag in record["conditions"]["weather_tags"]
             )
         ),
+        "risk_proxy": proxy_summary,
         "generation": summary,
     }
 
@@ -207,6 +225,7 @@ def write_csv(path, results):
         "design_field_rate",
         "acceptance_rate",
         "accepted_sample_latency_ms",
+        "risk_proxy_mean_predicted_risk",
     )
     with open(path, "w", encoding="utf-8-sig", newline="") as file:
         writer = csv.DictWriter(file, fieldnames=fields)
@@ -226,6 +245,9 @@ def write_csv(path, results):
                     "accepted_sample_latency_ms": generation.get(
                         "accepted_sample_latency_ms"
                     ),
+                    "risk_proxy_mean_predicted_risk": (
+                        result["risk_proxy"] or {}
+                    ).get("mean_predicted_risk")
                 }
             )
 
@@ -236,13 +258,13 @@ def write_markdown(path, results):
         "",
         "> 这些指标衡量合法性、人工条件一致性和参数分布，不代表 CARLA 实测危险性。",
         "",
-        "| 数据集 | 有效率 | 唯一率 | 设计区间记录一致率 | 平均样本距离 | 最近训练距离 | 相关矩阵误差 |",
-        "|---|---:|---:|---:|---:|---:|---:|",
+        "| 数据集 | 有效率 | 唯一率 | 设计区间记录一致率 | 平均样本距离 | 最近训练距离 | 相关矩阵误差 | 代理排序均值 |",
+        "|---|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for result in results:
         lines.append(
             "| {name} | {valid:.3f} | {unique:.3f} | {design:.3f} | "
-            "{pair:.4f} | {nearest:.4f} | {corr:.4f} |".format(
+            "{pair:.4f} | {nearest:.4f} | {corr:.4f} | {proxy} |".format(
                 name=result["name"],
                 valid=result["schema_valid_rate"],
                 unique=result["unique_rate"],
@@ -250,6 +272,11 @@ def write_markdown(path, results):
                 pair=result["pairwise_distance_mean"] or 0.0,
                 nearest=result["nearest_same_level_train_mean"] or 0.0,
                 corr=result["correlation_rmse"] or 0.0,
+                proxy=(
+                    f"{result['risk_proxy']['mean_predicted_risk']:.3f}"
+                    if result.get("risk_proxy")
+                    else "-"
+                ),
             )
         )
     lines.extend(
@@ -261,6 +288,7 @@ def write_markdown(path, results):
             "- 有效率来自 Schema 与语义校验，不等于 CARLA 可成功生成 Actor。",
             "- 最近训练距离和样本距离越大通常代表更高多样性，但过大也可能偏离训练分布。",
             "- 最终模型优劣仍需抽样运行 CARLA，并回填 `observed_risk` 后判断。",
+            "- `代理排序均值` 仅在显式提供 `--risk-proxy` 时出现；它来自冻结的 CARLA 实测风险代理，只用于候选排序，不能替代新的 `observed_risk`。",
             "",
         ]
     )
@@ -275,17 +303,80 @@ def main():
     for record in reference_records:
         level = record["conditions"]["target_risk_level"]
         reference_by_level.setdefault(level, []).append(record)
+    risk_proxy = None
+    if args.risk_proxy:
+        try:
+            import joblib
+        except ImportError as exc:
+            raise RuntimeError("使用 --risk-proxy 需要 joblib") from exc
+        risk_proxy = joblib.load(os.path.abspath(args.risk_proxy))
     results = [
-        evaluate_file(os.path.abspath(path), reference_records, reference_by_level)
+        evaluate_file(
+            os.path.abspath(path),
+            reference_records,
+            reference_by_level,
+            risk_proxy=risk_proxy,
+        )
         for path in args.inputs
     ]
+    risk_ordering = None
+    if risk_proxy is not None:
+        ordered = sorted(
+            results,
+            key=lambda item: item["risk_proxy"]["mean_predicted_risk"],
+        )
+        by_generator = {}
+        for item in results:
+            generation = item.get("generation") or {}
+            generator = generation.get("model") or item["name"].split("_", 1)[0]
+            level = item["risk_levels"][0] if item["risk_levels"] else "unknown"
+            by_generator.setdefault(generator, {})[level] = item
+        per_generator = {}
+        for generator, level_rows in sorted(by_generator.items()):
+            expected_levels = [level for level in RISK_LEVELS if level in level_rows]
+            predicted_levels = [
+                level
+                for level, _ in sorted(
+                    level_rows.items(),
+                    key=lambda pair: pair[1]["risk_proxy"]["mean_predicted_risk"],
+                )
+            ]
+            per_generator[generator] = {
+                "predicted_ascending_levels": predicted_levels,
+                "expected_ascending_levels": expected_levels,
+                "strict_expected_order": predicted_levels == expected_levels,
+                "mean_predicted_risk_by_level": {
+                    level: level_rows[level]["risk_proxy"]["mean_predicted_risk"]
+                    for level in expected_levels
+                },
+            }
+        risk_ordering = {
+            "ascending_dataset_order": [item["name"] for item in ordered],
+            "by_generator": per_generator,
+            "all_generators_strict_expected_order": all(
+                item["strict_expected_order"] for item in per_generator.values()
+            ),
+        }
     output_dir = os.path.abspath(args.output_dir)
     os.makedirs(output_dir, exist_ok=True)
     json_path = os.path.join(output_dir, "generator_evaluation.json")
     csv_path = os.path.join(output_dir, "generator_evaluation.csv")
     markdown_path = os.path.join(output_dir, "generator_evaluation.md")
     with open(json_path, "w", encoding="utf-8") as file:
+        # Keep the historical JSON list contract; ranking metadata is additive.
         json.dump(results, file, ensure_ascii=False, indent=2)
+    if risk_ordering is not None:
+        ranking_path = os.path.join(output_dir, "generator_risk_ordering.json")
+        with open(ranking_path, "w", encoding="utf-8") as file:
+            json.dump(
+                {
+                    "risk_proxy": os.path.abspath(args.risk_proxy),
+                    "risk_ordering": risk_ordering,
+                },
+                file,
+                ensure_ascii=False,
+                indent=2,
+            )
     write_csv(csv_path, results)
     write_markdown(markdown_path, results)
     print(f"[EVALUATION] 数据集: {len(results)}")

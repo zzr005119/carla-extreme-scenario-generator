@@ -71,7 +71,7 @@ D:\ANACONDA\envs\Carla666-0916\python.exe tools\stage5_minimal_demo.py
 
 | 模块 | 主入口 | 输入 | 输出 | 默认模式 | 当前证据等级 |
 |---|---|---|---|---|---|
-| M01 场景生成 | `tools/generate_seed_dataset.py`、`tools/generate_with_model.py` | 风险条件、种子、模型工件 | `generated_scenario` JSON/JSONL | 离线 | E2 |
+| M01 场景生成 | `tools/generate_seed_dataset.py`、`tools/generate_with_model.py`、`tools/run_diffusion_comparison.py` | 风险条件、种子、模型工件 | `generated_scenario` JSON/JSONL、对照评估 | 离线 | E2 |
 | M02 校验编译 | `core.scenario_validator.require_valid_scenario`、`compile_carla_config` | 场景记录、Schema、基础配置 | 校验结果、完整 CARLA 配置 | 离线 | E2 |
 | M03 场景库 | `core.scenario_library`、`tools/query_scenario_library.py` | `entries.jsonl`、筛选条件 | 场景行、风险/质量/证据摘要 | 只读 | E4/E2 |
 | M04 仿真采集 | `scenes/scene_04_parameterized.py`、`batch_runner.py` | CARLA JSON、CARLA 服务 | `metadata.json`、`telemetry.csv`、传感器证据 | 单独实机入口 | E4（历史） |

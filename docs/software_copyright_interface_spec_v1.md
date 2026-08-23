@@ -20,7 +20,7 @@ _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1
 
 | 模块 | 主入口 | 输入 | 输出 | 当前状态 |
 | --- | --- | --- | --- | --- |
-| M01 | `generate_seed_dataset.py`、`generate_with_model.py` | 条件、生成器、种子、模型工件 | 场景 JSON/JSONL | 已验证实现 / 原型 |
+| M01 | `generate_seed_dataset.py`、`generate_with_model.py`、`run_diffusion_comparison.py` | 条件、生成器、种子、模型工件 | 场景 JSON/JSONL、统一离线评估报告 | 已验证实现 / 原型 |
 | M02 | `scenario_validator.py`、`physical_constraints.py`、`check_physical_constraints.py` | 场景记录、Schema、基础配置 | Schema/语义校验、参数级物理约束结果、编译配置、JSON 报告 | 已验证实现 |
 | M03 | `build_scenario_library.py`、`query_scenario_library.py` | 来源清单、运行证据、质量门 | 场景库、索引、查询结果 | 已验证实现 |
 | M04 | `scene_04_parameterized.py`、`batch_runner.py` | JSON 配置、CARLA 服务、运行参数 | `metadata.json`、`telemetry.csv`、传感器帧 | 已验证实现 / 原型 |
@@ -79,15 +79,18 @@ M04 的一次运行目录至少包含以下轻量证据：
 | 用途 | 命令 |
 | --- | --- |
 | 生成平衡种子数据集 | `python tools\generate_seed_dataset.py --output-dir <dir> --count-per-level 64 --seed <seed>` |
-| 统一生成 LHS/GMM/CVAE 样本 | `python tools\generate_with_model.py --model <lhs|gmm|cvae> --risk <level> --count <N> --seed <seed> --output <path>` |
-| 指定 GMM 或 CVAE 工件 | 在统一生成命令中追加 `--artifact <path>` |
+| 统一生成 LHS/GMM/CVAE/Diffusion 样本 | `python tools\generate_with_model.py --model <lhs|gmm|cvae|diffusion> --risk <level> --count <N> --seed <seed> --output <path>` |
+| 指定 GMM、CVAE 或 Diffusion 工件 | 在统一生成命令中追加 `--artifact <path>` |
+| 四生成器小规模对照 | `tools\run_diffusion_comparison.cmd --device cpu --output-dir artifacts\diffusion_comparison_v1` |
 
 ### 代码接口
 
 - `ConditionalGMM.fit(records)`：从训练记录估计条件分布。
 - `ConditionalGMM.sample(target_risk_level, count, random_seed=None)`：按目标档生成参数样本。
 - `ConditionalTabularCVAE.sample(conditions, generator=None)`：从条件和潜变量生成标准化特征。
+- `ConditionalTabularDiffusion.sample(conditions, generator=None)`：按条件执行轻量 DDPM 反向采样，输出标准化特征。
 - `cvae_loss(reconstruction, features, mu, log_variance, beta)`：计算 CVAE 训练损失。
+- `ConditionalTabularDiffusion.diffusion_loss(features, conditions)`：计算噪声预测训练损失。
 - `training.scenario_dataset.ScenarioDataset.from_jsonl(path)`：读取 JSONL 训练记录。
 
 ### 输入输出与错误边界
@@ -96,6 +99,7 @@ M04 的一次运行目录至少包含以下轻量证据：
 - 输出必须经过 M02 校验后才可进入场景库或 CARLA 运行。
 - 生成器失败、模型工件缺失、样本无法满足约束时，调用方应保留失败日志，不把失败样本写入正式库。
 - 生成模型的目标档命中率必须由 CARLA 实测 `observed_risk` 统计，不能由生成器输出字段直接推断。
+- Diffusion 的风险档设计区间投影只保证参数级可行域，不保证 CARLA Actor、路线或传感器运行成功。
 
 ## 🛡️ M02 场景约束接口
 

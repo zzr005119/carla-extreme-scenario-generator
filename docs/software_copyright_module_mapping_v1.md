@@ -58,7 +58,7 @@ flowchart LR
 
 | 编号 | 系统模块 | 当前状态 | 主要代码入口 | 现有证据 |
 | --- | --- | --- | --- | --- |
-| M01 | 场景生成与条件编译 | 已验证实现 / 原型 | `tools/generate_seed_dataset.py`、`tools/generate_with_model.py`、`models/`、`training/` | LHS、条件 GMM、条件表格 CVAE 已完成离线生成与对照；生成模型仍属于研究分支 |
+| M01 | 场景生成与条件编译 | 已验证实现 / 原型 | `tools/generate_seed_dataset.py`、`tools/generate_with_model.py`、`models/`、`training/` | LHS、条件 GMM、条件表格 CVAE 和轻量条件表格 Diffusion 已完成离线生成与对照；生成模型仍属于研究分支 |
 | M02 | 场景约束与校验 | 已验证实现 | `core/scenario_validator.py`、`core/physical_constraints.py`、`tools/check_physical_constraints.py`、`schemas/` | Schema、语义校验、参数级物理约束和 CARLA 配置编译；256 条种子记录硬约束全部通过 |
 | M03 | 场景库管理 | 已验证实现 | `core/scenario_library.py`、`tools/build_scenario_library.py`、`tools/query_scenario_library.py` | 场景库 V1 收录 117 个独立场景、351 次来源批次严格验收运行；查询和质量门回归通过 |
 | M04 | 仿真执行与多传感器采集 | 已验证实现 / 原型 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py`、`batch_runner.py` | CARLA 0.9.16 实机回归；RGB、Depth、SemSeg、Collision；确定性路线控制已验证 |
@@ -73,10 +73,10 @@ flowchart LR
 
 - **职责：** 根据目标风险档、天气标签、危险行为和随机种子生成参数级场景记录。
 - **输入：** 风险条件、天气/危险标签、生成器参数、随机种子、基础场景配置。
-- **处理：** 规则/LHS 设计、条件 GMM 采样、条件表格 CVAE 推理，以及生成记录的统一结构化。
+- **处理：** 规则/LHS 设计、条件 GMM 采样、条件表格 CVAE 和轻量条件 Diffusion 推理，以及生成记录的统一结构化。
 - **输出：** `generated_scenario.schema.json` 约束下的 JSON/JSONL 场景记录、生成器来源和样本种子。
-- **实现映射：** `models/conditional_gmm.py`、`models/conditional_tabular_cvae.py`、`training/scenario_dataset.py`、`training/train_conditional_gmm.py`、`training/train_cvae.py`、`tools/generate_seed_dataset.py`、`tools/generate_with_model.py`。
-- **证据边界：** 目前可以宣称三种生成器具备可复现的参数生成和离线对照能力；不能宣称 CVAE 已达到稳定的目标风险命中率，也不能把 `target_risk_level` 当作 CARLA 实测风险标签。
+- **实现映射：** `models/conditional_gmm.py`、`models/conditional_tabular_cvae.py`、`models/conditional_tabular_diffusion.py`、`training/scenario_dataset.py`、`training/train_conditional_gmm.py`、`training/train_cvae.py`、`training/train_diffusion.py`、`tools/generate_seed_dataset.py`、`tools/generate_with_model.py`、`tools/run_diffusion_comparison.py`。
+- **证据边界：** 目前可以宣称四种生成器具备可复现的参数生成和离线对照能力；Diffusion 使用显式风险档设计区间投影，不能宣称其已替换 CVAE、达到稳定的目标风险命中率或学会真实交通风险，也不能把 `target_risk_level` 当作 CARLA 实测风险标签。
 
 ### M02 场景约束与校验
 
