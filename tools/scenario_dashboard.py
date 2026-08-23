@@ -103,20 +103,27 @@ HTML_PAGE = r"""
       --danger: #b91c1c;
     }
     * { box-sizing: border-box; }
+    html, body { width: 100%; max-width: 100%; }
     body {
       margin: 0;
       background: var(--canvas);
       color: var(--ink);
       font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+      overflow-x: hidden;
     }
     header {
-      background: linear-gradient(135deg, #132243 0%, #1f4b8f 100%);
+      background: #132243;
       color: #fff;
       padding: 28px clamp(18px, 5vw, 72px);
+      max-width: 100%;
+      overflow: hidden;
     }
     header h1 { margin: 0 0 8px; font-size: clamp(24px, 4vw, 38px); }
     header p { margin: 0; color: #dbeafe; }
-    main { max-width: 1500px; margin: 0 auto; padding: 24px clamp(14px, 4vw, 48px) 48px; }
+    .app-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .app-nav a { color: #dbeafe; border: 1px solid #6d8fc7; border-radius: 7px; padding: 7px 11px; text-decoration: none; font-size: 13px; }
+    .app-nav a:hover, .app-nav a:focus { background: #2563eb; color: #fff; }
+    main { width: 100%; max-width: 1500px; min-width: 0; margin: 0 auto; padding: 24px clamp(14px, 4vw, 48px) 48px; overflow: hidden; }
     .notice {
       border: 1px solid #f4d58d;
       background: #fff9e8;
@@ -124,20 +131,21 @@ HTML_PAGE = r"""
       border-radius: 12px;
       padding: 12px 16px;
       margin-bottom: 18px;
+      overflow-wrap: anywhere;
     }
     .cards { display: grid; grid-template-columns: repeat(5, minmax(130px, 1fr)); gap: 12px; margin-bottom: 18px; }
     .card, .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 8px 24px rgba(26, 46, 84, .06); }
     .card { padding: 16px; }
     .card .label { color: var(--muted); font-size: 13px; }
     .card .value { margin-top: 8px; font-size: 28px; font-weight: 700; }
-    .layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(320px, .85fr); gap: 18px; align-items: start; }
-    .panel { padding: 18px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(320px, .85fr); gap: 18px; align-items: start; min-width: 0; }
+    .panel { padding: 18px; min-width: 0; }
     .panel h2 { margin: 0 0 14px; font-size: 19px; }
     .filters { display: grid; grid-template-columns: 1.4fr repeat(5, minmax(110px, 1fr)); gap: 8px; margin-bottom: 14px; }
     input, select, button { border: 1px solid var(--line); border-radius: 8px; min-height: 36px; padding: 7px 9px; background: #fff; color: var(--ink); }
     button { cursor: pointer; background: var(--primary); color: #fff; border-color: var(--primary); font-weight: 600; }
     button.secondary { background: #fff; color: var(--primary); }
-    .table-wrap { overflow: auto; max-height: 630px; border: 1px solid var(--line); border-radius: 10px; }
+    .table-wrap { overflow: auto; width: 100%; max-width: 100%; max-height: 630px; border: 1px solid var(--line); border-radius: 10px; }
     table { width: 100%; border-collapse: collapse; min-width: 780px; }
     th, td { padding: 10px 9px; border-bottom: 1px solid #edf1f7; text-align: left; white-space: nowrap; font-size: 13px; }
     th { position: sticky; top: 0; background: #f8fafc; color: var(--muted); z-index: 1; }
@@ -168,8 +176,11 @@ HTML_PAGE = r"""
       .filters { grid-template-columns: repeat(3, minmax(130px, 1fr)); }
     }
     @media (max-width: 560px) {
-      .cards { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
-      .filters { grid-template-columns: 1fr 1fr; }
+      header, main { width: 100vw; max-width: 100vw; }
+      .app-nav { display: grid; grid-template-columns: repeat(3, max-content); justify-content: start; }
+      .cards { grid-template-columns: minmax(0, 1fr); }
+      .filters { grid-template-columns: minmax(0, 1fr); }
+      .status { align-items: flex-start; }
     }
   </style>
 </head>
@@ -177,6 +188,14 @@ HTML_PAGE = r"""
   <header>
     <h1>CARLA 极端场景库 V1</h1>
     <p>只读管理原型 · 场景筛选 · 运行证据 · 风险结果</p>
+    <nav class="app-nav" aria-label="主导航">
+      <a href="/dashboard">Dashboard</a>
+      <a href="/scenarios">场景库</a>
+      <a href="/generation">生成</a>
+      <a href="/validation">校验</a>
+      <a href="/tasks">任务</a>
+      <a href="/risk">风险分析</a>
+    </nav>
   </header>
   <main>
     <div class="notice">当前库是风险反馈驱动的压力测试库；真实性尚未评估，页面不提供写入、修改或重新运行 CARLA 的功能。</div>

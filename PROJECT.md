@@ -33,6 +33,51 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 4. ✅ **仿真平台与对抗性测试代理**：硬运行质量门和当前证据已收口；OpenSCENARIO 最小交换、代理契约、闭环编排、Gymnasium/SB3 工程链路、冻结代理、非学习基线、真实 CARLA 独立评估、重复测量和 LHS/high 边界校准均已形成可复现基线。RL 泛化、CARLA 在线训练和 ScenarioRunner 直执行未完成，不作为本次收口的已实现能力。
 5. ▶ **系统集成与成果产出**：当前阶段。整合“生成—管理—测试—评估”冻结入口，统一质量门与证据引用，准备论文、软著和结题材料。
 
+## 新总体目标与完成边界
+- **当前总目标**：先完成可访问、可演示、可扩展的 Web 管理系统，再继续补齐计划书中除明显夸张或特别耗时目标外的核心技术目标；Web 系统不是项目终点。
+- **Web 首期完成要求**：统一入口、Dashboard 首页、场景库列表、场景详情、117 个独立场景和 351 条严格验收来源证据的只读展示；生成、校验、CARLA 任务、风险分析页面先建立清晰模块边界。
+- **研究目标完成要求**：保留 LHS/GMM/CVAE 工程基线，补做可验证的物理约束模块、生成模型小规模对照、受控条件检索和自动风险分析/测试编排；每项结论必须区分静态校验、离线结果和 CARLA 实机证据。
+- **规模目标降级规则**：计划书中的 10,000 场景扩库改为可扩展生成与入库流水线，并以当前 117 条质量门快照作为已验证规模；90% 成本降低、11 倍效率、90% 覆盖率在同口径基线和实测完成前不得宣称达成。
+- **明确后置/不作为当前完成条件**：CARLA 在线 RL 训练、ScenarioRunner 完整直执行、自然语言自由检索、完整 PyBullet 可微训练闭环和跨地图真实性结论；这些能力保留接口或研究记录，不冒充已完成交付。
+- **封板决策**：当前不把既有命令行 Demo 提交冻结为最终 V1.0；待 Web 首期和核心目标清单收口后，再统一做最终冻结、截图和软著申请材料。
+
+## 技术路线与选型
+- **Web 服务**：首期使用 Python 标准库 `http.server`，在现有 `scenario_dashboard.py` 数据契约上增加 `tools/web_app.py` 统一入口；这样无需新增依赖即可先形成可运行 Web 系统。后续有写入、任务队列或权限需求时，再评估迁移 FastAPI。
+- **页面层**：服务端输出轻量 HTML/CSS/原生 JavaScript；复用现有 JSON/CSV 场景库，不引入 React/Vue 和微服务，保持单机演示与软著取证简单可复现。
+- **数据层**：场景库继续使用 `entries.jsonl`、`index.csv`、`summary.json`；不立即迁移数据库。任务记录确有持久化需求时，新增 SQLite 任务表，不改动既有场景证据格式。
+- **生成模型**：LHS 作为工程基线，条件 GMM 作为统计对照，表格 C-VAE 作为当前生成式 AI 主线；GAN/Diffusion 只做小规模可比实验，不替换已验证基线。
+- **物理约束**：先实现可单元测试、可报告的参数级物理约束校验；PyBullet 可作为独立适配模块，不能在没有实测证据时写成已完成的可微训练系统。
+- **仿真与风险**：CARLA `0.9.16` + `Carla666-0916`，复用 OpenSCENARIO 1.0 最小交换适配和 `heuristic_v2` 风险代理；`target_risk_level` 仅是设计条件，`observed_risk` 才是实测结果。
+- **计算资源**：Web、文档、静态校验和离线分析默认使用 CPU；需要 GPU 的模型实验优先使用 GPU1，但先检查并避让现有 TensorRT 服务；GPU0 的 vLLM 不修改；本轮 Web MVP 不启动 CARLA、不启动在线训练。
+
+## 阶段推进清单
+> 待办区只保留尚未完成的事项。完成一项后，从本清单删除，并在“当前工作”或对应文档中保留一条证据索引；`⏸` 表示明确暂缓，不计入当前完成条件。
+
+1. ⬜ **S5-WEB-03 Web 展示取证**：在功能冻结后采集 Dashboard、场景列表、详情和关键结果页面截图，登记到软著材料台账。
+2. ⬜ **S5-CORE-01 物理约束模块**：实现参数级约束检查、失败原因和报告输出；再评估是否接入 PyBullet。
+3. ⬜ **S5-CORE-02 生成模型对照**：完成 GAN 或 Diffusion 的小规模离线对照，统一合法性、多样性和风险排序口径，不追求替换基线。
+4. ⬜ **S5-CORE-03 受控条件检索**：先实现基于结构化字段和关键词的检索；自由自然语言解析作为后续增强。
+5. ⬜ **S5-CORE-04 Web 任务编排**：提供生成、校验、风险分析和 CARLA 任务的提交/状态/结果接口；真实 CARLA 任务默认显式确认，不由页面隐式启动。
+6. ⬜ **S5-CORE-05 计划书指标基线**：为成本、效率和覆盖率建立同口径基线与测量脚本；未实测前保留“待验证”，不填充宣传数字。
+7. ⏸ **S5-SCALE-01 10,000 场景扩库**：降级为可扩展流水线设计和当前规模质量验证，不作为阶段五阻塞项。
+8. ⏸ **S5-RL-01 CARLA 在线 RL/ScenarioRunner 完整直执行**：保留接口和研究记录，等待 Web 与核心质量目标收口后单独立项。
+
+## 计划书目标映射
+| 计划书目标 | 当前处理 | 验收要求 |
+|---|---|---|
+| 生成式 AI 场景生成 | 已有 LHS/GMM/CVAE；继续小规模模型对照 | 生成记录、Schema 校验、统一离线指标 |
+| 物理约束与可执行性 | 待完成参数级约束模块 | 单元测试、失败报告、CARLA 配置编译 |
+| 极端场景库 | 已完成 117 条独立场景快照 | 证据链、去重、查询和质量门 |
+| 多维质量评估 | 已有危险性/可执行性/重复性等基线 | 明确 `not_assessed` 的真实性边界 |
+| 对抗性测试与自动风险分析 | 已有代理闭环和 `heuristic_v2` 结果回填 | Web 任务接口 + 实机证据分级 |
+| CARLA/OpenSCENARIO 适配 | 已完成最小交换子集 | 不宣称完整 ScenarioRunner 直执行 |
+| Web 自动化测试平台 | 当前优先建设 | 页面、API、任务状态和结果展示回归 |
+| 规模化扩库与宣传指标 | 降级为可扩展设计/待测基线 | 未完成同口径实测前不得宣称达成 |
+
+## 软著材料同步要求
+- Web 每新增一个可见模块，就同步更新 `docs/software_copyright_module_mapping_v1.md`、`docs/software_copyright_interface_spec_v1.md` 和 `docs/software_copyright_material_ledger_v1.md` 的入口、功能、证据和边界。
+- Web 页面截图、操作说明、代码鉴别材料和申请主体信息全部后置到最终冻结提交；当前只维护材料台账，不提前声称已完成申请。
+
 ## 当前 Demo 子阶段
 1. ✅ 极端天气、多危险叠加和行人突发场景。
 2. ✅ RGB、Depth、SemSeg 和碰撞传感器集成。
@@ -59,6 +104,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - 阶段五 M08 一键最小演示链路 V1 已建立：`tools/stage5_demo.cmd` 优先使用 `Carla666-0916` 环境，默认离线串联 M01 场景记录、M02 校验/编译、M03 场景库查询、M04 OpenSCENARIO 静态适配、M05 历史风险证据、M06 复现清单和 M07 Dashboard 数据校验，输出统一 `demo_manifest.json`；默认 `carla_connected=false`，不隐式启动 CARLA。接口清单见 `docs/stage5_minimal_demo_and_interface_catalog_v1.md`。
 - 阶段四综合质量门与实验结论已收口：硬运行门通过，工程接口门按证据等级归档，SAC/rule-guided LHS 泛化、风险代理升级、CARLA 在线训练和 ScenarioRunner 直执行均明确为未证明或后置能力；报告见 `docs/stage4_quality_gate_and_experiment_closure_v1.md`。
 - 当前进入阶段五，优先整合“生成、校验、场景库、仿真、风险分析、实验编排、只读 Dashboard”的冻结入口，并准备软著、论文和结题材料；不继续无目标扩展阶段四 CARLA 实验。
+- Web MVP V1 已完成：统一入口 `tools/web_app.py`/`tools/web_app.cmd` 复用 `scenario_dashboard.py` 的场景库加载器和只读 API，提供 Dashboard、场景列表、独立场景详情、健康检查以及生成/校验/任务/风险分析模块边界；真实 HTTP 探活返回 `200`，`carla_connected=false`，计数为 117/351。全量 `96` 项 Python 测试通过，1 项在 Gymnasium 缺失时按预期跳过；Edge 桌面截图和 Playwright `390×844` 视口检查通过，移动端文档宽度等于视口宽度且 117 行加载完整。本轮未启动 CARLA 或 GPU 任务。说明见 `docs/web_system_mvp_v1.md`。
 - 整理 CARLA Demo 作为仿真底座的接口和验证证据，不把它包装成最终系统。
 - 软著系统模块映射 V1 已按阶段五前置材料口径更新：M01–M08 均已映射到当前代码入口、输入输出和证据边界；M07 保持本地只读 Dashboard 原型，M08 提供默认离线的一键最小演示。完整 OpenSCENARIO 直执行、RL 策略泛化和场景真实性评估仍未完成；文档见 `docs/software_copyright_module_mapping_v1.md`。
 - 阶段四 4.1 已形成 `custom_json_to_openscenario_carla_v1`：输入复用 `generated_scenario` Schema，输出 OpenSCENARIO XML 1.0 最小交换子集、Scene 04 CARLA JSON 和哈希清单；天气、传感器、风险算法、Traffic Manager、路线控制器等 CARLA 专属字段保持在旁路配置中。适配器单元回归和 `seed_v1` 全部 `256` 条记录静态转换均已通过，适配器生成的 CARLA JSON 已完成一次运行时冒烟；尚未声称 ScenarioRunner 直接执行兼容。边界见 `docs/openscenario_carla_adapter_v1.md`。
@@ -143,6 +189,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - `tools/collect_carla_validation.py`：读取 CARLA 元数据并回填 `observed_risk`。
 - `tools/build_scenario_library.py`：从严格验收实验构建场景库 JSONL、CSV 索引、汇总和哈希清单。
 - `tools/query_scenario_library.py`：按生成器、风险、碰撞、证据粒度、质量等级和标签组合筛选场景库，支持表格、CSV 和 JSONL 输出。
+- `tools/web_app.py`、`tools/web_app.cmd`：阶段五 Web 统一入口；复用 M07 数据契约，提供 Dashboard、场景列表、详情、健康检查和后续模块占位路由。
 - `analysis/analyze_scenario_library.py`：生成场景库质量摘要、目标/实测矩阵、审查 CSV、Markdown 报告和 PNG/SVG 总览图。
 - `configs/scenario_library_quality_gate_v1.json`：冻结当前场景库数量、证据分层、质量摘要和查询字段契约。
 - `tests/test_scenario_library_interfaces.py`：构建器校验、质量摘要快照、查询筛选和 CSV 导出回归测试。
@@ -203,7 +250,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - **双端开发基线**：笔记本作为代码、配置、测试和 Git 提交端；服务器作为模型训练、候选生成、风险分析、CARLA 仿真和批量实验执行端。日常代码通过内网 `lab` 远端同步，形成实质且已验证的阶段进展时同步推送 GitHub `origin`；服务器运行工作区禁止直接修改代码。
 - **历史结果保留**：CARLA 0.9.15 的配置、清单、聚合结果和 `834` 个结构化运行文件仍保留；0.9.15 程序、Python 环境、压缩包和约 `14.24 GiB` 原始 PNG/NPY 帧已删除，不再作为可直接运行的复现环境。
 - **总体研究核心**：PyTorch、GAN/VAE/扩散模型、物理约束或 PyBullet、强化学习、OpenSCENARIO/CARLA 适配。
-- **平台工程计划**：结构化场景数据库、Matplotlib/Plotly；Streamlit 可作为 Demo 展示层，但不是当前优先级。
+- **平台工程计划**：首期 Python 标准库 Web 服务 + 原生 HTML/CSS/JavaScript，继续使用结构化 JSON/CSV；后续按写入、任务队列和权限需求评估 FastAPI/SQLite，React/Vue/Streamlit 均不作为当前首期依赖。
 
 ## 存储路径与缓存
 - 项目环境、CARLA、模型、运行输出和开发缓存默认使用 `F:\`；项目规则已写入根目录 `AGENTS.md`。
@@ -291,8 +338,8 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 6. **版本与数据边界**：服务器运行结果必须能够追溯到 Git 提交、配置、随机种子和输出目录。服务器工作区不直接编辑；发现问题后回笔记本修改、提交并重新同步。GitHub `origin` 用于阶段备份和对外同步，内网 `lab` 用于高频开发部署；两者均只接收已验证且不含大文件或敏感信息的提交。
 
 ## 下一步
-1. 维持阶段四实验口径和结论冻结，以 `docs/stage4_quality_gate_and_experiment_closure_v1.md` 作为论文、软著与结题材料的证据边界入口。
-2. 按 `docs/software_copyright_material_ledger_v1.md` 持续维护 M01–M08 代码入口、证据和边界；最终申请截图、源代码鉴别材料和正式说明书等待 V1.0 冻结后统一制作。
-3. 维护 `docs/stage5_material_index_v1.md` 中的一键演示 `demo_manifest.json` 路径、SHA-256、关键计数和重建命令；不把历史风险证据写成新 CARLA 实测，不把 RL 泛化、ScenarioRunner 直执行或真实性评估写成已完成功能。
-4. 阶段四仅在集成回归、明确的新独立支持域或交付硬要求触发时重开；继续遵守服务器优先、CARLA `0.9.16`、`Carla666-0916` 和严格验收门，不启动 CARLA 在线训练。
-5. CARLA 当前保持停止；GPU1 仅保留 root 管理的 TensorRT 服务（约 `896 MiB`），GPU0 的 vLLM 不修改。后续 GPU/CARLA 任务启动前重新检查服务和显存状态。
+1. 推进 `S5-WEB-03` 和 `S5-CORE-01`；每项通过验证后从“阶段推进清单”删除对应条目，并写入可复现命令和结果。
+2. 保持阶段四实验口径和结论冻结，以 `docs/stage4_quality_gate_and_experiment_closure_v1.md` 作为论文、软著与结题材料的证据边界入口。
+3. 继续按“阶段推进清单”推进物理约束、生成模型对照、受控检索和 Web 任务编排；每项完成后同步更新接口、材料台账和计划书映射。
+4. 维护 `docs/stage5_material_index_v1.md` 中的一键演示 `demo_manifest.json` 路径、SHA-256、关键计数和重建命令；不把历史风险证据写成新 CARLA 实测。
+5. CARLA 当前保持停止；GPU1 仅保留 root 管理的 TensorRT 服务，GPU0 的 vLLM 不修改。后续 GPU/CARLA 任务启动前重新检查服务和显存状态。

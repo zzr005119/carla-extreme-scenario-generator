@@ -64,7 +64,7 @@ flowchart LR
 | M04 | 仿真执行与多传感器采集 | 已验证实现 / 原型 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py`、`batch_runner.py` | CARLA 0.9.16 实机回归；RGB、Depth、SemSeg、Collision；确定性路线控制已验证 |
 | M05 | 风险评估与结果分析 | 已验证实现 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2`、TTC、车距、碰撞和遥测分析；风险反馈 V5 与 27 维代理冻结 |
 | M06 | 实验编排与复现管理 | 已验证实现 / 原型 | `batch_runner.py`、`tools/server_*.cmd`、`configs/` | 批次调度、种子、配置哈希、服务器工作流和质量门；服务器模型权重不进入 Git |
-| M07 | 可视化管理界面 | 原型能力 | `tools/scenario_dashboard.py`、`tools/scenario_dashboard.cmd` | 本地只读页面已支持场景筛选、详情、运行证据和风险结果展示；不含多用户、权限和写入 |
+| M07 | 可视化管理界面 | 已实现首期 Web MVP / 只读原型 | `tools/web_app.py`、`tools/web_app.cmd`、`tools/scenario_dashboard.py`、`tools/scenario_dashboard.cmd` | 统一 Web 入口已支持 Dashboard、场景库、独立详情、健康检查和后续模块边界；不含多用户、权限、写入或 CARLA 隐式启动 |
 | M08 | 阶段五最小演示编排 | 已验证实现 / 离线原型 | `tools/stage5_minimal_demo.py`、`tools/stage5_demo.cmd` | M01–M08 离线组合、静态适配、历史证据读取和 `demo_manifest.json` 已通过；默认不连接 CARLA |
 
 ## 🔗 详细模块映射
@@ -128,7 +128,8 @@ flowchart LR
 - **职责：** 提供场景筛选、场景详情、运行证据、风险结果和质量指标的只读展示。
 - **输入：** M03 输出的场景库索引、M05 输出的风险分析、M06 输出的批次汇总。
 - **输出：** 场景列表、详情页、风险分布图和运行证据状态。
-- **当前状态：** 已形成本地只读 Web 原型，可展示场景库索引和条目详情；尚未形成多用户服务、权限、写入操作或产品化部署能力。
+- **当前状态：** 已完成首期本地 Web 管理入口，可访问 Dashboard、场景库列表、独立场景详情和健康检查，并保留生成、校验、任务、风险分析路由边界；尚未形成多用户服务、权限、写入操作或产品化部署能力。
+- **实现映射：** `tools/web_app.py`、`tools/web_app.cmd` 复用 `scenario_dashboard.py` 的数据加载器和 API，页面及接口回归见 `tests/test_web_app.py`。
 
 ### M08 阶段五最小演示编排
 

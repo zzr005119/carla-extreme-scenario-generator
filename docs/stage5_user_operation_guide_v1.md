@@ -4,7 +4,7 @@ _用途：软著说明书和项目演示的操作底稿；当前版本不等同�
 
 ## 1. 使用范围
 
-本系统当前是以 Python 命令行、JSON/CSV 文件和本地只读 Dashboard 为主的研究原型。推荐先使用离线最小演示确认接口，再单独运行 CARLA 实机任务。任何真实仿真都必须明确启动，不会由离线演示隐式触发。
+本系统当前是以 Python 命令行、JSON/CSV 文件和本地只读 Web 管理入口为主的研究原型。推荐先使用 Web 页面或离线最小演示确认接口，再单独运行 CARLA 实机任务。任何真实仿真都必须明确启动，不会由 Web 页面或离线演示隐式触发。
 
 ## 2. 环境准备
 
@@ -51,16 +51,16 @@ tools\stage5_demo.cmd
 启动本地只读页面：
 
 ```powershell
-tools\scenario_dashboard.cmd
+tools\web_app.cmd
 ```
 
 或者只做数据加载检查：
 
 ```powershell
-D:\ANACONDA\envs\Carla666-0916\python.exe tools\scenario_dashboard.py --validate-only
+D:\ANACONDA\envs\Carla666-0916\python.exe tools\web_app.py --validate-only
 ```
 
-页面支持场景筛选、详情和历史风险/证据查看，不提供写入、删除、提交 CARLA 任务或权限管理。
+页面支持 Dashboard、场景库筛选、独立详情和历史风险/证据查看；生成、校验、任务和风险分析入口当前为边界占位，不提供写入、删除、提交 CARLA 任务或权限管理。
 
 ### 3.3 查询命令行结果
 

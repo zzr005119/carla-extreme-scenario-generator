@@ -52,7 +52,7 @@ Get-FileHash artifacts\stage5_minimal_demo_v1\demo_manifest.json -Algorithm SHA2
 | M04 仿真采集 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py` | 0.9.16 `metadata.json`、`telemetry.csv`、传感器和路线验收 | E4（历史） | 真实运行必须单独启动并重新检查版本、服务和严格验收 |
 | M05 风险评估 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2` 分解、历史风险报告和批次统计 | E4（历史） | 启发式仿真指标，不是事故概率；M08 不产生新风险 |
 | M06 实验复现 | `batch_runner.py`、`tools/server_*.cmd`、`configs/` | 提交哈希、配置/种子、服务器任务和轻量汇总 | E4（历史） | 服务器结果不以大文件或模型权重形式入 Git |
-| M07 只读 Dashboard | `tools/scenario_dashboard.py`、`tools/scenario_dashboard.cmd` | 页面级回归、HTTP 接口、场景库展示 | E2 | 本地只读原型，不含多用户、权限或写入 |
+| M07 只读 Web 管理入口 | `tools/web_app.py`、`tools/web_app.cmd`、`tools/scenario_dashboard.py` | 页面级回归、HTTP 接口、场景库列表和详情展示 | E2 | 本地只读 Web MVP，不含多用户、权限或写入 |
 | M08 最小演示编排 | `tools/stage5_minimal_demo.py`、`tools/stage5_demo.cmd` | `demo_manifest.json`、静态配置、`.xosc`、适配清单 | E2 | 最小交换适配，不证明 ScenarioRunner 直执行 |
 
 证据等级定义见 [`stage4_quality_gate_and_experiment_closure_v1.md`](stage4_quality_gate_and_experiment_closure_v1.md)。M08 清单只汇总 M03/M05/M07 的历史或静态证据，不提升其证据等级。

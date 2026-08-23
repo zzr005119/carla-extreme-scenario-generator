@@ -26,7 +26,7 @@ _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1
 | M04 | `scene_04_parameterized.py`、`batch_runner.py` | JSON 配置、CARLA 服务、运行参数 | `metadata.json`、`telemetry.csv`、传感器帧 | 已验证实现 / 原型 |
 | M05 | `risk_metrics.py`、`analysis/` | 遥测、事件、运行元数据 | 风险分数、等级、分析报告 | 已验证实现 |
 | M06 | `batch_runner.py`、`tools/server_*.cmd` | 实验计划、Git 提交、服务器资源 | 批次汇总、日志、轻量结果 | 已验证实现 / 原型 |
-| M07 | `scenario_dashboard.py`、`scenario_dashboard.cmd` | 场景库索引、条目和汇总 | 只读页面、筛选结果、详情 JSON | 原型能力 |
+| M07 | `web_app.py`、`web_app.cmd`、`scenario_dashboard.py`、`scenario_dashboard.cmd` | 场景库索引、条目和汇总 | Web 页面、筛选结果、详情页、详情 JSON、健康检查 | 首期 Web MVP / 只读 |
 | M08 | `stage5_minimal_demo.py`、`stage5_demo.cmd` | M01 记录、M03 库、M02 基础配置 | 静态配置、`.xosc`、适配清单、`demo_manifest.json` | 已验证实现 / 离线原型 |
 
 ## ⚙️ 数据契约
@@ -259,20 +259,26 @@ flowchart TB
 
 | 用途 | 命令 |
 | --- | --- |
-| 启动并打开浏览器 | `tools\scenario_dashboard.cmd` |
-| 只校验数据加载 | `python tools\scenario_dashboard.py --validate-only` |
-| 指定端口 | `python tools\scenario_dashboard.py --port 8765 --open` |
+| 启动 Web 管理系统并打开浏览器 | `tools\web_app.cmd` |
+| 启动兼容的 Dashboard 入口 | `tools\scenario_dashboard.cmd` |
+| 只校验 Web 数据加载 | `python tools\web_app.py --validate-only` |
+| 指定端口 | `python tools\web_app.py --port 8765 --open` |
 
 ### HTTP 接口
 
 | 方法 | 路径 | 返回内容 | 是否写入 |
 | --- | --- | --- | --- |
 | `GET` | `/` | Dashboard 页面 | 否 |
+| `GET` | `/dashboard` | Dashboard 页面别名 | 否 |
+| `GET` | `/scenarios` | 场景库列表入口 | 否 |
+| `GET` | `/scenarios/{library_id}` | 独立场景详情页 | 否 |
 | `GET` | `/api/summary` | 场景库和质量分析汇总 | 否 |
 | `GET` | `/api/scenarios` | 场景索引列表 | 否 |
 | `GET` | `/api/scenarios/{library_id}` | 单个场景完整条目 | 否 |
+| `GET` | `/healthz` | Web 服务状态和数据计数 | 否 |
+| `GET` | `/generation`、`/validation`、`/tasks`、`/risk` | 后续模块占位页 | 否 |
 
-页面只读取 `index.csv`、`entries.jsonl`、`summary.json` 和质量分析摘要，不修改场景库、不启动 CARLA、不提交实验任务。当前只支持本机访问和单进程服务，尚未提供用户认证、权限管理或多用户部署。
+页面只读取 `index.csv`、`entries.jsonl`、`summary.json` 和质量分析摘要，不修改场景库、不启动 CARLA、不提交实验任务。当前只支持本机访问和单进程服务，尚未提供用户认证、权限管理或多用户部署；占位页不代表对应业务已实现。
 
 ## 🧭 M08 阶段五最小演示编排接口
 
