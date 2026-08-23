@@ -54,6 +54,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - V2 实机回归：运行 `20260812_120439` 完成，`heuristic_v2` 得分 `63.456`、等级 `high`，无碰撞，RGB/Depth/SemSeg 各 `200` 帧，传感器写盘完成，CARLA 服务健康检查通过。
 
 ## 当前工作
+- 阶段五 M08 一键最小演示链路 V1 已建立：`tools/stage5_demo.cmd` 优先使用 `Carla666-0916` 环境，默认离线串联 M01 场景记录、M02 校验/编译、M03 场景库查询、M04 OpenSCENARIO 静态适配、M05 历史风险证据、M06 复现清单和 M07 Dashboard 数据校验，输出统一 `demo_manifest.json`；默认 `carla_connected=false`，不隐式启动 CARLA。接口清单见 `docs/stage5_minimal_demo_and_interface_catalog_v1.md`。
 - 阶段四综合质量门与实验结论已收口：硬运行门通过，工程接口门按证据等级归档，SAC/rule-guided LHS 泛化、风险代理升级、CARLA 在线训练和 ScenarioRunner 直执行均明确为未证明或后置能力；报告见 `docs/stage4_quality_gate_and_experiment_closure_v1.md`。
 - 当前进入阶段五，优先整合“生成、校验、场景库、仿真、风险分析、实验编排、只读 Dashboard”的冻结入口，并准备软著、论文和结题材料；不继续无目标扩展阶段四 CARLA 实验。
 - 整理 CARLA Demo 作为仿真底座的接口和验证证据，不把它包装成最终系统。
@@ -289,7 +290,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 
 ## 下一步
 1. 冻结阶段四实验口径和结论，以 `docs/stage4_quality_gate_and_experiment_closure_v1.md` 作为论文、软著与结题材料的证据边界入口。
-2. 开始阶段五系统集成，先盘点并统一“生成、校验、场景库、仿真、风险分析、实验编排、只读 Dashboard”的运行入口、配置和最小演示流程。
-3. 依据已验证接口更新软著模块映射与接口规格，准备冻结版本后的演示截图、用户操作说明和材料清单；不把 RL 泛化、ScenarioRunner 直执行或真实性评估写成已完成功能。
+2. 以 `tools/stage5_demo.cmd` 的 M01–M08 产物为基础，补齐软著模块映射、接口规格、用户操作说明和冻结版本演示截图。
+3. 将一键演示的 `demo_manifest.json` 接入阶段五成果材料索引；不把历史风险证据写成新 CARLA 实测，不把 RL 泛化、ScenarioRunner 直执行或真实性评估写成已完成功能。
 4. 阶段四仅在集成回归、明确的新独立支持域或交付硬要求触发时重开；继续遵守服务器优先、CARLA `0.9.16`、`Carla666-0916` 和严格验收门，不启动 CARLA 在线训练。
 5. CARLA 当前保持停止；GPU1 仅保留 root 管理的 TensorRT 服务（约 `896 MiB`），GPU0 的 vLLM 不修改。后续 GPU/CARLA 任务启动前重新检查服务和显存状态。
