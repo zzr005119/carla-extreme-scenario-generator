@@ -113,6 +113,59 @@ class WebTaskOrchestrationTests(unittest.TestCase):
         self.assertEqual(completed["result"]["summary"]["accepted_count"], 1)
         self.assertEqual(completed["result"]["execution_mode"], "offline_cpu")
 
+    def test_cancelled_worker_cannot_overwrite_terminal_status(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manager = TaskManager(directory, max_workers=1)
+            started = threading.Event()
+            release = threading.Event()
+
+            def delayed_generation(_task):
+                started.set()
+                release.wait(timeout=3)
+                return {"execution_mode": "offline_cpu"}
+
+            manager._run_generation = delayed_generation
+            try:
+                task = manager.submit(
+                    "generation",
+                    {"model": "lhs", "risk": "low", "count": 1, "seed": 1},
+                )
+                self.assertTrue(started.wait(timeout=3))
+                cancelled = manager.cancel(task["task_id"])
+                self.assertEqual(cancelled["status"], "cancelled")
+                release.set()
+                deadline = time.time() + 3
+                while time.time() < deadline and manager.get(task["task_id"])["status"] == "running":
+                    time.sleep(0.01)
+                self.assertEqual(manager.get(task["task_id"])["status"], "cancelled")
+            finally:
+                release.set()
+                manager.close()
+
+    def test_worker_failure_is_persisted_as_structured_error(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manager = TaskManager(directory, max_workers=1)
+
+            def failing_generation(_task):
+                raise RuntimeError("P0 failure visibility")
+
+            manager._run_generation = failing_generation
+            try:
+                task = manager.submit(
+                    "generation",
+                    {"model": "lhs", "risk": "low", "count": 1, "seed": 1},
+                )
+                deadline = time.time() + 3
+                failed = manager.get(task["task_id"])
+                while time.time() < deadline and failed["status"] not in ("failed", "completed"):
+                    time.sleep(0.01)
+                    failed = manager.get(task["task_id"])
+                self.assertEqual(failed["status"], "failed")
+                self.assertEqual(failed["error"]["type"], "RuntimeError")
+                self.assertIn("P0 failure visibility", failed["error"]["message"])
+            finally:
+                manager.close()
+
     def test_carla_task_requires_explicit_confirmation(self):
         status, task = self.request_json(
             "POST",
@@ -133,6 +186,21 @@ class WebTaskOrchestrationTests(unittest.TestCase):
         self.assertEqual(confirmed["status"], "confirmed_manual")
         self.assertFalse(confirmed["result"]["carla_connected"])
         self.assertFalse(confirmed["result"]["execution_started"])
+
+    def test_carla_task_can_be_cancelled_without_execution(self):
+        status, task = self.request_json(
+            "POST",
+            "/api/tasks",
+            {"kind": "carla", "payload": {"config_path": str(CONFIG_PATH)}},
+        )
+        self.assertEqual(status, 202)
+        cancel_status, cancelled = self.request_json(
+            "POST", f"/api/tasks/{task['task_id']}/cancel"
+        )
+        self.assertEqual(cancel_status, 200)
+        self.assertEqual(cancelled["status"], "cancelled")
+        self.assertFalse(cancelled["result"]["execution_started"])
+        self.assertFalse(cancelled["result"]["carla_connected"])
 
     def test_risk_analysis_task_uses_existing_evidence(self):
         if not (RUN_DIR / "metadata.json").is_file() or not (RUN_DIR / "telemetry.csv").is_file():

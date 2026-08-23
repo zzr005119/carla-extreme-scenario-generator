@@ -210,6 +210,8 @@ class TaskManager:
             task["status"] = "cancelled"
             task["finished_at"] = _now()
             task["result"] = {"execution_started": False, "reason": "用户取消"}
+            if task["kind"] == "carla":
+                task["result"]["carla_connected"] = False
             self._persist(task)
             return self._snapshot(task)
 
@@ -289,9 +291,11 @@ class TaskManager:
 
     def _run(self, task_id):
         with self._lock:
-            if self._tasks[task_id]["status"] == "cancelled":
+            task = self._tasks[task_id]
+            if task["status"] in TERMINAL_STATUSES:
                 return
-        self._update(task_id, status="running", started_at=_now())
+            task.update(status="running", started_at=_now())
+            self._persist(task)
         try:
             task = self.get(task_id)
             if task["kind"] == "generation":
@@ -303,14 +307,21 @@ class TaskManager:
             else:
                 raise TaskError("CARLA 任务必须经过显式确认，不会进入离线 worker")
         except Exception as error:  # Persist a concise, user-visible failure.
-            self._update(
-                task_id,
-                status="failed",
-                finished_at=_now(),
-                error={"type": type(error).__name__, "message": str(error)},
-            )
+            with self._lock:
+                if self._tasks[task_id]["status"] == "cancelled":
+                    return
+                self._tasks[task_id].update(
+                    status="failed",
+                    finished_at=_now(),
+                    error={"type": type(error).__name__, "message": str(error)},
+                )
+                self._persist(self._tasks[task_id])
             return
-        self._update(task_id, status="completed", finished_at=_now(), result=result)
+        with self._lock:
+            if self._tasks[task_id]["status"] == "cancelled":
+                return
+            self._tasks[task_id].update(status="completed", finished_at=_now(), result=result)
+            self._persist(self._tasks[task_id])
 
     def _task_output_dir(self, task):
         path = self.storage_dir / task["task_id"]

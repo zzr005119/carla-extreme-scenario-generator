@@ -82,6 +82,7 @@ BASE_STYLE = """
   .status-line.success { color: #15803d; }
   .workflow-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
   table { width: 100%; border-collapse: collapse; }
+  .table-wrap { overflow-x: auto; width: 100%; max-width: 100%; }
   th, td { padding: 9px 7px; border-bottom: 1px solid #edf1f7; text-align: left; vertical-align: top; }
   th { color: var(--muted); width: 30%; font-weight: 500; }
   code { overflow-wrap: anywhere; }
@@ -274,7 +275,7 @@ def _tasks_page():
           return `<tr><td><code>${esc(task.task_id)}</code></td><td>${esc(task.kind)}</td><td>${esc(task.status)}</td><td>${esc(task.created_at)}</td><td><code>${esc(result)}</code></td><td>${action}</td></tr>`;
         }).join("");
         document.querySelectorAll("[data-confirm]").forEach(button => button.addEventListener("click", () => transition(button.dataset.confirm, "confirm", true)));
-        document.querySelectorAll("[data-cancel]").forEach(button => button.addEventListener("click", () => transition(button.dataset.cancel, "confirm", false)));
+        document.querySelectorAll("[data-cancel]").forEach(button => button.addEventListener("click", () => transition(button.dataset.cancel, "cancel")));
       }
       async function loadTasks() {
         const response = await fetch("/api/tasks");
@@ -283,7 +284,9 @@ def _tasks_page():
         renderTasks(payload.items || []);
       }
       async function transition(taskId, action, confirmed) {
-        const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/${action}`, {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({confirmed})});
+        const options = {method:"POST", headers:{"Content-Type":"application/json"}};
+        if (action === "confirm") options.body = JSON.stringify({confirmed: Boolean(confirmed)});
+        const response = await fetch(`/api/tasks/${encodeURIComponent(taskId)}/${action}`, options);
         const payload = await response.json();
         message(response.ok ? `任务 ${taskId} 已更新为 ${payload.status}` : (payload.error || "任务更新失败"));
         await loadTasks();

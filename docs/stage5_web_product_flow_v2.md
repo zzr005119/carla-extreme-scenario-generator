@@ -14,6 +14,14 @@
 
 页面统一行为：提交后立即显示任务 ID，轮询 `GET /api/tasks/{task_id}`，终态显示结构化 JSON；失败显示错误信息；任务历史可在 `/tasks` 查看。页面没有隐式 CARLA 启动、在线训练或 GPU 调度。
 
+## P0 验收结果
+
+- 页面访问：`/dashboard`、`/scenarios`、`/generation`、`/validation`、`/risk`、`/tasks` 均已完成真实 HTTP `200` 冒烟。
+- 任务终态：生成、校验、风险分析真实提交均进入 `completed`；失败任务保留结构化 `error`；运行中任务取消后不会被 worker 覆盖为 `completed/failed`。
+- CARLA 边界：CARLA 任务提交后为 `awaiting_confirmation`；确认只登记 `confirmed_manual`，取消为 `cancelled`，两者均明确 `execution_started=false`、`carla_connected=false`，Web 进程不启动 CARLA。
+- 移动端：任务表容器启用横向滚动，避免窄视口下任务 ID、结果和操作列溢出。
+- 验证命令：`D:\ANACONDA\envs\Carla666-0916\python.exe -m unittest discover -s tests -p "test_*.py" -v`，结果 `126 passed / 1 skipped`；`compileall` 和 `git diff --check` 通过。
+
 ## API 契约
 
 - `POST /api/tasks`：提交任务，返回 `202` 和任务快照。
