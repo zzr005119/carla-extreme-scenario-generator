@@ -261,6 +261,10 @@ HTTP 接口：
 
 任务状态至少包括 `queued`、`running`、`completed`、`failed`、`cancelled`、`awaiting_confirmation` 和 `confirmed_manual`。generation、validation、risk_analysis 使用 `offline_cpu`；CARLA 任务使用 `manual_external`，任务结果必须明确 `carla_connected=false` 和 `execution_started=false`，真实执行仍由 `server_run.cmd` 或专用 CARLA 入口承担。
 
+## 📏 S5-CORE-05 计划书指标基线接口
+
+`tools/measure_stage5_metrics.py` 接受生成汇总、CARLA `metadata.json`、参考条件记录和候选记录，输出 `stage5_metrics_baseline_v1` JSON。它只计算生成吞吐、严格验收运行时间代理和显式条件签名覆盖；缺少同口径 baseline 时，相对比较保持 `not_assessed`。详细口径和当前快照见 `docs/stage5_metrics_baseline_v1.md`。
+
 ### 复现最小字段
 
 每个实验至少保存：Git 提交哈希、配置快照及哈希、生成器和种子、Traffic Manager 种子、CARLA 版本、输出目录、运行状态和结果汇总。缺少其中任一关键字段时，应降低证据等级而不是补写未知值。
