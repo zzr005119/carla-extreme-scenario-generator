@@ -67,6 +67,7 @@ Get-FileHash artifacts\stage5_minimal_demo_v1\demo_manifest.json -Algorithm SHA2
 | [`software_copyright_module_mapping_v1.md`](software_copyright_module_mapping_v1.md) | M01–M08 模块职责与软著章节映射 |
 | [`software_copyright_interface_spec_v1.md`](software_copyright_interface_spec_v1.md) | 命令入口、数据契约、输出和异常边界 |
 | [`stage4_quality_gate_and_experiment_closure_v1.md`](stage4_quality_gate_and_experiment_closure_v1.md) | 阶段四证据等级和研究结论边界 |
+| [`stage5_freeze_preflight_v1.md`](stage5_freeze_preflight_v1.md) | V1.0 冻结前自动检查项和 PENDING 清单 |
 
 ## 正式冻结前动作
 

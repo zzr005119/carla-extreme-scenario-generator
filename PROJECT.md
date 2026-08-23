@@ -55,6 +55,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 
 ## 当前工作
 - 软著前置材料整理 V1 已完成：新增 `docs/software_copyright_material_ledger_v1.md`、`docs/stage5_user_operation_guide_v1.md` 和 `docs/stage5_material_index_v1.md`；模块映射、接口规格和阶段五成果索引已统一到 M01–M08 口径。当前不制作最终申请截图、不提交软著，待 V1.0 功能和提交冻结后统一采集、核对与整理。
+- V1.0 冻结前检查已建立：`tools/check_stage5_freeze.cmd` 覆盖材料入口、M01–M08 口径、M08 清单契约、117/351 场景库计数、产物哈希、Carla666-0916 环境和工作区状态；当前检查结果 `30 PASS / 0 FAIL`，正式提交、最终截图和申请主体信息仍为 PENDING。
 - 阶段五 M08 一键最小演示链路 V1 已建立：`tools/stage5_demo.cmd` 优先使用 `Carla666-0916` 环境，默认离线串联 M01 场景记录、M02 校验/编译、M03 场景库查询、M04 OpenSCENARIO 静态适配、M05 历史风险证据、M06 复现清单和 M07 Dashboard 数据校验，输出统一 `demo_manifest.json`；默认 `carla_connected=false`，不隐式启动 CARLA。接口清单见 `docs/stage5_minimal_demo_and_interface_catalog_v1.md`。
 - 阶段四综合质量门与实验结论已收口：硬运行门通过，工程接口门按证据等级归档，SAC/rule-guided LHS 泛化、风险代理升级、CARLA 在线训练和 ScenarioRunner 直执行均明确为未证明或后置能力；报告见 `docs/stage4_quality_gate_and_experiment_closure_v1.md`。
 - 当前进入阶段五，优先整合“生成、校验、场景库、仿真、风险分析、实验编排、只读 Dashboard”的冻结入口，并准备软著、论文和结题材料；不继续无目标扩展阶段四 CARLA 实验。
@@ -87,7 +88,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - OpenSCENARIO XML 1.4 已登记为未来标准交换适配方向：后续单独建立 1.4 映射、Schema 校验和工具链运行证据，不替换当前 1.0 运行目标。
 - 已完成 M01–M08 接口规格 V1：固化命令入口、核心函数、输入输出、运行可信条件、异常边界和验收矩阵；M08 默认离线且不产生新的 CARLA 风险结果；文档见 `docs/software_copyright_interface_spec_v1.md`。
 - M07 只读可视化原型已完成：`tools/scenario_dashboard.py` 通过 Python 标准库读取场景库，提供本地页面、筛选、场景详情和只读 JSON 接口；数据契约回归与本地 HTTP 端点验证通过。
-- 阶段三已完成收口并进入阶段四；软著演示截图暂缓，待正式准备申请软著时基于冻结版本统一采集，不作为阶段四启动条件。
+- 历史记录：阶段三已完成收口并进入阶段四；软著演示截图暂缓，待正式准备申请软著时基于冻结版本统一采集，不作为阶段四启动条件。当前项目已完成阶段四收口并处于阶段五。
 - 阶段三验收门已加固：运行级严格验收同时要求运行完成、验收完成、实机确认、传感器完成、CARLA 服务健康、路线完成并通过以及元数据路径存在；现有三生成器对照 `108/108` 条运行明细继续满足新条件。场景库新增 `verification_basis`，明确区分 `direct_run_evidence` 与 `inherited_batch_acceptance`。
 - 已确定第一版参数级场景表示：条件标签、天气、前车急刹、行人横穿、运行种子和实测风险标签。
 - 已生成 `seed_v1`：共 `256` 条参数设计样本，低/中/高/临界风险目标各 `64` 条；训练/验证/测试集为 `180/40/36`，各风险档在各数据划分中保持平衡。
