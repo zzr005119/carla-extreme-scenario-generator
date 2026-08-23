@@ -5,6 +5,7 @@ import unittest
 
 from tools.calibrate_lhs_high_boundary import (
     build_independent_calibration,
+    calibrate,
     summarize_repeat_direction,
 )
 
@@ -62,6 +63,23 @@ class LhsHighProxyCalibrationTests(unittest.TestCase):
         self.assertTrue(summary["direction_consistent"])
         self.assertEqual(summary["strategies"][0]["repeat_measurement_count"], 2)
         self.assertEqual(summary["strategies"][1]["collision_introduced_count"], 2)
+
+    def test_calibration_format_can_be_versioned_without_changing_metrics(self):
+        rows = [
+            independent_row("a", 49.95, 46.417, "medium", 0.21, False),
+            independent_row("b", 66.56, 79.118, "critical", 0.79, True),
+        ]
+        repeat_proxy = [{"strategy": "sac_policy", "proxy_score_delta": "4.0"}]
+        repeat_rows = [{"strategy": "sac_policy", "risk_delta": "10.0", "collision_change": "introduced"}]
+        summary, _ = calibrate(
+            rows,
+            ranked_rows=None,
+            proxy_rows=repeat_proxy,
+            repeat_rows=repeat_rows,
+            calibration_format="lhs_high_proxy_calibration_v2",
+        )
+        self.assertEqual(summary["format"], "lhs_high_proxy_calibration_v2")
+        self.assertEqual(summary["independent_calibration"]["sample_count"], 2)
 
 
 if __name__ == "__main__":

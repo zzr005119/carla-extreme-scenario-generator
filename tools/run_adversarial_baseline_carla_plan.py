@@ -500,7 +500,10 @@ def execute_independent_plan(
             timeout_seconds,
             agent_config,
             force=force,
-            source="lhs_high_independent_carla_plan_v1",
+            source=(
+                plan.get("summary", {}).get("plan_config_format")
+                or plan.get("format", "lhs_high_independent_carla_plan_v1")
+            ),
         )
         results.append(row)
         persist("running")

@@ -14,7 +14,7 @@
 - **服务器运行仓库**：`/home/zhaozirong/projects/carla-extreme-scenario-generator`
 - **内网 Git 远端**：`lab` → `zhaozirong@192.168.110.170:/home/zhaozirong/git/carla-extreme-scenario-generator.git`
 - **CARLA 0.9.15 历史证据**：`artifacts/carla_0915_runtime_evidence/`（本地忽略目录）
-- **最后更新**：2026-08-22
+- **最后更新**：2026-08-23
 
 ## 当前阶段
 **大创总体已完成阶段三“极端场景库与质量评估”的收口条件，当前进入阶段四“仿真平台与对抗性测试代理”。风险反馈 V5 已合并为 `117` 个独立场景，其中 `39` 个碰撞场景；27 维物理增强代理在 50 次重复 OOF 中取得 MAE `10.986`、Spearman `0.781`、Top-9 Jaccard `0.304`，并冻结为后续候选评分的优先实验分支，原始 15 维继续作为可复现实验基线。场景库 V1 已完成 V5 扩库：统一条目 Schema、来源追踪、内容哈希去重、质量分层、CSV 索引、离线查询接口、软著模块映射、M01–M07 接口规格和 Dashboard 页面级回归均已建立，共收录 `117` 个独立场景与 `351` 次来源批次严格验收运行；其中 `36` 个条目为直接逐次证据，`81` 个条目为批次继承证据。**
@@ -30,7 +30,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 1. ✅/▶ **基础调研与环境搭建**：CARLA、Python、Git/GitHub 和仿真底座已完成；生成式 AI 文献第一轮收集和模型选型已完成，公开数据集收集与预处理仍需补齐。
 2. ✅ **生成式 AI 模型与物理约束**：场景 Schema、独立校验器、种子数据集、LHS/GMM/CVAE、确定性控制器、严格验收、风险反馈 V1—V5、物理增强代理与配对实机验证均已形成可复现工程基线；潜空间条件 Flow 延后评估，不作为阶段二完成条件。
 3. ✅ **极端场景库与质量评估**：统一条目、来源追踪、哈希去重、真实性/多样性/危险性/可执行性指标、结构化检索索引、质量分析基线、接口回归门槛、软著模块映射、接口规格和 Dashboard 页面级回归均已完成；软著演示截图后置到正式申请准备阶段。
-4. ▶ **仿真平台与对抗性测试代理**：当前阶段。OpenSCENARIO/CARLA 最小适配、对抗性测试代理 V1 契约、单步/多步闭环、异常路径编排测试、Gymnasium 外壳、环境级 CARLA 冒烟、场景库分层采样、四类非学习基线、reward V2、60 次 CARLA 严格对照、Stable-Baselines3 训练工程链路、冻结 27 维风险代理执行器、多随机种子代理基准、SAC/rule-guided LHS 的 12 分层 CARLA 独立评估、3 个原始 pair × 3 个 Traffic Manager 种子的 `27/27` 重复复验、新增 6 个未覆盖分层的 `18/18` CARLA 严格验收、18 个独立 pair 的合并统计、质量门审计、2 个优先分层的 `18/18` 重复测量、LHS/high 候选边界复核、3 个独立候选的 `3/3` CARLA 严格验收均已完成；当前不继续重复同一 pair，不启动 CARLA 在线训练。
+4. ▶ **仿真平台与对抗性测试代理**：当前阶段。OpenSCENARIO/CARLA 最小适配、对抗性测试代理 V1 契约、单步/多步闭环、异常路径编排测试、Gymnasium 外壳、环境级 CARLA 冒烟、场景库分层采样、四类非学习基线、reward V2、60 次 CARLA 严格对照、Stable-Baselines3 训练工程链路、冻结 27 维风险代理执行器、多随机种子代理基准、SAC/rule-guided LHS 的 12 分层 CARLA 独立评估、3 个原始 pair × 3 个 Traffic Manager 种子的 `27/27` 重复复验、新增 6 个未覆盖分层的 `18/18` CARLA 严格验收、18 个独立 pair 的合并统计、质量门审计、2 个优先分层的 `18/18` 重复测量、LHS/high 候选边界复核、3 个独立候选的 `3/3` CARLA 严格验收、V2 新增 6 个独立候选的 `6/6` CARLA 严格验收和 9 条独立样本合并校准均已完成；当前不继续重复同一 pair，不启动 CARLA 在线训练。
 5. ⏳ **系统集成与成果产出**：整合“生成—管理—测试—评估”平台，完成对比实验、论文/软著和结题材料。
 
 ## 当前 Demo 子阶段
@@ -289,8 +289,9 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - LHS/high 候选参数与代理排序边界复核 V1 已完成：对物理增强评分的 `256` 个 LHS/high 候选离线复核，源场景 `lhs_high_20260817_0223` 的稳健代理分 `58.866`、均值分 `61.956`、标准差 `6.181`，稳健分降序排名 `14/256`；运行侧基线代理 `55.032` 与物理增强分相差 `-3.834`。重复实测中 SAC/rule-guided LHS 的风险增量为 `+29.254/+34.077` 且均为 `3/3` 新增碰撞，明显大于代理增量 `+4.791/+8.456`，说明排序方向可参考但增量幅度和碰撞边界未校准。离线工具为 `tools/analyze_lhs_high_proxy_boundary.py`，3 个独立候选为 `lhs_high_20260817_0203`、`lhs_high_20260817_0022`、`lhs_high_20260817_0041`；独立计划工具为 `tools/prepare_lhs_high_independent_carla_plan.py`，计划生成使用服务器 CPU 资源，配置和参数记录已纳入仓库。
 - LHS/high 独立候选 CARLA 验证已完成：服务器 CARLA `0.9.16`、`Carla666-0916`、GPU1 执行 3 条独立场景，`3/3` 严格验收、`heuristic_v2`、RGB 各 `100` 帧、路线双车在途率均为 `1.0`、最大路线偏差不超过 `0.999 m`、客户端/服务端版本一致。`lhs_high_20260817_0203` 实测 `46.417/medium`、无碰撞；`lhs_high_20260817_0022` 实测 `79.118/critical`、3 次碰撞；`lhs_high_20260817_0041` 实测 `79.856/critical`、2 次碰撞。该结果是 3 个独立边界场景的测量，不是策略泛化、重复性或在线训练结论；证据已回收至 `F:\Carla\project-transfer\server-results\execution_smoke_v1_20260822_222603` 和 `F:\Carla\project-transfer\server-results\execution_remaining_v1_20260822_223026`。
 - LHS/high 风险代理校准 V1 已完成：3 条独立样本的风险 MAE 为 `13.122`、实测分相对代理分偏差为 `+10.766`、Spearman `0.500`；high 以上筛选命中 `3/3`，但碰撞概率 `0.5` 阈值召回为 `1/2`。重复测量中代理增量排序与实测排序一致，但实测增量约为代理增量的 `4.03x/6.11x`。当前代理仅保留为候选筛选信号，不作为实测风险或在线训练 reward；报告见 `docs/lhs_high_proxy_calibration_v1.md`，结果位于 `F:\Carla\project-transfer\lhs_high_proxy_calibration_v1_20260823_000100`。
-- 2026-08-22 GPU1 状态复核与资源释放：服务器 CARLA `0.9.16` 进程 PID `754020` 曾占用约 `6166 MiB`、GPU 利用率 `54%`，RPC `2000` 可连接；CARLA API 连续 2 秒帧号增加 `174`，地图为 `Town10HD_Opt`，客户端/服务端均为 `0.9.16`，因此不是死锁。检查时无 2000 端口客户端和运行中的项目任务，已通过 `tools/server_carla.cmd -Action Stop` 停止空闲 CARLA。当前 GPU1 仅剩 root 管理的 TensorRT `python3` PID `3841027`，约 `896 MiB`、项目 GPU 锁已释放；GPU0 的 vLLM 未修改。LHS/high 独立候选执行期间 CARLA 已按需启动并在完成后停止；后续需要 CARLA 时再显式启动，模型任务优先使用 GPU1 并在启动前复核 root 服务显存。
+- LHS/high 风险代理校准 V2 已完成：新增 6 条独立候选 `6/6` 严格验收，合并 V1 后共 `9` 条独立样本；风险 MAE `11.752`、实测分相对代理分偏差 `+5.024`、Spearman `0.433`，high 以上筛选召回 `5/6`，碰撞概率 `0.5` 阈值召回 `2/4`。排序和碰撞边界仍不足以把代理当作实测风险或在线训练 reward；报告见 `docs/lhs_high_proxy_calibration_v2.md`，结果位于 `F:\Carla\project-transfer\lhs_high_proxy_calibration_v2_20260823_090057`。
+- 2026-08-23 GPU1 状态复核与资源释放：服务器 CARLA `0.9.16` 启动前后均通过 RPC/地图/版本健康检查，V2 独立批次运行期间 GPU1 的 CARLA 由项目锁独占；6 条运行完成后已通过 `tools/server_carla.cmd -Action Stop` 停止空闲 CARLA。当前 GPU1 仅剩 root 管理的 TensorRT `python3` PID `3841027`，约 `896 MiB`、项目 GPU 锁已释放；GPU0 的 vLLM 未修改。CARLA 未出现死锁证据；后续需要 CARLA 时再显式启动，模型任务优先使用 GPU1 并在启动前复核 root 服务显存。
 1. 保留质量门审计结论，按生成器、目标风险档和碰撞状态追踪后续结果；当前不把 high/critical 碰撞集中误判为基础设施质量门失败。
-2. LHS/high 候选参数与代理排序边界复核、3 个独立候选 CARLA 严格验收及风险代理校准 V1 已完成；下一步只从未使用候选中补充独立场景，不继续重复同一 pair，不启动 CARLA 在线训练。
+2. LHS/high 候选参数与代理排序边界复核、9 个独立候选 CARLA 严格验收及风险代理校准 V1/V2 已完成；下一步不重复同一 pair，不启动 CARLA 在线训练；只有出现明确新问题和独立支持域覆盖目标时才设计新场景。
 3. 维持服务器优先、CARLA `0.9.16`、`Carla666-0916`、版本/传感器/路线/服务严格验收门；不启动 CARLA 在线训练。
 4. 只有更大独立集合持续出现实测风险增益且碰撞和路线质量门不恶化时，才讨论增加 SAC 训练预算或进入更高成本的 CARLA 训练研究。

@@ -279,11 +279,17 @@ def summarize_repeat_direction(proxy_rows, repeat_rows):
     }
 
 
-def calibrate(independent_rows, ranked_rows, proxy_rows, repeat_rows):
+def calibrate(
+    independent_rows,
+    ranked_rows,
+    proxy_rows,
+    repeat_rows,
+    calibration_format="lhs_high_proxy_calibration_v1",
+):
     independent_summary, calibration_rows = build_independent_calibration(independent_rows, ranked_rows)
     repeat_summary = summarize_repeat_direction(proxy_rows, repeat_rows)
     summary = {
-        "format": "lhs_high_proxy_calibration_v1",
+        "format": calibration_format,
         "evidence_kind": "offline_calibration_with_carla_runtime_inputs",
         "completed_at": datetime.now().astimezone().isoformat(timespec="seconds"),
         "analysis_mode": "offline_cpu_only",
@@ -303,7 +309,7 @@ def _report(summary, rows):
     independent = summary["independent_calibration"]
     collision = independent["collision_probability"]
     lines = [
-        "# LHS/high 风险代理校准 V1",
+        f"# LHS/high 风险代理校准 {summary.get('calibration_version', 'V1')}",
         "",
         "## 证据口径",
         "",
@@ -348,7 +354,14 @@ def _report(summary, rows):
     return "\n".join(lines)
 
 
-def run_calibration(independent_paths, ranked_path, proxy_path, repeat_path, output_dir):
+def run_calibration(
+    independent_paths,
+    ranked_path,
+    proxy_path,
+    repeat_path,
+    output_dir,
+    calibration_format="lhs_high_proxy_calibration_v1",
+):
     independent_rows = _load_json_rows(independent_paths)
     ranked_rows = _load_csv(ranked_path)
     proxy_rows = _load_csv(proxy_path)
@@ -359,7 +372,14 @@ def run_calibration(independent_paths, ranked_path, proxy_path, repeat_path, out
     ]
     if not repeat_rows:
         raise ValueError("No LHS/high repeated measurements found")
-    summary, calibration_rows = calibrate(independent_rows, ranked_rows, proxy_rows, repeat_rows)
+    summary, calibration_rows = calibrate(
+        independent_rows,
+        ranked_rows,
+        proxy_rows,
+        repeat_rows,
+        calibration_format=calibration_format,
+    )
+    summary["calibration_version"] = calibration_format.rsplit("_", 1)[-1].upper()
     os.makedirs(os.path.abspath(output_dir), exist_ok=False)
     _write_json(os.path.join(output_dir, "summary.json"), summary)
     _write_csv(os.path.join(output_dir, "independent_calibration.csv"), calibration_rows)
@@ -376,6 +396,11 @@ def parse_args():
     parser.add_argument("--runtime-proxy-comparison", required=True)
     parser.add_argument("--repeat-comparisons", required=True)
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument(
+        "--calibration-format",
+        default="lhs_high_proxy_calibration_v1",
+        choices=("lhs_high_proxy_calibration_v1", "lhs_high_proxy_calibration_v2"),
+    )
     return parser.parse_args()
 
 
@@ -387,6 +412,7 @@ def main():
         args.runtime_proxy_comparison,
         args.repeat_comparisons,
         args.output_dir,
+        calibration_format=args.calibration_format,
     )
     print(
         f"[CALIBRATION] independent={summary['independent_calibration']['sample_count']} "
