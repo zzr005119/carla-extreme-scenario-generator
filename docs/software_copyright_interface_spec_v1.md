@@ -1,10 +1,10 @@
-# 软著系统接口规格 V1（M01–M07）
+# 软著系统接口规格 V1（M01–M08）
 
-_项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1.0；配套模块映射：`docs/software_copyright_module_mapping_v1.md`；更新日期：2026-08-18_
+_项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1.0；配套模块映射：`docs/software_copyright_module_mapping_v1.md`；更新日期：2026-08-23_
 
 ---
 
-> **文档定位：** 本文固化 M01–M07 的现有命令入口、核心函数、数据契约、输出物和验收条件，作为软件说明书和后续系统集成的工程底稿。本文只记录当前代码已经提供或已经验证的接口。
+> **文档定位：** 本文固化 M01–M08 的现有命令入口、核心函数、数据契约、输出物和验收条件，作为软件说明书和后续系统集成的工程底稿。本文只记录当前代码已经提供或已经验证的接口。
 
 ## 📋 接口原则
 
@@ -27,6 +27,7 @@ _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1
 | M05 | `risk_metrics.py`、`analysis/` | 遥测、事件、运行元数据 | 风险分数、等级、分析报告 | 已验证实现 |
 | M06 | `batch_runner.py`、`tools/server_*.cmd` | 实验计划、Git 提交、服务器资源 | 批次汇总、日志、轻量结果 | 已验证实现 / 原型 |
 | M07 | `scenario_dashboard.py`、`scenario_dashboard.cmd` | 场景库索引、条目和汇总 | 只读页面、筛选结果、详情 JSON | 原型能力 |
+| M08 | `stage5_minimal_demo.py`、`stage5_demo.cmd` | M01 记录、M03 库、M02 基础配置 | 静态配置、`.xosc`、适配清单、`demo_manifest.json` | 已验证实现 / 离线原型 |
 
 ## ⚙️ 数据契约
 
@@ -273,19 +274,54 @@ flowchart TB
 
 页面只读取 `index.csv`、`entries.jsonl`、`summary.json` 和质量分析摘要，不修改场景库、不启动 CARLA、不提交实验任务。当前只支持本机访问和单进程服务，尚未提供用户认证、权限管理或多用户部署。
 
+## 🧭 M08 阶段五最小演示编排接口
+
+### 启动入口
+
+| 用途 | 命令 |
+| --- | --- |
+| 运行离线最小演示 | `tools\stage5_demo.cmd` |
+| 指定输入和输出 | `tools\stage5_demo.cmd --record <record.json> --output-dir <dir>` |
+| 直接调用 Python | `D:\ANACONDA\envs\Carla666-0916\python.exe tools\stage5_minimal_demo.py` |
+
+### 处理顺序
+
+1. 读取一个 `generated_scenario` JSON 记录。
+2. 调用 M02 校验并编译完整 Scene 04 CARLA 配置。
+3. 执行 Scene 04 `--validate-only`，确认配置形状，不连接 CARLA。
+4. 调用 OpenSCENARIO 适配器生成 `.xosc`、`.carla.json` 和适配清单。
+5. 读取 M03 场景库，统计独立场景、碰撞场景和高风险候选摘要。
+6. 加载 M07 Dashboard 数据，核对索引、条目和质量汇总数量。
+7. 输出 `demo_manifest.json`，记录每个模块状态、路径和限制。
+
+### 输出契约
+
+| 输出 | 说明 |
+| --- | --- |
+| `input_record.json` | 输入记录副本，不代表本次重新生成 |
+| `compiled_carla_config.json` | M02 编译配置，可继续 `--validate-only` |
+| `<sample_id>.xosc` | OpenSCENARIO 1.0 最小交换子集 |
+| `<sample_id>.carla.json` | 适配器旁路 CARLA 配置 |
+| `<sample_id>.adapter_manifest.json` | 源记录、映射和哈希状态 |
+| `demo_manifest.json` | M01–M08 总状态、`carla_connected` 和证据边界 |
+
+### 运行边界
+
+M08 默认必须写入 `carla_connected=false`、`execution_mode=offline_static_and_evidence` 和 `new_carla_risk_evaluation=false`。它读取历史场景库风险，不产生新的 `observed_risk`，不启动 CARLA、不启动 GPU 任务、不修改场景库。
+
 ## ⚠️ 未冻结接口
 
 - 已形成 OpenSCENARIO 1.0 最小交换子集适配，但完整导入/导出、地图坐标绑定和跨仿真器执行仍未实现；不能把当前自定义 JSON 配置称为通用场景交换接口。
 - OpenSCENARIO XML 1.4 作为未来标准交换适配方向保留，暂不替换当前 1.0 运行目标；需要单独的映射版本、Schema 校验和运行时证据。
-- 强化学习测试代理尚未形成训练、部署和评估接口，阶段四完成前不纳入软著已实现功能。
+- 强化学习测试代理已形成工程接口和有限独立评估，但尚未证明普遍 CARLA 泛化优势；材料中只能按工程链路/原型能力描述。
 - 真实世界数据映射和真实性评估接口尚未冻结，场景库 `realism` 继续保持 `not_assessed`。
 
 ## 🎯 后续实现顺序
 
 1. 用本文接口矩阵作为后续改动的验收清单。
 2. 保持 M07 只读 Dashboard 的页面级回归，不改变当前仿真和风险计算逻辑。
-3. 在已通过的 M04.1 静态适配和 CARLA JSON 冒烟基础上，定义对抗性测试代理接口。
-4. 完成阶段四关键闭环后，再更新接口规格和软著模块映射版本。
+3. 以 M08 离线演示和 `demo_manifest.json` 作为阶段五接口集成门。
+4. 系统集成完成后，基于最终冻结提交统一更新说明书、截图和申请材料。
 
 ---
 

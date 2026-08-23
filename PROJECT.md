@@ -54,11 +54,12 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - V2 实机回归：运行 `20260812_120439` 完成，`heuristic_v2` 得分 `63.456`、等级 `high`，无碰撞，RGB/Depth/SemSeg 各 `200` 帧，传感器写盘完成，CARLA 服务健康检查通过。
 
 ## 当前工作
+- 软著前置材料整理 V1 已完成：新增 `docs/software_copyright_material_ledger_v1.md`，区分当前工程底稿与正式申请前冻结材料；新增 `docs/stage5_user_operation_guide_v1.md` 作为操作说明底稿，并将模块映射和接口规格更新至 M01–M08/阶段五口径。当前不制作最终申请截图、不提交软著，待 V1.0 功能和提交冻结后统一采集、核对与整理。
 - 阶段五 M08 一键最小演示链路 V1 已建立：`tools/stage5_demo.cmd` 优先使用 `Carla666-0916` 环境，默认离线串联 M01 场景记录、M02 校验/编译、M03 场景库查询、M04 OpenSCENARIO 静态适配、M05 历史风险证据、M06 复现清单和 M07 Dashboard 数据校验，输出统一 `demo_manifest.json`；默认 `carla_connected=false`，不隐式启动 CARLA。接口清单见 `docs/stage5_minimal_demo_and_interface_catalog_v1.md`。
 - 阶段四综合质量门与实验结论已收口：硬运行门通过，工程接口门按证据等级归档，SAC/rule-guided LHS 泛化、风险代理升级、CARLA 在线训练和 ScenarioRunner 直执行均明确为未证明或后置能力；报告见 `docs/stage4_quality_gate_and_experiment_closure_v1.md`。
 - 当前进入阶段五，优先整合“生成、校验、场景库、仿真、风险分析、实验编排、只读 Dashboard”的冻结入口，并准备软著、论文和结题材料；不继续无目标扩展阶段四 CARLA 实验。
 - 整理 CARLA Demo 作为仿真底座的接口和验证证据，不把它包装成最终系统。
-- 软著系统模块映射 V1 是阶段三基线：已将场景生成、约束校验、场景库、仿真采集、风险分析和实验编排映射到代码入口与运行证据；其中对 Dashboard 和代理工程链路的状态早于阶段四收口，需在阶段五按当前证据更新。完整 OpenSCENARIO 直执行和 RL 策略泛化仍未完成；文档见 `docs/software_copyright_module_mapping_v1.md`。
+- 软著系统模块映射 V1 已按阶段五前置材料口径更新：M01–M08 均已映射到当前代码入口、输入输出和证据边界；M07 保持本地只读 Dashboard 原型，M08 提供默认离线的一键最小演示。完整 OpenSCENARIO 直执行、RL 策略泛化和场景真实性评估仍未完成；文档见 `docs/software_copyright_module_mapping_v1.md`。
 - 阶段四 4.1 已形成 `custom_json_to_openscenario_carla_v1`：输入复用 `generated_scenario` Schema，输出 OpenSCENARIO XML 1.0 最小交换子集、Scene 04 CARLA JSON 和哈希清单；天气、传感器、风险算法、Traffic Manager、路线控制器等 CARLA 专属字段保持在旁路配置中。适配器单元回归和 `seed_v1` 全部 `256` 条记录静态转换均已通过，适配器生成的 CARLA JSON 已完成一次运行时冒烟；尚未声称 ScenarioRunner 直接执行兼容。边界见 `docs/openscenario_carla_adapter_v1.md`。
 - 对抗性测试代理 V1 契约已完成：采用场景间迭代模式，动作是 15 维归一化参数增量，观测是 34 维参数/条件/实测反馈向量；奖励分离风险增量、碰撞/事件奖励、无效候选、重复和运行失败惩罚，并固化 Schema/语义失败、严格验收失败、CARLA 服务异常、连续重复和最大步数终止条件。核心实现、配置、Schema、CLI 和文档分别位于 `core/adversarial_agent.py`、`configs/adversarial_agent_v1.json`、`schemas/adversarial_agent_v1.schema.json`、`tools/adversarial_agent_v1.py` 和 `docs/adversarial_test_agent_v1.md`。服务器已安装训练依赖并完成 SAC/PPO 各 64 步 mock 短训练；该结果只验证训练接口，不构成策略效果或 RL 有效性结论。
 - 闭环编排 V1 已完成：`core/adversarial_loop.py` 和 `tools/run_adversarial_episode.py` 先执行严格基线，再执行固定动作候选，并将 metadata 解析为代理 EpisodeResult；`validate`、`mock`、`carla` 三种模式和服务器冒烟入口已建立。2026-08-19 服务器 CARLA `0.9.16` 单 episode 真实冒烟完成 `2/2` 次严格验收：基线风险 `26.536/medium`，候选风险 `28.939/medium`，实测增量 `+2.403`；两次均无碰撞、RGB 各 `100` 帧、路线双车在途率 `1.0`、最大路线偏差不超过 `1.000 m`、服务健康、客户端/服务端版本一致。证据已回收至 `F:\Carla\project-transfer\server-results\adversarial_loop_smoke_v1_20260819_123339`。该结果只证明执行链路和结果回填可用，不构成策略效果或 RL 有效性结论。
@@ -84,7 +85,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - 适配器冒烟期间曾发现本机默认 `python` 加载 CARLA `0.9.15`；该残留包已卸除，后续本机连接 CARLA 0.9.16 必须显式使用 `Carla666-0916` 环境。
 - 运行环境规则已收口：服务器优先，SSH/RPC/健康检查失败才回退本机；本机固定使用 `D:\ANACONDA\envs\Carla666-0916`，运行前检查客户端/服务端均为 `0.9.16`。本机 Python 0.9.15 残留包已卸除。
 - OpenSCENARIO XML 1.4 已登记为未来标准交换适配方向：后续单独建立 1.4 映射、Schema 校验和工具链运行证据，不替换当前 1.0 运行目标。
-- 已完成 M01–M07 接口规格 V1：固化命令入口、核心函数、输入输出、运行可信条件、异常边界和验收矩阵；文档见 `docs/software_copyright_interface_spec_v1.md`。
+- 已完成 M01–M08 接口规格 V1：固化命令入口、核心函数、输入输出、运行可信条件、异常边界和验收矩阵；M08 默认离线且不产生新的 CARLA 风险结果；文档见 `docs/software_copyright_interface_spec_v1.md`。
 - M07 只读可视化原型已完成：`tools/scenario_dashboard.py` 通过 Python 标准库读取场景库，提供本地页面、筛选、场景详情和只读 JSON 接口；数据契约回归与本地 HTTP 端点验证通过。
 - 阶段三已完成收口并进入阶段四；软著演示截图暂缓，待正式准备申请软著时基于冻结版本统一采集，不作为阶段四启动条件。
 - 阶段三验收门已加固：运行级严格验收同时要求运行完成、验收完成、实机确认、传感器完成、CARLA 服务健康、路线完成并通过以及元数据路径存在；现有三生成器对照 `108/108` 条运行明细继续满足新条件。场景库新增 `verification_basis`，明确区分 `direct_run_evidence` 与 `inherited_batch_acceptance`。
@@ -270,7 +271,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - 传感器策略已冻结为两档：大批量生成与风险代理训练使用 `RGB + Collision` 性能基线；主动补样、论文/软著展示和后续视觉风险模型使用 `RGB + Depth + Semantic + Collision` 低频证据配置，不把多传感器强行加入全部批次。
 - 服务器生成的本轮结果目录使用 `20260816` 时间戳，与项目当前日期 2026-08-16 一致。
 - 本轮唯一的初次路线失败在相同配置重跑后恢复为双车全程在途、路线偏差小于 `1.01 m`；当前按偶发运行状态处理，但后续批次仍保留路线严格验收，不能删除该质量门槛。
-- 截至 2026 年 8 月 18 日，阶段二和阶段三已形成可复现工程基线：三生成器 108/108 严格实测对照、反馈短名单 81/81、双通道配对 54/54、碰撞边界主动补样 54/54、物理增强配对 54/54 均通过严格验收；风险反馈 V5、50 次重复 OOF、27 维物理增强代理、场景库质量门、软著模块映射、M01–M07 接口规格和 Dashboard 页面级回归均已完成。随后阶段四完成硬质量门和当前证据收口，项目转入阶段五，不再无边界扩展阶段二实验。
+- 截至 2026 年 8 月 18 日，阶段二和阶段三已形成可复现工程基线：三生成器 108/108 严格实测对照、反馈短名单 81/81、双通道配对 54/54、碰撞边界主动补样 54/54、物理增强配对 54/54 均通过严格验收；风险反馈 V5、50 次重复 OOF、27 维物理增强代理、场景库质量门、当时的 M01–M07 接口规格和 Dashboard 页面级回归均已完成。随后阶段四完成硬质量门和当前证据收口，阶段五已把材料口径扩展至 M01–M08；项目不再无边界扩展阶段二实验。
 - 实验室双 RTX 4090 服务器 `factory22-srv` 已完成 CARLA 0.9.16、Python 3.12.13、完整模型依赖、三生成器推理、风险代理复训和 15 次项目批次验证。后续完整模型训练和 CARLA 批量实验默认迁移到服务器 GPU 1，本地 RTX 4060 仅保留代码开发、快速静态校验和故障回退；GPU 0 继续保留给现有 vLLM 服务。
 - GPU 1 还存在一个由 root 管理的 TensorRT 推理服务，当前显存占用约 `896 MiB`，项目不得终止或修改该服务。项目工作流使用 `/home/zhaozirong/software/output/carla-0.9.16/.workflow_gpu1.lock` 防止自身的模型任务与 CARLA 相互并发，但该锁无法约束外部服务；重型实验前必须先运行服务器状态检查并确认剩余显存。
 - 长时间多传感器运行仍可能产生硬件压力，但帧完整性和服务健康检查已作为批次验收条件。
@@ -289,8 +290,8 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 6. **版本与数据边界**：服务器运行结果必须能够追溯到 Git 提交、配置、随机种子和输出目录。服务器工作区不直接编辑；发现问题后回笔记本修改、提交并重新同步。GitHub `origin` 用于阶段备份和对外同步，内网 `lab` 用于高频开发部署；两者均只接收已验证且不含大文件或敏感信息的提交。
 
 ## 下一步
-1. 冻结阶段四实验口径和结论，以 `docs/stage4_quality_gate_and_experiment_closure_v1.md` 作为论文、软著与结题材料的证据边界入口。
-2. 以 `tools/stage5_demo.cmd` 的 M01–M08 产物为基础，补齐软著模块映射、接口规格、用户操作说明和冻结版本演示截图。
+1. 维持阶段四实验口径和结论冻结，以 `docs/stage4_quality_gate_and_experiment_closure_v1.md` 作为论文、软著与结题材料的证据边界入口。
+2. 按 `docs/software_copyright_material_ledger_v1.md` 持续维护 M01–M08 代码入口、证据和边界；最终申请截图、源代码鉴别材料和正式说明书等待 V1.0 冻结后统一制作。
 3. 将一键演示的 `demo_manifest.json` 接入阶段五成果材料索引；不把历史风险证据写成新 CARLA 实测，不把 RL 泛化、ScenarioRunner 直执行或真实性评估写成已完成功能。
 4. 阶段四仅在集成回归、明确的新独立支持域或交付硬要求触发时重开；继续遵守服务器优先、CARLA `0.9.16`、`Carla666-0916` 和严格验收门，不启动 CARLA 在线训练。
 5. CARLA 当前保持停止；GPU1 仅保留 root 管理的 TensorRT 服务（约 `896 MiB`），GPU0 的 vLLM 不修改。后续 GPU/CARLA 任务启动前重新检查服务和显存状态。

@@ -1,6 +1,6 @@
 # 软著系统模块映射 V1
 
-_项目：基于生成式 AI 的自动驾驶极端场景库构建与仿真测试平台；版本：V1；更新日期：2026-08-18_
+_项目：基于生成式 AI 的自动驾驶极端场景库构建与仿真测试平台；版本：V1；更新日期：2026-08-23；阶段五前置材料整理版_
 
 ---
 
@@ -12,7 +12,7 @@ _项目：基于生成式 AI 的自动驾驶极端场景库构建与仿真测试
 
 拟登记软件名称为 **基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1.0**。当前映射覆盖从参数级场景生成到场景库管理、CARLA 仿真执行、风险评估和实验结果查询的最小闭环。
 
-系统当前以 Python 命令行和文件接口为主要形态，CARLA 0.9.16 是仿真运行时；代码、配置、Schema、CSV、JSON 和 Markdown 报告共同构成可追溯的软件工程证据。可视化管理界面、强化学习测试代理和完整 OpenSCENARIO 适配不属于当前已完成边界。
+系统当前以 Python 命令行、文件接口和本地只读 Dashboard 为主要形态，CARLA 0.9.16 是仿真运行时；代码、配置、Schema、CSV、JSON 和 Markdown 报告共同构成可追溯的软件工程证据。阶段四硬质量门和当前证据已经收口；阶段五 M08 一键离线演示已建立。RL 泛化、CARLA 在线训练、ScenarioRunner 直执行和场景真实性评估仍不属于当前已完成边界。
 
 ### 状态定义
 
@@ -24,12 +24,12 @@ _项目：基于生成式 AI 的自动驾驶极端场景库构建与仿真测试
 
 ### 总体架构
 
-下图将软件划分为生成、约束、管理、仿真、评估和实验编排六个已实现或原型模块，并单独标出尚未实现的可视化界面。
+下图将软件划分为生成、约束、管理、仿真、评估、实验编排、可视化和最小演示编排模块，并标出仍受边界限制的能力。
 
 ```mermaid
 flowchart LR
     accTitle: Soft Copyright System Architecture
-    accDescr: The diagram maps scenario generation, validation, library management, CARLA execution, risk evaluation, experiment orchestration, and the planned visualization interface.
+    accDescr: The diagram maps scenario generation, validation, library management, CARLA execution, risk evaluation, experiment orchestration, the read-only Dashboard, and the stage-five demo orchestrator.
 
     operator([👤 实验人员]) --> generation[[⚙️ 场景生成]]
     generation --> validation[[🛡️ 约束校验]]
@@ -40,7 +40,9 @@ flowchart LR
     risk --> experiment[(💾 实验记录)]
     experiment --> query[[🔍 查询与分析]]
     query --> operator
-    query -. 结果展示 .-> visualization[[⚠️ 可视化界面]]
+    query -. 结果展示 .-> visualization[[🖥️ 只读 Dashboard]]
+    experiment --> demo[[🧭 M08 最小演示编排]]
+    demo --> operator
     validation -. 配置编译 .-> runner
     generation -. 来源追踪 .-> experiment
 
@@ -48,8 +50,8 @@ flowchart LR
     classDef prototype fill:#fef9c3,stroke:#ca8a04,stroke-width:2px,color:#713f12
     classDef planned fill:#f3f4f6,stroke:#6b7280,stroke-width:2px,color:#1f2937
 
-    class generation,validation,library,runner,sensors,risk,experiment,query implemented
-    class visualization planned
+    class generation,validation,library,runner,sensors,risk,experiment,query,demo implemented
+    class visualization prototype
 ```
 
 ## ⚙️ 模块总表
@@ -62,7 +64,8 @@ flowchart LR
 | M04 | 仿真执行与多传感器采集 | 已验证实现 / 原型 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py`、`batch_runner.py` | CARLA 0.9.16 实机回归；RGB、Depth、SemSeg、Collision；确定性路线控制已验证 |
 | M05 | 风险评估与结果分析 | 已验证实现 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2`、TTC、车距、碰撞和遥测分析；风险反馈 V5 与 27 维代理冻结 |
 | M06 | 实验编排与复现管理 | 已验证实现 / 原型 | `batch_runner.py`、`tools/server_*.cmd`、`configs/` | 批次调度、种子、配置哈希、服务器工作流和质量门；服务器模型权重不进入 Git |
-| M07 | 可视化管理界面 | 原型能力 | `tools/scenario_dashboard.py`、`tools/scenario_dashboard.cmd` | 本地只读页面已支持场景筛选、详情、运行证据和风险结果展示 |
+| M07 | 可视化管理界面 | 原型能力 | `tools/scenario_dashboard.py`、`tools/scenario_dashboard.cmd` | 本地只读页面已支持场景筛选、详情、运行证据和风险结果展示；不含多用户、权限和写入 |
+| M08 | 阶段五最小演示编排 | 已验证实现 / 离线原型 | `tools/stage5_minimal_demo.py`、`tools/stage5_demo.cmd` | M01–M07 离线组合、静态适配、历史证据读取和 `demo_manifest.json` 已通过；默认不连接 CARLA |
 
 ## 🔗 详细模块映射
 
@@ -122,10 +125,19 @@ flowchart LR
 
 ### M07 可视化管理界面
 
-- **职责规划：** 提供场景筛选、场景详情、运行证据、风险结果和质量指标的只读展示。
-- **计划输入：** M03 输出的场景库索引、M05 输出的风险分析、M06 输出的批次汇总。
-- **计划输出：** 场景列表、详情页、风险分布图和运行证据状态。
+- **职责：** 提供场景筛选、场景详情、运行证据、风险结果和质量指标的只读展示。
+- **输入：** M03 输出的场景库索引、M05 输出的风险分析、M06 输出的批次汇总。
+- **输出：** 场景列表、详情页、风险分布图和运行证据状态。
 - **当前状态：** 已形成本地只读 Web 原型，可展示场景库索引和条目详情；尚未形成多用户服务、权限、写入操作或产品化部署能力。
+
+### M08 阶段五最小演示编排
+
+- **职责：** 把已验证的生成记录、约束校验、配置编译、场景库查询、OpenSCENARIO 静态适配、历史风险证据和 Dashboard 数据检查串成一个可复现入口。
+- **输入：** `generated_scenario` JSON 记录、场景库 `entries.jsonl`、基础 CARLA 配置和输出目录。
+- **处理：** M02 Schema/语义校验，编译 Scene 04 配置，生成 `.xosc`、`.carla.json` 和适配清单，读取库内高风险碰撞摘要，核对 Dashboard 数据行数。
+- **输出：** `input_record.json`、`compiled_carla_config.json`、`.xosc`、`.carla.json`、`.adapter_manifest.json` 和 `demo_manifest.json`。
+- **实现映射：** `tools/stage5_minimal_demo.py`、`tools/stage5_demo.cmd`、`tests/test_stage5_minimal_demo.py`。
+- **证据边界：** 默认 `carla_connected=false`，M05 读取历史风险汇总而不产生新实测风险；M08 通过只证明接口集成门，不等价于新的 CARLA 运行或 ScenarioRunner 直执行。
 
 ## 🔄 最小可运行闭环
 
@@ -169,31 +181,32 @@ sequenceDiagram
 
 | 软著材料章节 | 对应系统模块 | 建议证据 |
 | --- | --- | --- |
-| 软件概述与总体架构 | M01–M06 | 本文架构图、`PROJECT.md`、仓库目录 |
+| 软件概述与总体架构 | M01–M08 | 本文架构图、`PROJECT.md`、阶段五接口清单 |
 | 场景生成与参数设置 | M01 | 生成器命令、生成记录、模型选型报告 |
 | 场景合法性检查 | M02 | Schema、校验输出、错误路径示例 |
 | 场景库建立与检索 | M03 | 场景库条目、CSV 索引、查询命令和质量报告 |
 | 仿真场景运行 | M04 | Scene 04 配置、CARLA 运行日志、`metadata.json`、传感器状态 |
 | 风险评估与统计分析 | M05 | 风险指标代码、`telemetry.csv`、分析报告和图表 |
 | 批量实验与复现 | M06 | 批次计划、配置哈希、汇总 CSV、服务器任务日志 |
-| 可视化界面 | M07 | 暂不纳入已完成功能；待界面实现后补充 |
+| 可视化界面 | M07 | Dashboard 页面回归和冻结版本截图；仅描述本地只读原型 |
+| 一键演示与结果索引 | M08 | `demo_manifest.json`、静态配置、适配清单和用户操作说明 |
 
 ## ⚠️ 当前不可宣称内容
 
 - 软著申请或登记已经完成；当前只完成系统模块映射前置工作。
 - 已实现完整的 Web/桌面可视化管理产品；当前只有基于 Python 标准库的本地只读原型，主要业务入口仍是命令行和文件接口。
-- 已实现强化学习测试代理或自动对抗性测试闭环；阶段四尚未完成。
+- 已证明强化学习策略具有普遍 CARLA 泛化优势；阶段四只完成工程链路和有限独立评估。
 - 已实现完整 OpenSCENARIO 导入、导出和跨仿真器兼容；当前核心配置是项目自定义 JSON 与 CARLA 运行器。
 - 生成样本已经等价于真实道路样本；场景库真实性目前保持 `not_assessed`。
 - CVAE 已稳定控制实测风险等级；现有证据支持其作为研究分支，不支持替代 LHS 工程基线。
 
 ## 🎯 后续落地顺序
 
-1. 固化 M01–M06 的模块接口、输入输出和异常处理说明。
-2. 选定软著说明书需要展示的最小操作闭环，优先使用命令行可复核证据。
-3. 保持 M07 只读原型和页面级回归稳定；软著演示截图后置到正式准备申请阶段。
-4. 进入阶段四，完成 OpenSCENARIO/CARLA 适配和测试代理后，再扩充系统模块映射。
-5. 最终冻结软件版本、补齐使用说明和截图，再进入软著材料整理与登记准备。
+1. 固化 M01–M08 的模块接口、输入输出和异常处理说明。
+2. 以 `tools/stage5_demo.cmd` 作为当前最小操作闭环，维护 `demo_manifest.json` 证据入口。
+3. 保持 M07 只读原型和页面级回归稳定；正式截图后置到最终版本冻结和申请准备阶段。
+4. 在阶段五系统集成完成后，统一模块名称、用户操作说明、软件版本和证据索引。
+5. 最终冻结软件版本、重新运行全量回归并采集截图，再进入软著登记准备。
 
 ---
 
