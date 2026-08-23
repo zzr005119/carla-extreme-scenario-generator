@@ -73,13 +73,25 @@ D:\ANACONDA\envs\Carla666-0916\python.exe tools\stage5_minimal_demo.py
 |---|---|---|---|---|---|
 | M01 场景生成 | `tools/generate_seed_dataset.py`、`tools/generate_with_model.py`、`tools/run_diffusion_comparison.py` | 风险条件、种子、模型工件 | `generated_scenario` JSON/JSONL、对照评估 | 离线 | E2 |
 | M02 校验编译 | `core.scenario_validator.require_valid_scenario`、`compile_carla_config` | 场景记录、Schema、基础配置 | 校验结果、完整 CARLA 配置 | 离线 | E2 |
-| M03 场景库 | `core.scenario_library`、`tools/query_scenario_library.py` | `entries.jsonl`、筛选条件 | 场景行、风险/质量/证据摘要 | 只读 | E4/E2 |
+| M03 场景库 | `core.scenario_library`、`core.scenario_query`、`tools/query_scenario_library.py`、`GET /api/scenarios/search` | `entries.jsonl`、结构化筛选条件、白名单关键词 | 场景行、风险/质量/证据摘要、查询元数据 | 只读 | E2/E4（历史） |
 | M04 仿真采集 | `scenes/scene_04_parameterized.py`、`batch_runner.py` | CARLA JSON、CARLA 服务 | `metadata.json`、`telemetry.csv`、传感器证据 | 单独实机入口 | E4（历史） |
 | M04 交换适配 | `tools/convert_scenario_to_openscenario.py` | 场景记录、映射、基础配置 | `.xosc`、`.carla.json`、适配清单 | 静态 | E2/E3 |
 | M05 风险评估 | `core.risk_metrics.evaluate_telemetry_risk`、`evaluate_risk_v2` | 遥测、事件、参数、风险配置 | `observed_risk` 分数/等级/分量 | 运行后离线 | E4（历史） |
 | M06 实验复现 | `tools/server_sync.cmd`、`tools/server_run.cmd`、`tools/server_fetch_results.cmd` | 提交、配置、任务和资源 | 任务元数据、轻量汇总 | 服务器 | E4（历史） |
 | M07 Dashboard | `tools/scenario_dashboard.py`、`tools/scenario_dashboard.cmd` | 场景库索引和条目 | 只读页面、JSON 查询接口 | 本地只读 | E2 |
 | M08 最小编排 | `tools/stage5_minimal_demo.py`、`tools/stage5_demo.cmd` | M01 记录、M03 库、M02 基础配置 | `demo_manifest.json` 和演示产物 | 离线默认 | E2 |
+
+### M03 受控查询契约
+
+M03 的 CLI 与 Web API 共用 `core.scenario_query.QuerySpec`。支持生成器、`target_risk`、`observed_risk`、碰撞、天气/危险标签、证据粒度、质量层级、CARLA 版本、风险分数/多样性范围、排序和数量限制。`keyword` 只在白名单字段中做大小写不敏感包含匹配，多个关键词按 AND 组合；风险枚举、布尔值、排序和数值边界非法时返回 CLI 参数错误或 HTTP `400`。
+
+示例：
+
+```text
+GET /api/scenarios/search?target_risk=high&weather_tag=night&keyword=lhs&sort=risk_desc&limit=3
+```
+
+该接口只读现有 `entries.jsonl`，不修改索引、不生成新的风险证据、不连接 CARLA，也不把自然语言句子解释为查询条件。
 
 ## 关键代码契约
 

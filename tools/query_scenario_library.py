@@ -6,9 +6,18 @@ import json
 import os
 import sys
 
-
+# Allow the CLI to import the shared core package when launched as a script.
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(SCRIPT_DIR, ".."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
+from core.scenario_query import (
+    matches as controlled_matches,
+    sort_entries as controlled_sort_entries,
+    spec_from_mapping,
+)
+
 DEFAULT_LIBRARY = os.path.join(
     PROJECT_ROOT,
     "data",
@@ -60,6 +69,12 @@ def parse_args():
     parser.add_argument("--quality-tier", choices=("bronze", "silver", "gold"))
     parser.add_argument("--weather-tag", action="append", default=[])
     parser.add_argument("--hazard-tag", action="append", default=[])
+    parser.add_argument(
+        "--keyword",
+        action="append",
+        default=[],
+        help="在样本标识、生成器、风险/天气/危险标签和证据字段中做受控关键词匹配",
+    )
     parser.add_argument("--min-score", type=float)
     parser.add_argument("--max-score", type=float)
     parser.add_argument("--min-diversity", type=float)
@@ -95,70 +110,11 @@ def load_entries(path):
 
 
 def matches(entry, args):
-    labels = entry["labels"]
-    evidence = entry["execution_evidence"]
-    risk = entry["observed_risk"]
-    quality = entry["quality"]
-    if args.generator and args.generator not in labels["generators"]:
-        return False
-    if args.target_risk and args.target_risk not in labels["target_risk_levels"]:
-        return False
-    if args.observed_risk and args.observed_risk != labels["observed_risk_level"]:
-        return False
-    if args.collision is not None:
-        expected_collision = args.collision == "yes"
-        if risk["collision_observed"] is not expected_collision:
-            return False
-    if (
-        args.evidence_granularity
-        and args.evidence_granularity != evidence["evidence_granularity"]
-    ):
-        return False
-    if (
-        args.verification_basis
-        and args.verification_basis != evidence["verification_basis"]
-    ):
-        return False
-    if args.carla_version:
-        versions = evidence["carla_versions"]
-        if args.carla_version == "unknown":
-            if versions:
-                return False
-        elif args.carla_version not in versions:
-            return False
-    if args.quality_tier and args.quality_tier != quality["tier"]:
-        return False
-    if not set(args.weather_tag).issubset(labels["weather_tags"]):
-        return False
-    if not set(args.hazard_tag).issubset(labels["hazard_tags"]):
-        return False
-    if args.min_score is not None and risk["score_mean"] < args.min_score:
-        return False
-    if args.max_score is not None and risk["score_mean"] > args.max_score:
-        return False
-    diversity_score = quality["diversity"]["score"]
-    if args.min_diversity is not None and (
-        diversity_score is None or diversity_score < args.min_diversity
-    ):
-        return False
-    return True
+    return controlled_matches(entry, spec_from_mapping(vars(args)))
 
 
 def sort_entries(entries, mode):
-    key_functions = {
-        "risk_desc": lambda entry: (-entry["observed_risk"]["score_mean"], entry["library_id"]),
-        "risk_asc": lambda entry: (entry["observed_risk"]["score_mean"], entry["library_id"]),
-        "diversity_desc": lambda entry: (
-            -(entry["quality"]["diversity"]["score"] or 0.0),
-            entry["library_id"],
-        ),
-        "quality_desc": lambda entry: (
-            -entry["quality"]["operational_score"],
-            entry["library_id"],
-        ),
-        "sample_id": lambda entry: entry["canonical_sample_id"],
-    }
-    return sorted(entries, key=key_functions[mode])
+    return controlled_sort_entries(entries, mode)
 
 
 def flatten_entry(entry):

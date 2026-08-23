@@ -48,7 +48,7 @@ Get-FileHash artifacts\stage5_minimal_demo_v1\demo_manifest.json -Algorithm SHA2
 |---|---|---|---|---|
 | M01 场景生成 | `tools/generate_seed_dataset.py`、`tools/generate_with_model.py`、`tools/run_diffusion_comparison.py`、`models/`、`training/` | `data/scenarios/seed_v1/`、四生成器离线对照、`docs/generator_diffusion_comparison_v1.md`、模型选型报告 | E2 | 参数生成和离线对照，不代表实测风险控制；Diffusion 含设计区间投影 |
 | M02 约束校验 | `core/scenario_validator.py`、`core/physical_constraints.py`、`tools/check_physical_constraints.py`、`schemas/` | Schema、语义校验、参数级物理约束、Scene 04 配置编译、负例测试和 JSON 报告 | E2 | 静态通过不等于 CARLA 运行通过；物理指标为运行前近似 |
-| M03 场景库 | `core/scenario_library.py`、`tools/build_scenario_library.py`、`tools/query_scenario_library.py` | `entries.jsonl`、`index.csv`、质量报告、查询回归 | E2/E4（历史） | `117` 个独立场景、`351` 条来源证据；真实性为 `not_assessed` |
+| M03 场景库 | `core/scenario_library.py`、`core/scenario_query.py`、`tools/build_scenario_library.py`、`tools/query_scenario_library.py`、`tools/scenario_dashboard.py` | `entries.jsonl`、`index.csv`、质量报告、CLI/Web 受控查询回归 | E2/E4（历史） | `117` 个独立场景、`351` 条来源证据；结构化条件与白名单关键词可组合；真实性为 `not_assessed` |
 | M04 仿真采集 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py` | 0.9.16 `metadata.json`、`telemetry.csv`、传感器和路线验收 | E4（历史） | 真实运行必须单独启动并重新检查版本、服务和严格验收 |
 | M05 风险评估 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2` 分解、历史风险报告和批次统计 | E4（历史） | 启发式仿真指标，不是事故概率；M08 不产生新风险 |
 | M06 实验复现 | `batch_runner.py`、`tools/server_*.cmd`、`configs/` | 提交哈希、配置/种子、服务器任务和轻量汇总 | E4（历史） | 服务器结果不以大文件或模型权重形式入 Git |

@@ -7,10 +7,16 @@ import sys
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote, urlsplit
-
+from urllib.parse import parse_qs, unquote, urlsplit
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from core.scenario_query import query_entries, spec_from_mapping  # noqa: E402
+from tools.query_scenario_library import flatten_entry  # noqa: E402
+
+
 DEFAULT_LIBRARY_DIR = PROJECT_ROOT / "data" / "scenarios" / "scenario_library_v1"
 
 
@@ -394,7 +400,8 @@ class DashboardHandler(BaseHTTPRequestHandler):
         self._send(status_code, "application/json; charset=utf-8", _json_bytes(payload))
 
     def do_GET(self):
-        request_path = urlsplit(self.path).path
+        request = urlsplit(self.path)
+        request_path = request.path
         if request_path == "/":
             self._send(200, "text/html; charset=utf-8", HTML_PAGE)
             return
@@ -405,6 +412,37 @@ class DashboardHandler(BaseHTTPRequestHandler):
             return
         if request_path == "/api/scenarios":
             self._send_json(200, {"count": len(self.dashboard_data["rows"]), "items": self.dashboard_data["rows"]})
+            return
+        if request_path == "/api/scenarios/search":
+            try:
+                raw_query = parse_qs(request.query, keep_blank_values=False)
+                query = {
+                    key: values if len(values) > 1 else values[0]
+                    for key, values in raw_query.items()
+                }
+                sort = str(query.pop("sort", "risk_desc"))
+                limit = int(query.pop("limit", 20))
+                spec = spec_from_mapping(query)
+                matched = query_entries(
+                    list(self.dashboard_data["entries"].values()),
+                    spec,
+                    sort=sort,
+                    limit=limit,
+                )
+            except (TypeError, ValueError) as error:
+                self._send_json(400, {"error": str(error)})
+                return
+            self._send_json(
+                200,
+                {
+                    "count": len(matched),
+                    "library_count": len(self.dashboard_data["entries"]),
+                    "limit": limit,
+                    "sort": sort,
+                    "filters": query,
+                    "items": [flatten_entry(entry) for entry in matched],
+                },
+            )
             return
         prefix = "/api/scenarios/"
         if request_path.startswith(prefix):

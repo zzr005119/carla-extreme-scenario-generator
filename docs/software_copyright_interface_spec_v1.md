@@ -22,7 +22,7 @@ _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1
 | --- | --- | --- | --- | --- |
 | M01 | `generate_seed_dataset.py`、`generate_with_model.py`、`run_diffusion_comparison.py` | 条件、生成器、种子、模型工件 | 场景 JSON/JSONL、统一离线评估报告 | 已验证实现 / 原型 |
 | M02 | `scenario_validator.py`、`physical_constraints.py`、`check_physical_constraints.py` | 场景记录、Schema、基础配置 | Schema/语义校验、参数级物理约束结果、编译配置、JSON 报告 | 已验证实现 |
-| M03 | `build_scenario_library.py`、`query_scenario_library.py` | 来源清单、运行证据、质量门 | 场景库、索引、查询结果 | 已验证实现 |
+| M03 | `build_scenario_library.py`、`query_scenario_library.py`、`core/scenario_query.py` | 来源清单、运行证据、质量门、结构化查询条件 | 场景库、索引、受控查询结果 | 已验证实现 |
 | M04 | `scene_04_parameterized.py`、`batch_runner.py` | JSON 配置、CARLA 服务、运行参数 | `metadata.json`、`telemetry.csv`、传感器帧 | 已验证实现 / 原型 |
 | M05 | `risk_metrics.py`、`analysis/` | 遥测、事件、运行元数据 | 风险分数、等级、分析报告 | 已验证实现 |
 | M06 | `batch_runner.py`、`tools/server_*.cmd` | 实验计划、Git 提交、服务器资源 | 批次汇总、日志、轻量结果 | 已验证实现 / 原型 |
@@ -134,6 +134,8 @@ M02 只负责“记录和配置是否合法”。`--validate-only` 只能证明�
 | 只校验构建输入 | 在构建命令后追加 `--validate-only` |
 | 查询高风险碰撞场景 | `python tools\query_scenario_library.py --collision yes --sort risk_desc --limit 5 --format jsonl` |
 | 导出 CSV | 在查询命令后追加 `--format csv --output <path>` |
+| 受控条件/关键词查询 | `python tools\query_scenario_library.py --target-risk high --weather-tag night --keyword lhs --limit 5` |
+| Web 受控查询 API | `GET /api/scenarios/search?target_risk=high&weather_tag=night&keyword=lhs&limit=3` |
 
 ### 代码接口
 
@@ -149,6 +151,8 @@ M02 只负责“记录和配置是否合法”。`--validate-only` 只能证明�
 - 聚合 `execution_evidence`、`observed_risk` 和 `quality`，保留来源文件哈希。
 - 质量门当前冻结为 117 个独立场景和 351 次来源批次严格验收运行；36 个条目为 `direct_run_evidence`，81 个条目为 `inherited_batch_acceptance` 聚合证据，真实性仍为 `not_assessed`。
 - 查询只读取已构建索引，不重新运行 CARLA，也不修改场景库条目。
+- `core.scenario_query` 统一执行枚举、范围、标签和白名单关键词过滤；关键词不解析自然语言，多个关键词按 AND 组合。
+- `target_risk` 是设计条件，`observed_risk` 是历史实测标签；查询响应保留两者的字段边界。
 
 ## 🖥️ M04 仿真与采集接口
 

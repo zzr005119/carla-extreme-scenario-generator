@@ -60,7 +60,7 @@ flowchart LR
 | --- | --- | --- | --- | --- |
 | M01 | 场景生成与条件编译 | 已验证实现 / 原型 | `tools/generate_seed_dataset.py`、`tools/generate_with_model.py`、`models/`、`training/` | LHS、条件 GMM、条件表格 CVAE 和轻量条件表格 Diffusion 已完成离线生成与对照；生成模型仍属于研究分支 |
 | M02 | 场景约束与校验 | 已验证实现 | `core/scenario_validator.py`、`core/physical_constraints.py`、`tools/check_physical_constraints.py`、`schemas/` | Schema、语义校验、参数级物理约束和 CARLA 配置编译；256 条种子记录硬约束全部通过 |
-| M03 | 场景库管理 | 已验证实现 | `core/scenario_library.py`、`tools/build_scenario_library.py`、`tools/query_scenario_library.py` | 场景库 V1 收录 117 个独立场景、351 次来源批次严格验收运行；查询和质量门回归通过 |
+| M03 | 场景库管理 | 已验证实现 | `core/scenario_library.py`、`core/scenario_query.py`、`tools/build_scenario_library.py`、`tools/query_scenario_library.py` | 场景库 V1 收录 117 个独立场景、351 次来源批次严格验收运行；结构化条件/白名单关键词查询、Web API 和质量门回归通过 |
 | M04 | 仿真执行与多传感器采集 | 已验证实现 / 原型 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py`、`batch_runner.py` | CARLA 0.9.16 实机回归；RGB、Depth、SemSeg、Collision；确定性路线控制已验证 |
 | M05 | 风险评估与结果分析 | 已验证实现 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2`、TTC、车距、碰撞和遥测分析；风险反馈 V5 与 27 维代理冻结 |
 | M06 | 实验编排与复现管理 | 已验证实现 / 原型 | `batch_runner.py`、`tools/server_*.cmd`、`configs/` | 批次调度、种子、配置哈希、服务器工作流和质量门；服务器模型权重不进入 Git |
@@ -92,9 +92,11 @@ flowchart LR
 - **职责：** 统一保存独立场景的参数、生成来源、内容哈希、运行证据、风险结果和质量分层。
 - **输入：** 三生成器对照数据、风险反馈数据、运行明细、聚合统计、Schema 和质量门配置。
 - **处理：** 规范化参数向量、SHA-256 场景去重、来源追踪、运行证据聚合、风险汇总、质量分级和多样性计算。
+- **查询：** 通过 `QuerySpec` 校验生成器、目标/实测风险、碰撞、天气/危险标签、证据粒度、质量层级、分数/多样性范围和白名单关键词；结构化条件与关键词可组合，多个关键词按 AND 匹配。
 - **输出：** 场景库条目、CSV 索引、质量分析报告和可筛选的查询结果。
-- **实现映射：** `schemas/scenario_library_entry.schema.json`、`core/scenario_library.py`、`tools/build_scenario_library.py`、`tools/query_scenario_library.py`、`analysis/analyze_scenario_library.py`。
+- **实现映射：** `schemas/scenario_library_entry.schema.json`、`core/scenario_library.py`、`core/scenario_query.py`、`tools/build_scenario_library.py`、`tools/query_scenario_library.py`、`tools/scenario_dashboard.py`、`analysis/analyze_scenario_library.py`。
 - **证据边界：** 当前库有 117 个独立场景和 351 次来源批次严格验收运行；36 个条目保留 `direct_run_evidence` 逐次证据，81 个条目仅以 `inherited_batch_acceptance` 继承批次验收结论。真实性字段仍为 `not_assessed`，不能写成真实道路分布代表库。
+- **查询边界：** `GET /api/scenarios/search` 和 CLI 均为只读接口；关键词仅匹配样本/库标识、生成器、风险/天气/危险标签及证据字段，不解析自然语言、不启动 CARLA、不回填实测结果。
 
 ### M04 仿真执行与多传感器采集
 
@@ -173,6 +175,8 @@ sequenceDiagram
 | 检查场景库接口 | `tools\test_scenario_library.cmd` | 5 项 `unittest` 回归 |
 | 检查场景库构建 | `python tools\build_scenario_library.py --validate-only` | 离线结构/契约校验 |
 | 查询库内场景 | `python tools\query_scenario_library.py --quality-tier silver --format table` | 离线查询 |
+| 受控条件/关键词查询 | `python tools\query_scenario_library.py --target-risk high --weather-tag night --keyword lhs --sort risk_desc --limit 5 --format jsonl` | 结构化条件与白名单关键词组合查询 |
+| Web 受控查询 | `GET /api/scenarios/search?target_risk=high&weather_tag=night&keyword=lhs&sort=risk_desc&limit=3` | HTTP `200`；非法条件返回 `400` |
 | 运行单个参数场景 | `python scenes\scene_04_parameterized.py --config <config.json>` | CARLA 实机运行 |
 | 运行批次 | `python batch_runner.py --limit <N>` | 批次调度与汇总 |
 

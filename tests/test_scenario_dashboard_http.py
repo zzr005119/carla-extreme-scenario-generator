@@ -68,6 +68,26 @@ class ScenarioDashboardHttpTests(unittest.TestCase):
         self.assertIn("sample_id", payload["items"][0])
         self.assertIn("collision_observed", payload["items"][0])
 
+    def test_controlled_search_api_contract(self):
+        payload = self.get_json(
+            "/api/scenarios/search?target_risk=high&weather_tag=night&"
+            "keyword=lhs&sort=risk_desc&limit=3"
+        )
+
+        self.assertEqual(payload["count"], 3)
+        self.assertEqual(payload["library_count"], 117)
+        self.assertEqual(payload["limit"], 3)
+        self.assertEqual(payload["sort"], "risk_desc")
+        self.assertEqual(len(payload["items"]), 3)
+        self.assertTrue(all(item["generators"] == "lhs" for item in payload["items"]))
+        self.assertTrue(all(item["target_risk_levels"] == "high" for item in payload["items"]))
+
+    def test_controlled_search_rejects_unsupported_values(self):
+        with self.assertRaises(HTTPError) as context:
+            self.get_bytes("/api/scenarios/search?target_risk=high%20risk")
+
+        self.assertEqual(context.exception.code, 400)
+
     def test_scenario_detail_api_contract(self):
         record = self.get_json(f"/api/scenarios/{self.first_library_id}")
 
