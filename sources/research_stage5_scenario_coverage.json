@@ -1,0 +1,48 @@
+{
+  "format": "stage5_external_source_record_v1",
+  "topic": "scenario_coverage_definition",
+  "retrieved_at": "2026-08-24",
+  "scope": "Sources used to define a denominator and explain why an industry-wide percentage is not available.",
+  "sources": [
+    {
+      "id": "nhtsa_ads_framework",
+      "title": "A Framework for Automated Driving System Testable Cases and Scenarios",
+      "publisher": "U.S. National Highway Traffic Safety Administration",
+      "year": 2018,
+      "url": "https://www.nhtsa.gov/sites/nhtsa.gov/files/documents/13882-automateddrivingsystems_092618_v1a_tag.pdf",
+      "evidence": "NHTSA describes a preliminary framework for testable cases and scenarios for ADS features and operational design domains.",
+      "use_in_model": "Supports a structured test-case denominator rather than a raw road-mile percentage.",
+      "boundary": "Framework and example cases; it does not publish a universal industry coverage numerator/denominator."
+    },
+    {
+      "id": "iso_34502",
+      "title": "ISO 34502:2022 Road vehicles - Test scenarios for automated driving systems - Scenario-based safety evaluation framework",
+      "publisher": "ISO / UNECE GRVA public presentation",
+      "year": 2022,
+      "url": "https://unece.org/sites/default/files/2023-05/GRVA-16-31e_0.pdf",
+      "evidence": "The framework is scenario-based and is applied during ADS product development; it defines a process rather than one fixed global scenario list.",
+      "use_in_model": "Supports reporting coverage against an explicitly declared scenario catalog.",
+      "boundary": "Standard guidance is not an industry census and does not validate the project's 15% starting point."
+    },
+    {
+      "id": "pegasus_database",
+      "title": "Scenario Database / PEGASUS method material",
+      "publisher": "PEGASUS project",
+      "year": 2018,
+      "url": "https://www.pegasusprojekt.de/files/tmpl/Pegasus-Abschlussveranstaltung/15_Scenario-Database.pdf",
+      "evidence": "PEGASUS presents a six-layer model and a database/data-processing chain for relevant scenarios and parameter distributions.",
+      "use_in_model": "Supports decomposing coverage by road, traffic, environment, and actor layers.",
+      "boundary": "Project methodology and catalog design, not a measured industry-wide coverage rate."
+    },
+    {
+      "id": "sunrise_coverage_metrics",
+      "title": "Coverage Metrics for a Scenario Database for the Scenario-Based Assessment of Automated Driving Systems",
+      "publisher": "SUNRISE project / arXiv",
+      "year": 2024,
+      "url": "https://arxiv.org/html/2409.01139",
+      "evidence": "The paper illustrates coverage metrics with more than 200,000 scenarios from 10 scenario categories and shows that 100% coverage can be obtained under a specified definition and reference set.",
+      "use_in_model": "Demonstrates that coverage is denominator- and metric-dependent; use a declared reference catalog and report per-dimension coverage.",
+      "boundary": "An illustrative dataset experiment, not an industry baseline and not evidence that this project's 21 signatures represent all ADS scenarios."
+    }
+  ]
+}

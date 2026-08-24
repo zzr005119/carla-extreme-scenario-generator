@@ -1,6 +1,6 @@
 # 阶段五成果材料索引 V1
 
-_更新日期：2026-08-23；用途：阶段五系统集成、论文/软著前置整理和证据追溯；不等同于最终申请材料_
+_更新日期：2026-08-24；用途：阶段五系统集成、论文/软著前置整理和证据追溯；不等同于最终申请材料_
 
 ## 索引定位
 
@@ -69,6 +69,7 @@ Get-FileHash artifacts\stage5_minimal_demo_v1\demo_manifest.json -Algorithm SHA2
 | [`stage4_quality_gate_and_experiment_closure_v1.md`](stage4_quality_gate_and_experiment_closure_v1.md) | 阶段四证据等级和研究结论边界 |
 | [`stage5_freeze_preflight_v1.md`](stage5_freeze_preflight_v1.md) | V1.0 冻结前自动检查项和 PENDING 清单 |
 | [`stage5_metrics_baseline_v1.md`](stage5_metrics_baseline_v1.md) | 计划书成本、效率和覆盖率测量口径、同 CPU baseline 与证据边界；可由 `tools\\run_stage5_metrics_baseline.cmd` 重建 |
+| [`stage5_external_cost_and_coverage_estimate_v1.md`](stage5_external_cost_and_coverage_estimate_v1.md) | 公开资料锚点、实车成本三档区间、行业覆盖率分母边界、`0.960341x` 解释和优化实验顺序；不替代项目实测 |
 
 ## 正式冻结前动作
 

@@ -1,0 +1,68 @@
+{
+  "format": "stage5_external_source_record_v1",
+  "topic": "real_vehicle_testing_cost_estimate",
+  "retrieved_at": "2026-08-24",
+  "scope": "Public anchors for an engineering estimate; not a quote, invoice, or project measurement.",
+  "sources": [
+    {
+      "id": "bts_vehicle_mile_2024",
+      "title": "Transportation Economic Trends: Transportation Spending - Per Vehicle Mile",
+      "publisher": "U.S. Bureau of Transportation Statistics",
+      "year": 2024,
+      "url": "https://data.bts.gov/stories/s/Transportation-Economic-Trends-Transportation-Spen/bzt6-t8cd/",
+      "evidence": "The 2024 year-in-review reports an average cost of owning and operating a new vehicle of about $0.82 per mile at 15,000 miles per year.",
+      "use_in_model": "Vehicle running-cost anchor only.",
+      "boundary": "Consumer vehicle ownership cost; it excludes ADS sensors, safety operator, test engineer, proving ground, insurance uplift, and data operations."
+    },
+    {
+      "id": "aaa_ydc_2024",
+      "title": "Your Driving Costs 2024 fact sheet",
+      "publisher": "AAA",
+      "year": 2024,
+      "url": "https://newsroom.aaa.com/wp-content/uploads/2024/09/YDC_Fact-Sheet-FINAL-9.2024.pdf",
+      "evidence": "AAA reports an overall average cost to own and operate a new car in 2024 of $12,297, with a sales-weighted average MSRP of $38,883; the study uses five top-selling models in each of nine categories.",
+      "use_in_model": "Cross-check for the BTS per-mile anchor and vehicle depreciation/ownership component.",
+      "boundary": "New-car consumer ownership study, not instrumented AV fleet operating cost."
+    },
+    {
+      "id": "bls_auto_2024",
+      "title": "Automotive Service Technicians and Mechanics",
+      "publisher": "U.S. Bureau of Labor Statistics",
+      "year": 2024,
+      "url": "https://www.bls.gov/ooh/installation-maintenance-and-repair/automotive-service-technicians-and-mechanics.htm",
+      "evidence": "The May 2024 median annual wage is $49,670.",
+      "use_in_model": "Lower-bound labor anchor for a safety operator or vehicle technician; converted from annual wage using 2,080 hours/year and an explicit burden multiplier.",
+      "boundary": "U.S. occupational median wage; local wage, overtime, contractor markup, and employer burden vary."
+    },
+    {
+      "id": "bls_software_2024",
+      "title": "Software Developers, Quality Assurance Analysts, and Testers",
+      "publisher": "U.S. Bureau of Labor Statistics",
+      "year": 2024,
+      "url": "https://www.bls.gov/ooh/Computer-and-Information-Technology/Software-developers.htm",
+      "evidence": "The May 2024 median annual wage for software developers is $133,080.",
+      "use_in_model": "Test-engineer allocation anchor; only a fractional allocation is charged to one test run.",
+      "boundary": "U.S. occupational median wage, not an AV test engineer quote."
+    },
+    {
+      "id": "rand_rr1478",
+      "title": "Driving to Safety: How Many Miles of Driving Would It Take to Demonstrate Autonomous Vehicle Reliability?",
+      "publisher": "RAND Corporation",
+      "year": 2016,
+      "url": "https://www.rand.org/pubs/research_reports/RR1478.html",
+      "evidence": "The report estimates hundreds of millions to hundreds of billions of miles may be required for statistical safety evidence. One example uses 275 million failure-free miles and a 100-vehicle fleet at 25 mph, taking about 12.5 years; estimating a low failure rate to 20% precision is shown as about 8.8 billion miles and about 400 years for the same fleet.",
+      "use_in_model": "Evidence for why rare-event real-road campaigns are expensive and why simulation is useful for candidate discovery.",
+      "boundary": "Statistical feasibility analysis, not a per-mile price and not a claim about this project's safety."
+    },
+    {
+      "id": "mcity_rare_event",
+      "title": "Simulated terrible drivers cut the time and cost of AV testing by a factor of one thousand",
+      "publisher": "University of Michigan / Mcity",
+      "year": 2023,
+      "url": "https://news.engin.umich.edu/2023/03/simulated-terrible-drivers-cut-the-time-and-cost-of-av-testing-by-a-factor-of-one-thousand/",
+      "evidence": "The mixed-reality research reports a 1,000-fold reduction in testing time/cost for its rare-event evaluation setup and a 99.99% reduction in required testing miles.",
+      "use_in_model": "External opportunity bound showing that targeted simulation can dominate rare-event real-road sampling.",
+      "boundary": "Specific mixed-reality system and study design; cannot be transferred as the measured result of this CARLA project."
+    }
+  ]
+}
