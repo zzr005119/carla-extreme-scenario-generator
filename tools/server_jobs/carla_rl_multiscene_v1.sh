@@ -5,7 +5,8 @@ set -euo pipefail
 # this job never kills an unknown process and never touches GPU0/vLLM.
 PROJECT_ROOT="${PROJECT_ROOT:-/home/zhaozirong/projects/carla-extreme-scenario-generator}"
 PYTHON="${PYTHON:-/home/zhaozirong/software/envs/Carla666-0916/bin/python}"
-OUTPUT_ROOT="${PROJECT_OUTPUT_ROOT:-/home/zhaozirong/software/output/carla-0.9.16/carla_rl_multiscene_v1}"
+OUTPUT_BASE="${PROJECT_OUTPUT_ROOT:-/home/zhaozirong/software/output/carla-0.9.16}"
+OUTPUT_ROOT="${CARLA_RL_OUTPUT_ROOT:-$OUTPUT_BASE/carla_rl_multiscene_v1}"
 PLAN_PATH="${PLAN_PATH:-$OUTPUT_ROOT/carla_rl_multiscene_plan_v1.json}"
 CONFIG="$PROJECT_ROOT/configs/adversarial_loop_multistep_v1.json"
 ENTRIES="$PROJECT_ROOT/data/scenarios/scenario_library_v1/entries.jsonl"
@@ -59,7 +60,7 @@ case "$MODE" in
       --config "$CONFIG" --scenario-plan "$PLAN_PATH" \
       --model "$MODEL" --algorithm SAC \
       --split "$EVAL_SPLIT" \
-      --output-root "$OUTPUT_ROOT/test_sac_seed_${SEED}" \
+      --output-root "$OUTPUT_ROOT/${EVAL_SPLIT}_sac_seed_${SEED}" \
       --seed "$((SEED + 100000))" --allow-online-carla
     ;;
   *)

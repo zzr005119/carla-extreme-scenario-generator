@@ -30,11 +30,12 @@ try {
 
     $commit = Get-LocalGitValue -Arguments @("rev-parse", "HEAD")
     $currentBranch = Get-LocalGitValue -Arguments @("branch", "--show-current")
-    if ($currentBranch -ne $branch) {
-        throw "Expected local branch '$branch', found '$currentBranch'."
+    if ($currentBranch -ne $branch -and -not $currentBranch.StartsWith("codex/")) {
+        throw "Expected local branch '$branch' or a codex/* worktree branch, found '$currentBranch'."
     }
 
     Write-Host "[SYNC] commit=$commit"
+    Write-Host "[SYNC] source_branch=$currentBranch deploy_branch=$branch"
     Write-Host "[SYNC] target=$($context.Target):$projectDirectory"
     if ($DryRun) {
         Write-Host "[SYNC] dry-run completed; no remote changes were made."

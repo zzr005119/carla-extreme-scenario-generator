@@ -54,15 +54,18 @@ python tools/prepare_carla_rl_multiscene_plan.py \
 
 ## 🖥️ 服务器一键入口
 
-服务器脚本：`tools/server_jobs/carla_rl_multiscene_v1.sh`。它只使用服务器 `Carla666-0916` 和 GPU1，不触碰 GPU0 的 vLLM，也不会杀掉不属于本任务的 CARLA/TensorRT 进程。CARLA 由服务器操作者显式启动并保持 RPC `2000` 可用。Windows 工作区的完整训练入口是 `tools/server_carla_rl_multiscene_v1.cmd`，它通过现有 `server_run.ps1` 放入服务器 tmux 并申请 CARLA/GPU1 资源锁。
+底层参数化脚本为 `tools/server_jobs/carla_rl_multiscene_v1.sh`。面向实际操作的入口已按阶段拆开；CARLA 阶段会先启动或复用服务器 CARLA，再通过 `server_run.ps1` 提交到独立 tmux。提交命令返回后训练继续运行，SSH 或本机终端断开不会结束服务器任务。
 
-```bash
-bash tools/server_jobs/carla_rl_multiscene_v1.sh prepare
-bash tools/server_jobs/carla_rl_multiscene_v1.sh canary
-bash tools/server_jobs/carla_rl_multiscene_v1.sh train
-bash tools/server_jobs/carla_rl_multiscene_v1.sh resume /path/to/sac_seed_20260824_steps_0001000.zip
-bash tools/server_jobs/carla_rl_multiscene_v1.sh evaluate /path/to/sac_seed_20260824_final.zip
-```
+| 阶段 | Windows 入口 | 行为 |
+|---|---|---|
+| 00 | `tools/server_carla_rl_00_prepare_v1.cmd` | CPU 生成并校验固定计划；canary 缺计划时也会自动执行 |
+| 01 | `tools/server_carla_rl_01_canary_sac_256_v1.cmd` | 后台运行 SAC 256 步并执行严格质量门 |
+| 02 | `tools/server_carla_rl_02_train_sac_10000_v1.cmd` | 后台运行 10,000 步；发现已有 checkpoint 时拒绝覆盖 |
+| 03 | `tools/server_carla_rl_03_resume_sac_10000_v1.cmd` | 自动定位已登记的最新 checkpoint 并恢复到 10,000 步 |
+| 04 | `tools/server_carla_rl_04_evaluate_dev_v1.cmd` | 在冻结 dev split 上运行最终模型，供人工复核 |
+| 05 | `tools/server_carla_rl_05_evaluate_test_v1.cmd` | 仅在 dev 结果存在后运行冻结 test split |
+
+阶段 01 和阶段 02 完成后，`tools/check_carla_rl_training.py` 会核对训练状态、准确步数、最终模型、checkpoint、只使用 train split、所有 CARLA 执行的严格验收、服务健康和客户端/服务端 `0.9.16`。任何失败都会让远程任务返回非零，不能直接进入下一阶段。
 
 训练目录会包含：
 
@@ -73,6 +76,7 @@ bash tools/server_jobs/carla_rl_multiscene_v1.sh evaluate /path/to/sac_seed_2026
 | `models/*.zip` | 可恢复 checkpoint；不提交 Git |
 | `rl_training_summary.json` | 完成步数、采样覆盖和证据等级 |
 | `test_evaluation_summary.json` | 独立 test 运行的逐场景摘要 |
+| `quality_gate.json` | canary/主训练自动质量门及失败项 |
 
 原始传感器帧和模型权重只保留在服务器输出目录，结果回收时优先回收 JSON/CSV/Markdown 汇总，不在本机长期保存安装包或原始大文件。
 
