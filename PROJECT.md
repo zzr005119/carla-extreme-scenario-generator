@@ -55,7 +55,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 
 1. ▶ **S5-WEB-03 Web 展示取证**：9 张 Web 功能截图已暂定归档到 `artifacts/stage5_web_screenshots_v1/` 并登记到软著台账；正式 V1.0 冻结后仍需复核截图与提交版本一致，并补采一键演示、CARLA 实机和 OpenSCENARIO 证据图。
 2. ⏸ **S5-SCALE-01 10,000 场景扩库**：降级为可扩展流水线设计和当前规模质量验证，不作为阶段五阻塞项。
-3. ▶ **S5-RL-01 CARLA 在线 RL**：已完成服务器 GPU1 上 PPO `2` 步真实 CARLA 在线链路冒烟，并完成多场景固定划分、checkpoint/断点训练、独立 test 评估入口；当前只完成 CPU 计划与 dry-run，尚未启动 `10,000` 步真实训练，不能写成 RL 泛化结论。协议见 `docs/carla_online_rl_multiscene_v1.md`，冒烟证据见 `docs/carla_online_rl_smoke_v1.md`。
+3. ▶ **S5-RL-01 CARLA 在线 RL**：已完成服务器 GPU1 上 SAC `256` 步真实 CARLA canary 训练，精确保存 `256/256` 步模型和 checkpoint；但自动质量门为 `14/15`，`267` 次 CARLA 执行中 `265` 次严格通过，`2` 次因前车路线偏离失败（作业 `carla-rl-01-canary-sac-256-v1_20260824_170529`）。因此 `10,000` 步主训练暂不启动，先复核路线失败；当前不能写成 RL 泛化结论。协议见 `docs/carla_online_rl_multiscene_v1.md`。
 4. ✅ **S5-XOSC-01 ScenarioRunner 单场景直执行与关联完整验收**：服务器 CARLA 0.9.16 + ScenarioRunner 0.9.16 已完成 `seed_v1_high_0165` 原生 XOSC 加载、Storyboard 运行和清理；同一输入的 Scene 04 旁路配置又通过 RGB/Depth/Semantic/Collision、waypoint 路线、服务健康、风险和清理统一门。纯 XOSC 无 criteria，不产生风险 JSON/JUnit，仍不宣称 XOSC 原生承载完整语义；证据见 `docs/scenario_runner_direct_execution_v1.md` 和 `docs/scenario_runner_full_acceptance_v1.md`。
 5. ✅ **S5-PYBULLET-01 P4 边界收口**：`core/differentiable_closed_loop.py` 已形成 Torch 可微运动学代理、碰撞/安全间距/控制平滑/加速度越界四项软损失、`L_adv + lambda_1 L_physics + lambda_2 L_control` 组合点、可选 PyBullet DIRECT 几何接触回放和硬约束质量门；`tools/p4_differentiable_boundary.cmd` 输出统一 P4 manifest。固定环境 `Carla666-0916` 的 `tests.test_runtime_adapters` 为 `9/9` 通过；本机未安装可选 PyBullet，按契约记录跳过，服务器历史 `3.2.7` 基线仍需用增强回放入口重新归档。真实 PyBullet 可微刚体、车辆动力学闭环和训练接入仍未完成，边界见 `docs/differentiable_closed_loop_v1.md`。
 6. ⏸ **S5-ABL-01 完整消融实验与结题报告**：放在 Web、在线 RL、ScenarioRunner 和可微闭环证据收口后统一设计、执行和写作。
