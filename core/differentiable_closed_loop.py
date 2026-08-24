@@ -232,13 +232,13 @@ class PyBulletValidationAdapter:
                 physicsClientId=client,
             )
             ego_id = bullet.createMultiBody(
-                baseMass=0,
+                baseMass=1,
                 baseCollisionShapeIndex=box_shape,
                 basePosition=[0, 0, 1.0],
                 physicsClientId=client,
             )
             lead_id = bullet.createMultiBody(
-                baseMass=0,
+                baseMass=1,
                 baseCollisionShapeIndex=box_shape,
                 basePosition=[4.0 + float(gaps[0, 0]), 0, 1.0],
                 physicsClientId=client,
@@ -267,7 +267,7 @@ class PyBulletValidationAdapter:
                 "contact_count": contact_points,
                 "geometry_replay": True,
                 "evidence_kind": "optional_pybullet_discrete_check",
-                "note": "PyBullet 原生步进和接触查询已与 Torch 轨迹解耦；不产生梯度，也不代表 CARLA 车辆物理",
+                "note": "PyBullet 原生步进和动态盒体接触查询已与 Torch 轨迹解耦；不产生梯度，也不代表 CARLA 车辆物理",
             }
         except Exception as error:
             return {
