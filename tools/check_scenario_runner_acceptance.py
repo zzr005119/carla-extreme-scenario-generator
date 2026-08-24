@@ -43,6 +43,7 @@ def check_acceptance(manifest_path, metadata_path=None):
     sensor = metadata.get("sensor_pipeline") or {}
     sensors = sensor.get("sensors") or {}
     server = metadata.get("server_health") or {}
+    collision = metadata.get("collision_sensor") or {}
     route = metadata.get("route_control") or {}
     risk = result.get("risk_evaluation") or {}
     frames = metadata.get("frames") or {}
@@ -56,6 +57,15 @@ def check_acceptance(manifest_path, metadata_path=None):
         state = sensors.get(name) or {}
         saved = int(frames.get(name, state.get("saved", 0) or 0))
         add(f"sensor_{name}", saved >= minimum and state.get("complete") is True and int(state.get("failed", 0)) == 0, {"saved": saved, "minimum": minimum, "state": state})
+    add(
+        "sensor_collision",
+        collision.get("enabled") is True
+        and collision.get("status") == required["collision_sensor_status"]
+        and collision.get("complete") is True
+        and int(collision.get("event_count", -1))
+        == int(result.get("collision_count", -2)),
+        collision,
+    )
     add("server_health", server.get("status") == required["server_status"], server.get("status"))
     add("route_control", route.get("enabled") is True and route.get("status") == "completed" and route.get("mode") == required["route_control_mode"], {"enabled": route.get("enabled"), "status": route.get("status"), "mode": route.get("mode")})
     both_rate = float(route.get("both_on_route_rate", 0.0) or 0.0)

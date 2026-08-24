@@ -787,6 +787,15 @@ def main():
             "workers_per_sensor": writer_workers,
             "sensors": {},
         },
+        "collision_sensor": {
+            "enabled": bool(sensor_config["collision"].get("enabled", False)),
+            "sensor_type": "sensor.other.collision",
+            "status": "disabled"
+            if not sensor_config["collision"].get("enabled", False)
+            else "pending",
+            "event_count": 0,
+            "complete": False,
+        },
         "server_health": {"status": "not_checked"},
         "route_control": {
             "enabled": route_lock_enabled,
@@ -941,6 +950,16 @@ def main():
             timespec="seconds"
         )
         metadata["cleanup"] = {"status": cleanup_status}
+        collision_state = metadata["collision_sensor"]
+        collision_state["event_count"] = int(
+            metadata["result"].get("collision_count", 0)
+        )
+        if collision_state["enabled"] and cleanup_status == "completed":
+            collision_state["status"] = "completed"
+            collision_state["complete"] = True
+        elif collision_state["enabled"] and cleanup_status == "failed":
+            collision_state["status"] = "failed"
+            collision_state["complete"] = False
         metadata["simulation"]["elapsed_seconds"] = round(
             simulation_elapsed,
             3,
@@ -1231,6 +1250,10 @@ def main():
             )
             actors.append(collision_sensor)
             sensor_actors.append(collision_sensor)
+            with metadata_lock:
+                metadata["collision_sensor"].update(
+                    {"status": "active", "complete": False}
+                )
 
             def on_collision(event):
                 impulse = event.normal_impulse
@@ -1246,6 +1269,7 @@ def main():
                 )
                 with metadata_lock:
                     metadata["result"]["collision_count"] += 1
+                    metadata["collision_sensor"]["event_count"] += 1
                 record_event(
                     "collision",
                     elapsed,

@@ -46,13 +46,14 @@ class ScenarioRunnerAcceptanceTests(unittest.TestCase):
                 "carla_versions": {"client": "0.9.16", "server": "0.9.16", "match": True},
                 "frames": {"rgb": 200, "depth": 200, "semantic": 200},
                 "sensor_pipeline": {"status": "completed", "sensors": {name: {"complete": True, "failed": 0, "saved": 200} for name in ("rgb", "depth", "semantic")}},
+                "collision_sensor": {"enabled": True, "status": "completed", "complete": True, "event_count": 0},
                 "server_health": {"status": "healthy"},
                 "route_control": {"enabled": True, "status": "completed", "mode": "waypoint_follower", "both_on_route_rate": 1.0, "maximum_ego_deviation_m": 1.0, "maximum_lead_deviation_m": 1.1},
                 "result": {"status": "completed", "collision_count": 0, "risk_evaluation": {"method": "heuristic_v2", "level": "medium", "score": 27.0}},
                 "cleanup": {"status": "completed"},
             }
             (run_root / "metadata.json").write_text(json.dumps(metadata), encoding="utf-8")
-            manifest = {"format": "scenario_runner_carla_full_acceptance_v1", "sample_id": "sample", "expected_run_root": str(root / "runs"), "acceptance_requirements": {"carla_version": "0.9.16", "sensor_status": "completed", "minimum_rgb_frames": 100, "minimum_depth_frames": 100, "minimum_semantic_frames": 100, "server_status": "healthy", "route_control_mode": "waypoint_follower", "minimum_route_both_on_rate": 1.0, "maximum_route_deviation_m": 3.0, "risk_method": "heuristic_v2"}}
+            manifest = {"format": "scenario_runner_carla_full_acceptance_v1", "sample_id": "sample", "expected_run_root": str(root / "runs"), "acceptance_requirements": {"carla_version": "0.9.16", "sensor_status": "completed", "minimum_rgb_frames": 100, "minimum_depth_frames": 100, "minimum_semantic_frames": 100, "collision_sensor_status": "completed", "server_status": "healthy", "route_control_mode": "waypoint_follower", "minimum_route_both_on_rate": 1.0, "maximum_route_deviation_m": 3.0, "risk_method": "heuristic_v2"}}
             manifest_path = root / "acceptance_manifest.json"
             manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
             self.assertEqual(check_acceptance(manifest_path)["status"], "passed")
