@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from tools.measure_stage5_metrics import (
+    _comparison,
     condition_coverage,
     generation_throughput,
     testing_cost,
@@ -80,6 +81,19 @@ class Stage5MetricsTests(unittest.TestCase):
         self.assertEqual(result["reference_signature_count"], 2)
         self.assertEqual(result["covered_signature_count"], 1)
         self.assertEqual(result["coverage_rate"], 0.5)
+
+    def test_comparison_rejects_different_measurement_contracts(self):
+        system = {
+            "accepted_records_per_second": 10.0,
+            "measurement_contracts": [{"version": "same_cpu_v1", "count": 8}],
+        }
+        baseline = {
+            "accepted_records_per_second": 1.0,
+            "measurement_contracts": [{"version": "different_cpu_v1", "count": 8}],
+        }
+        result = _comparison(system, baseline, higher_is_better=True)
+        self.assertEqual(result["status"], "not_assessed")
+        self.assertIn("contracts differ", result["reason"])
 
 
 if __name__ == "__main__":

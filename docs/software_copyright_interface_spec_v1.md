@@ -263,7 +263,7 @@ HTTP 接口：
 
 ## 📏 S5-CORE-05 计划书指标基线接口
 
-`tools/measure_stage5_metrics.py` 接受生成汇总、CARLA `metadata.json`、参考条件记录和候选记录，输出 `stage5_metrics_baseline_v1` JSON。它只计算生成吞吐、严格验收运行时间代理和显式条件签名覆盖；缺少同口径 baseline 时，相对比较保持 `not_assessed`。详细口径和当前快照见 `docs/stage5_metrics_baseline_v1.md`。
+`tools/measure_stage5_metrics.py` 接受生成汇总、CARLA `metadata.json`、参考条件记录和候选记录，输出 `stage5_metrics_baseline_v1` JSON。它只计算生成吞吐、严格验收运行时间代理和显式条件签名覆盖；系统与 baseline 的测量契约不一致时，相对比较保持 `not_assessed`。同 CPU 的 baseline 由 `tools/benchmark_stage5_generation_baseline.py` 生成。详细口径、当前对照值和计划书原始目标边界见 `docs/stage5_metrics_baseline_v1.md`。
 
 ### 复现最小字段
 

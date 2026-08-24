@@ -14,7 +14,7 @@
 - **服务器运行仓库**：`/home/zhaozirong/projects/carla-extreme-scenario-generator`
 - **内网 Git 远端**：`lab` → `zhaozirong@192.168.110.170:/home/zhaozirong/git/carla-extreme-scenario-generator.git`
 - **CARLA 0.9.15 历史证据**：`artifacts/carla_0915_runtime_evidence/`（本地忽略目录）
-- **最后更新**：2026-08-23
+- **最后更新**：2026-08-24
 
 ## 当前阶段
 **大创已完成阶段四“仿真平台与对抗性测试代理”的硬质量门和当前证据收口，现转入阶段五“系统集成与成果产出”。阶段四形成了 OpenSCENARIO 最小交换适配、对抗性代理契约、闭环编排、Gymnasium/SB3 工程链路、非学习基线、冻结代理训练与真实 CARLA 独立评估。18 个独立策略 pair 的 `54/54` 条运行通过版本、RGB、服务健康、`heuristic_v2` 和路线严格验收；LHS/high 的 9 个独立候选完成边界校准。现有证据证明工程链路可复现，但不证明 SAC 或 rule-guided LHS 的普遍优势，不支持把风险代理升级为实测风险或在线训练 reward。阶段四综合结论见 `docs/stage4_quality_gate_and_experiment_closure_v1.md`。**
@@ -108,7 +108,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - `S5-CORE-02` 生成模型小规模对照已完成：新增轻量条件表格 Diffusion、训练入口、统一生成入口和四生成器对照编排；四生成器各按 low/medium/high/critical 每档 `32` 条，共 `512` 条离线记录，统一 Schema 有效率和唯一率均为 `100%`。Diffusion 使用显式目标档设计区间投影后四档设计一致率为 `100%`；冻结风险代理下四种生成器均保持 `low < medium < high < critical` 的档位均值排序。该结果仅是 E2 本机离线参数证据，不新增 CARLA 实测，不替换 CVAE 主线；完整边界见 `docs/generator_diffusion_comparison_v1.md`，复现入口为 `tools/run_diffusion_comparison.cmd`。
 - `S5-CORE-03` 受控条件检索已完成：`core/scenario_query.py` 统一 CLI 与 `GET /api/scenarios/search` 的结构化条件、范围校验和白名单关键词匹配；结构化条件与关键词可组合，非法条件返回 HTTP `400`，定向回归 `14` 项通过。查询只读索引，不解析自然语言、不启动 CARLA、不产生新的风险证据；说明见 `docs/controlled_scenario_query_v1.md`。
 - `S5-CORE-04` Web 任务编排已完成：`core/web_task_orchestrator.py` 和 `tools/web_app.py` 提供 generation、validation、risk_analysis、carla 四类任务的提交、状态、结果和取消/确认接口；前三类使用本机 CPU worker，CARLA 任务默认 `awaiting_confirmation`，确认后仅登记 `confirmed_manual` 外部执行，绝不由 Web 进程隐式启动 CARLA。生成/校验/风险三页已产品化，校验支持 JSONL 逐条结果；页面、任务和全量回归均通过；接口见 `docs/software_copyright_interface_spec_v1.md`。
-- `S5-CORE-05` 计划书指标基线已完成：`tools/measure_stage5_metrics.py` 固化生成吞吐、严格验收运行时间代理和条件签名覆盖率口径；当前快照为 `213.566477` 条/s、`8.781667 s/严格验收运行`、`8/21=38.095238%`，但因没有同口径 baseline，计划书的 90%、11 倍和 90% 目标均保持 `not_assessed`。报告见 `docs/stage5_metrics_baseline_v1.md` 和被 Git 忽略的 `artifacts/stage5_metrics_baseline_v1/metrics_report.json`。
+- `S5-CORE-05` 计划书指标同口径 baseline 已补齐：`tools/benchmark_stage5_generation_baseline.py` 在同一 CPU/Python/15 维范围/Schema 契约下，对 LHS 与 `uniform_rule` 各做五次、每次 `2048` 条生成；本轮总吞吐为 `3612.599633` vs `3761.787593` 条/s（系统侧 `0.960341x`，远未达到计划书 11 倍；CPU 墙钟仍会有调度波动）。同一 0.9.16 Gymnasium CARLA 冒烟的严格验收时间代理为 `12.9075` vs `13.622` s（下降 `5.2452%`，不是实车路测成本）。同一 `seed_v1` 的 `21` 个条件签名覆盖为 `100%` vs 固定规则模板 `4.761905%`；这不是行业覆盖率分母。计划书原始三项目标仍按证据边界分别标记为 `not_assessed` 或 `not_met_on_rule_proxy`。可复现入口为 `tools/run_stage5_metrics_baseline.cmd`，报告见 `docs/stage5_metrics_baseline_v1.md`，原始结果在 `F:\Carla\project-transfer\stage5_metrics_p1_20260824`。
 - 整理 CARLA Demo 作为仿真底座的接口和验证证据，不把它包装成最终系统。
 - 软著系统模块映射 V1 已按阶段五前置材料口径更新：M01–M08 均已映射到当前代码入口、输入输出和证据边界；M07 已升级为生成/校验/风险三条 Web 工作流，M08 提供默认离线的一键最小演示。完整 OpenSCENARIO 直执行、RL 策略泛化和场景真实性评估仍未完成；文档见 `docs/software_copyright_module_mapping_v1.md`、`docs/stage5_web_product_flow_v2.md`。
 - 阶段四 4.1 已形成 `custom_json_to_openscenario_carla_v1`：输入复用 `generated_scenario` Schema，输出 OpenSCENARIO XML 1.0 最小交换子集、Scene 04 CARLA JSON 和哈希清单；天气、传感器、风险算法、Traffic Manager、路线控制器等 CARLA 专属字段保持在旁路配置中。适配器单元回归和 `seed_v1` 全部 `256` 条记录静态转换均已通过，适配器生成的 CARLA JSON 已完成一次运行时冒烟；尚未声称 ScenarioRunner 直接执行兼容。边界见 `docs/openscenario_carla_adapter_v1.md`。
@@ -195,7 +195,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - `tools/build_scenario_library.py`：从严格验收实验构建场景库 JSONL、CSV 索引、汇总和哈希清单。
 - `core/scenario_query.py`：统一校验结构化查询条件和白名单关键词，供 CLI 与 Web API 复用。
 - `core/web_task_orchestrator.py`：统一 Web 任务提交、状态、结果和 CARLA 显式确认契约；离线任务使用 CPU worker，CARLA 不由 Web 进程启动。
-- `tools/measure_stage5_metrics.py`：按固定输入和验收门测量阶段五生成吞吐、测试时间代理和条件签名覆盖率，缺少 baseline 时不计算相对目标。
+- `tools/measure_stage5_metrics.py`：按固定输入、契约和验收门测量阶段五生成吞吐、测试时间代理和条件签名覆盖率；系统与 baseline 契约不一致时拒绝计算相对值。`tools/benchmark_stage5_generation_baseline.py` 提供同 CPU 的 LHS/规则采样复现实验。
 - `tools/query_scenario_library.py`：按生成器、目标/实测风险、碰撞、证据粒度、质量等级、CARLA 版本、天气/危险标签、风险分数、多样性和白名单关键词组合筛选场景库，支持表格、CSV 和 JSONL 输出。
 - `tools/web_app.py`、`tools/web_app.cmd`：阶段五 Web 统一入口；复用 M07 数据契约，提供 Dashboard、场景列表、详情、受控查询、健康检查和任务提交/状态/结果页面。
 - `analysis/analyze_scenario_library.py`：生成场景库质量摘要、目标/实测矩阵、审查 CSV、Markdown 报告和 PNG/SVG 总览图。
@@ -346,7 +346,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 6. **版本与数据边界**：服务器运行结果必须能够追溯到 Git 提交、配置、随机种子和输出目录。服务器工作区不直接编辑；发现问题后回笔记本修改、提交并重新同步。GitHub `origin` 用于阶段备份和对外同步，内网 `lab` 用于高频开发部署；两者均只接收已验证且不含大文件或敏感信息的提交。
 
 ## 下一步
-1. 下一项进入阶段五核心质量收口：补齐同口径 baseline、完成 Web 产品流程的真实演示取证，并复核计划书指标；`S5-WEB-03` 仍等待功能冻结后执行。每项通过验证后从“阶段推进清单”删除对应条目，并写入可复现命令和结果。
+1. 下一项进入阶段五核心质量收口：完成 Web 产品流程的真实演示取证并复核软著材料；`S5-WEB-03` 仍等待功能冻结后执行。计划书指标 baseline 已补齐，但原始目标的实车路测/人工计时/行业覆盖分母仍需单独证据，不能用当前代理替代。
 2. 保持阶段四实验口径和结论冻结，以 `docs/stage4_quality_gate_and_experiment_closure_v1.md` 作为论文、软著与结题材料的证据边界入口。
 3. Web 生成/校验/风险页面已经完成首期产品化，不再重复建设同一层原型；后续只补真实演示证据、权限/部署等明确需求。在线 RL、ScenarioRunner 直执行和 PyBullet 研究闭环单独排期，必须先通过对应真实环境门槛。
 4. 维护 `docs/stage5_material_index_v1.md` 中的一键演示 `demo_manifest.json` 路径、SHA-256、关键计数和重建命令；不把历史风险证据写成新 CARLA 实测。

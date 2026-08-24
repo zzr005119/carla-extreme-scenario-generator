@@ -124,6 +124,11 @@ def generation_throughput(paths):
     accepted = sum(int(item.get("accepted_count", 0)) for item in summaries)
     attempted = sum(int(item.get("attempted_count", 0)) for item in summaries)
     elapsed = sum(float(item.get("elapsed_seconds", 0.0)) for item in summaries)
+    contracts = [
+        item.get("measurement_contract")
+        for item in summaries
+        if item.get("measurement_contract") is not None
+    ]
     return {
         "status": "measured" if summaries and elapsed > 0 else "not_assessed",
         "summary_count": len(summaries),
@@ -133,6 +138,7 @@ def generation_throughput(paths):
         "accepted_records_per_second": round(accepted / elapsed, 6) if elapsed > 0 else None,
         "acceptance_rate": round(accepted / attempted, 6) if attempted > 0 else None,
         "measurement_definition": "sum(accepted_count) / sum(elapsed_seconds)",
+        "measurement_contracts": contracts,
     }
 
 
@@ -162,9 +168,29 @@ def _strict_acceptance(metadata):
     return versions.get("match") is True
 
 
+def _testing_contract(metadata):
+    """Return the fields that must agree for a CARLA time comparison."""
+    simulation = metadata.get("simulation") or {}
+    route = metadata.get("route_control") or {}
+    sensor = metadata.get("sensor_pipeline") or {}
+    sensors = sensor.get("sensors") or {}
+    return {
+        "carla_versions": metadata.get("carla_versions") or {},
+        "map": metadata.get("map"),
+        "fixed_delta_seconds": simulation.get("fixed_delta_seconds"),
+        "simulation_seconds": simulation.get("elapsed_seconds"),
+        "sensors": sorted(str(name) for name in sensors),
+        "route_enabled": bool(route.get("enabled", False)),
+        "route_mode": route.get("mode"),
+        "route_length_requested_m": route.get("route_length_requested_m"),
+        "controller_settings": route.get("controller_settings") or {},
+    }
+
+
 def testing_cost(paths):
     records = [_load_json(path) for path in _iter_input_paths(paths)]
     wall_seconds = []
+    contracts = []
     strict_count = 0
     completed_count = 0
     for metadata in records:
@@ -173,6 +199,7 @@ def testing_cost(paths):
             completed_count += 1
         if _strict_acceptance(metadata):
             strict_count += 1
+            contracts.append(_testing_contract(metadata))
             value = result.get("wall_duration_seconds")
             if value is not None:
                 wall_seconds.append(float(value))
@@ -187,6 +214,7 @@ def testing_cost(paths):
         "wall_duration_seconds_median": round(statistics.median(wall_seconds), 6) if wall_seconds else None,
         "cost_proxy_definition": "wall_duration_seconds per strictly accepted run; not monetary cost",
         "acceptance_definition": "completed result + sensor completed + healthy CARLA + cleanup completed + matching 0.9.16 versions + route gate when enabled",
+        "measurement_contracts": contracts,
     }
 
 
@@ -199,6 +227,19 @@ def _comparison(system, baseline, *, higher_is_better):
     previous = baseline.get("accepted_records_per_second") if higher_is_better else baseline.get("wall_duration_seconds_mean")
     if current is None or previous in (None, 0):
         return {"status": "not_assessed", "reason": "comparable numeric values missing"}
+    system_contracts = system.get("measurement_contracts") or []
+    baseline_contracts = baseline.get("measurement_contracts") or []
+    if bool(system_contracts) != bool(baseline_contracts) or (
+        system_contracts
+        and set(json.dumps(item, sort_keys=True) for item in system_contracts)
+        != set(json.dumps(item, sort_keys=True) for item in baseline_contracts)
+    ):
+        return {
+            "status": "not_assessed",
+            "reason": "system and baseline measurement contracts differ or are missing",
+            "system_contract_count": len(system_contracts),
+            "baseline_contract_count": len(baseline_contracts),
+        }
     ratio = current / previous
     return {
         "status": "measured",
@@ -234,9 +275,21 @@ def main():
         "format": OUTPUT_FORMAT,
         "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "target_metrics": {
-            "testing_cost_reduction": "not_assessed_until_same_unit_baseline",
-            "generation_efficiency_gain": "not_assessed_until_same_command_baseline",
-            "extreme_scene_coverage": "not_assessed_until_reference_universe_is_explicit",
+            "testing_cost_reduction": {
+                "target_relative_reduction": 0.90,
+                "target_unit": "real_road_test_cost",
+                "status": "not_assessed_without_real_road_test_baseline",
+            },
+            "generation_efficiency_gain": {
+                "target_multiplier": 11.0,
+                "target_baseline": "manual_rule_editing",
+                "status": "not_assessed_without_human_operation_timing",
+            },
+            "extreme_scene_coverage": {
+                "target_rate": 0.90,
+                "target_reference": "industry_coverage_below_0.15",
+                "status": "not_assessed_without_industry_denominator",
+            },
         },
         "system": {
             "generation": system_generation,
@@ -268,6 +321,7 @@ def main():
         },
         "claims_boundary": [
             "wall_duration_seconds is a reproducible execution-time proxy, not monetary cost",
+            "uniform_rule_parameter_sampling_v1 is a rule-sampling proxy, not human editing time",
             "coverage is over the explicitly supplied reference condition signatures, not real-world road coverage",
             "no target percentage or multiplier is declared without a same-denominator baseline",
         ],
