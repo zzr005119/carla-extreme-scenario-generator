@@ -38,5 +38,5 @@ tools\p4_differentiable_boundary.cmd --profile closing --horizon 32
 ## 当前验证状态
 
 - 本机 `Carla666-0916`：`tests.test_runtime_adapters` 为 `9/9` 通过；本机当前未安装可选 PyBullet，因此离散分支按设计跳过。
-- 服务器历史基线：已安装 PyBullet `3.2.7`，此前基础梯度/DIRECT 适配测试 `4/4` 通过。增强后的 gap 几何回放仍需在服务器环境重新执行并归档 manifest，完成前不写成新的服务器实机证据。
+- 服务器 `Carla666-0916`：PyBullet `3.2.7` 的增强 gap 几何回放已通过；`horizon=128` 的 contact probe 报告 `negative_gap_steps=63`、`contact_count=41`、接触步 `65–75`，Torch 梯度有限且 `pybullet_native_differentiable=false`。详细记录见 `docs/p4_server_validation_v1.md`，原始 manifest 位于 `F:\Carla\project-transfer\server-results\p4_differentiable_boundary_v1`。
 - 本模块不替代 CARLA 0.9.16 的真实运行验收，也不关闭完整消融实验和结题报告后置项。

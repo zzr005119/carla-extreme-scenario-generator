@@ -24,7 +24,7 @@ _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1
 | 模块 | 代码入口 | 当前可引用材料 | 当前状态 | 正式申请前补充 |
 |---|---|---|---|---|
 | M01 场景生成 | `tools/generate_seed_dataset.py`、`tools/generate_with_model.py`、`tools/run_diffusion_comparison.py`、`models/`、`training/` | 生成记录、Schema、模型选型报告、四生成器离线对照 | 已验证实现 / 研究原型 | 选定最终展示命令和一组可复现输入输出 |
-| M02 约束校验 | `core/scenario_validator.py`、`core/physical_constraints.py`、`core/differentiable_closed_loop.py`、`tools/check_physical_constraints.py`、`tools/run_differentiable_closed_loop.py`、`schemas/` | Schema、语义校验、参数级硬约束、Torch 可微代理损失、可选 PyBullet 离散几何校验、配置编译和 P4 JSON manifest | 已验证实现 / 代理边界 | 固定说明书中的正常流程、一个负例、物理约束报告和 P4 manifest；明确不写 PyBullet 可微刚体训练 |
+| M02 约束校验 | `core/scenario_validator.py`、`core/physical_constraints.py`、`core/differentiable_closed_loop.py`、`tools/check_physical_constraints.py`、`tools/run_differentiable_closed_loop.py`、`schemas/` | Schema、语义校验、参数级硬约束、Torch 可微代理损失、可选 PyBullet 离散几何校验、配置编译和 P4 JSON manifest | 已验证实现 / 代理边界 | 固定说明书中的正常流程、一个负例、物理约束报告和 P4 manifest；服务器接触 probe 已登记到 `docs/p4_server_validation_v1.md`；明确不写 PyBullet 可微刚体训练 |
 | M03 场景库 | `core/scenario_library.py`、`tools/build_scenario_library.py`、`tools/query_scenario_library.py` | `entries.jsonl`、`index.csv`、质量分析报告、查询回归 | 已验证实现 | 冻结库快照并确认材料中的数量和证据分层 |
 | M04 仿真采集 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py`、`tools/check_scenario_runner_acceptance.py` | CARLA 0.9.16 运行证据、`metadata.json`、`telemetry.csv`、`acceptance_result.json`；四类传感器/路线/风险单样本通过 | 已验证实现 / 原型 | 冻结版本复核提交哈希和证据路径，重新采集最终截图 |
 | M05 风险评估 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2` 分解、风险报告、批次统计 | 已验证实现 | 说明书中标注这是仿真遥测启发式指标，不是事故概率 |
