@@ -1475,11 +1475,16 @@ def main():
                 pedestrian_distance = ego_location.distance(walker.get_location())
 
             if route_control_mode == "waypoint_follower":
+                if brake_started:
+                    # During the scripted lead-vehicle brake, the route
+                    # follower must target a stop before the brake override.
+                    lead_route_follower.reset_speed_controller()
                 lead_applied_control, lead_control_state = (
-                    lead_route_follower.run_step()
+                    lead_route_follower.run_step(
+                        target_speed_kmh=0.0 if brake_started else None
+                    )
                 )
                 if brake_started:
-                    lead_route_follower.reset_speed_controller()
                     apply_brake_override(lead_applied_control, brake_intensity)
 
                 ego_applied_control, ego_control_state = ego_route_follower.run_step()
