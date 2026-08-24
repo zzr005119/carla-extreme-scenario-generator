@@ -14,6 +14,7 @@ MANIFEST="$PROJECT_ROOT/data/scenarios/scenario_library_v1/manifest.json"
 SEED="${RL_SEED:-20260824}"
 MODE="${1:-canary}"
 EVAL_SPLIT="${EVAL_SPLIT:-test}"
+CANARY_SUFFIX="${RL_CANARY_SUFFIX:-}"
 
 cd "$PROJECT_ROOT"
 
@@ -33,9 +34,13 @@ case "$MODE" in
     prepare_plan
     ;;
   canary)
+    canary_root="$OUTPUT_ROOT/canary_sac_seed_${SEED}"
+    if [[ -n "$CANARY_SUFFIX" ]]; then
+      canary_root="${canary_root}_${CANARY_SUFFIX}"
+    fi
     "$PYTHON" -u tools/train_carla_rl.py \
       --config "$CONFIG" --scenario-plan "$PLAN_PATH" \
-      --output-root "$OUTPUT_ROOT/canary_sac_seed_${SEED}" \
+      --output-root "$canary_root" \
       --algorithm SAC --steps 256 --chunk-steps 256 --seed "$SEED" \
       --allow-online-carla
     ;;
