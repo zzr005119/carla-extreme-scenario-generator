@@ -1,6 +1,6 @@
 # 软著系统模块映射 V1
 
-_项目：基于生成式 AI 的自动驾驶极端场景库构建与仿真测试平台；版本：V1；更新日期：2026-08-23；阶段五前置材料整理版_
+_项目：基于生成式 AI 的自动驾驶极端场景库构建与仿真测试平台；版本：V1；更新日期：2026-08-24；阶段五前置材料整理版_
 
 ---
 
@@ -12,7 +12,7 @@ _项目：基于生成式 AI 的自动驾驶极端场景库构建与仿真测试
 
 拟登记软件名称为 **基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1.0**。当前映射覆盖从参数级场景生成到场景库管理、CARLA 仿真执行、风险评估和实验结果查询的最小闭环。
 
-系统当前以 Python 命令行、文件接口和本地只读 Dashboard 为主要形态，CARLA 0.9.16 是仿真运行时；代码、配置、Schema、CSV、JSON 和 Markdown 报告共同构成可追溯的软件工程证据。阶段四硬质量门和当前证据已经收口；阶段五 M08 一键离线演示已建立。RL 泛化、CARLA 在线训练、ScenarioRunner 直执行和场景真实性评估仍不属于当前已完成边界。
+系统当前以 Python 命令行、文件接口和本地只读 Dashboard 为主要形态，CARLA 0.9.16 是仿真运行时；代码、配置、Schema、CSV、JSON 和 Markdown 报告共同构成可追溯的软件工程证据。阶段四硬质量门和当前证据已经收口；阶段五 M08 一键离线演示已建立，另有一条 ScenarioRunner 关联样本通过完整多传感器、路线和风险质量门。RL 泛化、CARLA 在线训练、跨地图 ScenarioRunner 兼容和场景真实性评估仍不属于当前已完成边界。
 
 ### 状态定义
 
@@ -61,11 +61,11 @@ flowchart LR
 | M01 | 场景生成与条件编译 | 已验证实现 / 原型 | `tools/generate_seed_dataset.py`、`tools/generate_with_model.py`、`models/`、`training/` | LHS、条件 GMM、条件表格 CVAE 和轻量条件表格 Diffusion 已完成离线生成与对照；生成模型仍属于研究分支 |
 | M02 | 场景约束与校验 | 已验证实现 | `core/scenario_validator.py`、`core/physical_constraints.py`、`tools/check_physical_constraints.py`、`schemas/` | Schema、语义校验、参数级物理约束和 CARLA 配置编译；256 条种子记录硬约束全部通过 |
 | M03 | 场景库管理 | 已验证实现 | `core/scenario_library.py`、`core/scenario_query.py`、`tools/build_scenario_library.py`、`tools/query_scenario_library.py` | 场景库 V1 收录 117 个独立场景、351 次来源批次严格验收运行；结构化条件/白名单关键词查询、Web API 和质量门回归通过 |
-| M04 | 仿真执行与多传感器采集 | 已验证实现 / 原型 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py`、`batch_runner.py` | CARLA 0.9.16 实机回归；RGB、Depth、SemSeg、Collision；确定性路线控制已验证 |
+| M04 | 仿真执行与多传感器采集 | 已验证实现 / 原型 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py`、`tools/check_scenario_runner_acceptance.py`、`batch_runner.py` | CARLA 0.9.16 实机回归；`seed_v1_high_0165` 通过 RGB、Depth、SemSeg、Collision、waypoint 路线、服务健康和清理统一验收 |
 | M05 | 风险评估与结果分析 | 已验证实现 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2`、TTC、车距、碰撞和遥测分析；风险反馈 V5 与 27 维代理冻结 |
 | M06 | 实验编排与复现管理 | 已验证实现 / 原型 | `batch_runner.py`、`core/web_task_orchestrator.py`、`tools/measure_stage5_metrics.py`、`tools/server_*.cmd`、`configs/` | 批次调度、种子、配置哈希、服务器工作流、质量门和阶段五指标基线；Web 离线任务状态/结果持久化；CARLA 任务仅显式确认后登记外部执行 |
 | M07 | 可视化管理界面 | 已实现首期 Web 工作流 | `tools/web_app.py`、`tools/web_app.cmd`、`tools/scenario_dashboard.py`、`tools/scenario_dashboard.cmd` | 统一 Web 入口支持 Dashboard、场景库、独立详情、健康检查、受控查询，以及生成/校验/风险分析表单、任务轮询和结构化结果；不含多用户、权限或 Web 内隐式启动 CARLA |
-| M08 | 阶段五最小演示编排 | 已验证实现 / 离线原型 | `tools/stage5_minimal_demo.py`、`tools/stage5_demo.cmd` | M01–M08 离线组合、静态适配、历史证据读取和 `demo_manifest.json` 已通过；默认不连接 CARLA |
+| M08 | 阶段五最小演示编排 | 已验证实现 / 离线原型 | `tools/stage5_minimal_demo.py`、`tools/stage5_demo.cmd`、`docs/scenario_runner_full_acceptance_v1.md` | M01–M08 离线组合、静态适配、历史证据读取和 `demo_manifest.json` 已通过；ScenarioRunner 关联完整验收作为独立实机证据登记，默认演示仍不连接 CARLA |
 
 ## 🔗 详细模块映射
 
@@ -105,7 +105,7 @@ flowchart LR
 - **处理：** 地图/天气/交通灯设置、Actor 生成、确定性 waypoint 跟踪、危险事件触发、传感器回调和世界状态恢复。
 - **输出：** `metadata.json`、`telemetry.csv`、传感器帧、运行状态和严格验收字段。
 - **实现映射：** `scenes/scene_01_extreme_weather.py`、`scenes/scene_02_multi_hazard.py`、`scenes/scene_03_multi_sensor.py`、`scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py`、`batch_runner.py`。
-- **证据边界：** RGB、Depth、SemSeg 和 Collision 已在低频多传感器配置中验证；大批量实验默认使用 RGB + Collision 性能基线，不能宣称所有批次均保存完整三路图像。
+- **证据边界：** RGB、Depth、SemSeg 和 Collision 已在低频多传感器配置中验证；2026-08-24 的 `seed_v1_high_0165` 以 200/200/200 帧通过完整验收。大批量实验默认使用 RGB + Collision 性能基线，不能宣称所有批次均保存完整三路图像。
 
 ### M05 风险评估与结果分析
 
@@ -141,7 +141,7 @@ flowchart LR
 - **处理：** M02 Schema/语义校验，编译 Scene 04 配置，生成 `.xosc`、`.carla.json` 和适配清单，读取库内高风险碰撞摘要，核对 Dashboard 数据行数。
 - **输出：** `input_record.json`、`compiled_carla_config.json`、`.xosc`、`.carla.json`、`.adapter_manifest.json` 和 `demo_manifest.json`。
 - **实现映射：** `tools/stage5_minimal_demo.py`、`tools/stage5_demo.cmd`、`tests/test_stage5_minimal_demo.py`。
-- **证据边界：** 默认 `carla_connected=false`，M05 读取历史风险汇总而不产生新实测风险；M08 通过只证明接口集成门，不等价于新的 CARLA 运行或 ScenarioRunner 直执行。
+- **证据边界：** 默认 `carla_connected=false`，M05 读取历史风险汇总而不产生新实测风险；M08 通过只证明接口集成门。ScenarioRunner 关联完整验收由独立配置准备器、Scene 04 运行器和检查器产生，不由默认离线演示隐式启动。
 
 ## 🔄 最小可运行闭环
 
