@@ -43,7 +43,7 @@ _验收日期：2026-08-24；以下结果属于当前工程底稿，正式申请
 | M08 一键演示 | M01–M08 离线最小链路通过；117 个独立场景、351 条严格验收来源证据 | `carla_connected=false`，未启动 CARLA、未产生新风险结果、未占用 GPU |
 | 文档差异检查 | `git diff --check` 通过 | 只检查空白和补丁格式，不代表内容已经成为最终申请材料 |
 | Web P0 真实冒烟 | 页面 `200`；生成/校验/风险 `completed`；CARLA 取消 `cancelled` | 只证明本机 Web 任务和显式外部执行边界，不证明在线 CARLA 训练 |
-| ScenarioRunner 关联完整验收 | `seed_v1_high_0165`：RGB/Depth/Semantic 各 `200` 帧；路线双车在途率 `1.0`；风险 `42.268/medium`；`12/12` 检查通过 | 同一输入的 XOSC 直执行与 Scene 04 完整验收分层记录；不证明跨地图或批量泛化 |
+| ScenarioRunner 关联完整验收 | `seed_v1_high_0165`：RGB/Depth/Semantic 各 `200` 帧；Collision 独立状态门通过；路线双车在途率 `1.0`；风险 `40.843/medium`；`13/13` 检查通过 | 同一输入的 XOSC 直执行与 Scene 04 完整验收分层记录；不证明跨地图或批量泛化 |
 
 ## 材料分层
 

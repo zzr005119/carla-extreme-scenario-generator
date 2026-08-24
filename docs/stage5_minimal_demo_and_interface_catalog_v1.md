@@ -62,7 +62,7 @@ D:\ANACONDA\envs\Carla666-0916\python.exe tools\stage5_minimal_demo.py
 |---|---|---|
 | `input_record.json` | M01 输入记录副本 | 记录来源可追溯，不代表新生成 |
 | `compiled_carla_config.json` | M02 编译后的完整 CARLA 配置 | 静态配置可用，不代表服务在线 |
-| `<sample_id>.xosc` | OpenSCENARIO 1.0 最小交换子集 | XML 可解析，不代表 ScenarioRunner 直执行 |
+| `<sample_id>.xosc` | OpenSCENARIO 1.0 最小交换子集 | XML 可解析；ScenarioRunner 直执行与完整 Scene 04 验收需引用独立 manifest |
 | `<sample_id>.carla.json` | 适配器生成的 CARLA 配置 | 可做 `--validate-only`，不代表实机结果 |
 | `<sample_id>.adapter_manifest.json` | 转换血缘、映射和状态 | 记录适配边界 |
 | `demo_manifest.json` | M01–M08 状态、路径、限制和 `carla_connected` | 阶段五主审计入口 |
@@ -118,7 +118,7 @@ M04 实机运行必须同时检查运行状态、传感器写盘、CARLA 服务�
 
 ### 适配器
 
-`custom_json_to_openscenario_carla_v1` 每次静态转换输出 `.xosc`、`.carla.json` 和 `.adapter_manifest.json`。天气、传感器、Traffic Manager、风险算法和路线控制器仍以 CARLA 配置旁路保存；当前未完成 ScenarioRunner 直执行。
+`custom_json_to_openscenario_carla_v1` 每次静态转换输出 `.xosc`、`.carla.json` 和 `.adapter_manifest.json`。天气、传感器、Traffic Manager、风险算法和路线控制器仍以 CARLA 配置旁路保存；默认 M08 不启动 ScenarioRunner，已验证的单场景直执行和关联完整验收见 `docs/scenario_runner_full_acceptance_v1.md`。
 
 ## 分层运行入口
 

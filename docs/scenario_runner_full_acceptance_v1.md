@@ -42,7 +42,7 @@ python tools/check_scenario_runner_acceptance.py \
 
 | 检查项 | 结果 |
 | --- | --- |
-| Git 提交 | `2495b0a4bde78c287db15d029ff022786504c0cd` |
+| Git 提交 | `57d3deb2edc08cd62a2379df1eb47f2209bd2308` |
 | CARLA 客户端/服务端 | `0.9.16 / 0.9.16`，版本匹配 |
 | 环境与资源 | 服务器 `Carla666-0916`；CARLA 使用 GPU1；GPU0 vLLM 未修改；GPU1 外部 TensorRT 服务未修改 |
 | 地图与 TM | `Town10HD_Opt`；TM `8100`；seed `20260977` |
@@ -52,11 +52,11 @@ python tools/check_scenario_runner_acceptance.py \
 | Semantic | `200` 帧，expected/received/saved 均为 `200`，失败 `0` |
 | Collision | 传感器已启用，碰撞事件计数 `0` |
 | 路线控制 | `waypoint_follower`，双车在途率 `1.0` |
-| 最大路线偏差 | ego `0.992 m`；lead `0.978 m`；门槛 `3.0 m` |
-| 风险 | `heuristic_v2`，`42.268 / medium` |
+| 最大路线偏差 | ego `0.992 m`；lead `0.995 m`；门槛 `3.0 m` |
+| 风险 | `heuristic_v2`，`40.843 / medium` |
 | 服务与清理 | CARLA 健康检查通过；传感器/场景 Actor 和世界设置清理完成 |
-| 统一结果 | `acceptance_result.json` 状态 `passed`，全部 `12` 项检查通过 |
-| 结果清单 SHA-256 | `4637890C007AC38AEDC391494AE6240956F38E306C445DE500FA82B271CE7E9F` |
+| 统一结果 | `acceptance_result.json` 状态 `passed`，全部 `13` 项检查通过 |
+| 结果清单 SHA-256 | `E3F78CC08234E703CF9D285FC43F9164FB02941E412EC97C744ACE238ADA9E4C` |
 
 ## 证据位置
 
@@ -71,7 +71,7 @@ python tools/check_scenario_runner_acceptance.py \
 本机轻量回收目录：
 
 ```text
-F:\Carla\project-transfer\scenario_runner_v1_full_acceptance_20260824_142853\
+F:\Carla\project-transfer\scenario_runner_v1_full_acceptance_20260824_145339\
 ```
 
 ## 结论边界

@@ -94,7 +94,7 @@ python tools\convert_scenario_to_openscenario.py `
 
 ## 后续边界
 
-阶段四 4.2 的最小 ScenarioRunner 直执行已完成；仍需独立处理真实 `.xodr`/多地图绑定、行人完整横穿轨迹、CARLA 天气/传感器注入、路线严格验收和风险结果回填。因此不能把 V1 写成“OpenSCENARIO 与 CARLA 无缝对接”。
+阶段四 4.2 的最小 ScenarioRunner 直执行已完成；同一 `seed_v1_high_0165` 还通过了旁路 Scene 04 的完整天气/传感器/路线/风险验收。仍需独立处理真实 `.xodr`/多地图绑定、行人完整横穿轨迹，以及把天气/传感器/路线/风险语义原生映射进 XOSC；因此不能把 V1 写成“OpenSCENARIO 与 CARLA 无缝对接”。
 
 ## 未来优化方向
 
