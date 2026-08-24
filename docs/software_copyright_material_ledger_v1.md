@@ -65,19 +65,30 @@ _验收日期：2026-08-23；以下结果属于当前工程底稿，正式申请
 - 申请所需的源代码鉴别材料、文档页数和格式。
 - 申请主体、著作权人、开发完成日期等非代码信息。
 
-## 截图清单（当前只列计划）
+## 截图清单
 
-P0 已通过，截图仍应在最终 V1.0 冻结提交后统一采集。建议先采集 Web 主链路，再补一张真实 CARLA 证据和一张一键演示产物，避免把不同提交的页面拼成一套材料。
+P0 已通过。以下 9 张图已从用户截图目录归档到
+`artifacts/stage5_web_screenshots_v1/`，作为当前 Web 功能的暂定最终截图。它们仍需在正式 V1.0 冻结提交后复核页面版本、路径和数据口径，才能作为最终申请材料使用。
 
-| 编号 | 截图主题 | 推荐入口 | 当前状态 | 采集要求 |
+| 编号 | 截图主题 | 归档文件 | 当前状态 | 采集/使用要求 |
 |---|---|---|---|---|
-| S01 | 一键演示成功和输出目录 | `tools/stage5_demo.cmd` | 待冻结后采集 | 截图必须显示提交/版本或在旁边保留 `demo_manifest.json` |
-| S02 | 场景生成记录和目标条件 | M01 输出 JSON | 待冻结后采集 | 标注 `target_risk_level` 是设计条件 |
-| S03 | 校验通过或负例拒绝 | M02 CLI | 待冻结后采集 | 不把静态通过写成 CARLA 运行成功 |
-| S04 | Web 场景库筛选和详情 | `tools/web_app.cmd` | 待冻结后采集 | 页面只读，显示数据快照日期；兼容入口仍保留 |
-| S05 | CARLA 运行结果 | Scene 04 + `metadata.json` | 待冻结后采集 | 只使用严格验收通过的真实记录 |
-| S06 | 风险分析结果 | M05 报告/图表 | 待冻结后采集 | 标注 `heuristic_v2` 和证据来源 |
-| S07 | OpenSCENARIO 适配产物 | M08 输出目录 | 待冻结后采集 | 标注“最小交换子集”，不写直执行兼容 |
+| S01 | Dashboard 首页 | `artifacts/stage5_web_screenshots_v1/Dashboard 首页.png` | 已归档（暂定） | 保留 117 个独立场景、351 条严格验收证据等总览数据 |
+| S02 | 场景库筛选页 | `artifacts/stage5_web_screenshots_v1/场景库筛选页.png` | 已归档（暂定） | 保留筛选条件、结果数量和列表内容 |
+| S03 | 场景详情页 | `artifacts/stage5_web_screenshots_v1/场景详情页.png` | 已归档（暂定） | 区分 `target_risk_level` 与 `observed_risk`，不混写为实测风险 |
+| S04 | 生成页面提交前 | `artifacts/stage5_web_screenshots_v1/生成页面提交前.png` | 已归档（暂定） | 显示生成器、目标风险、天气标签、数量和随机种子 |
+| S05 | 生成成功结果 | `artifacts/stage5_web_screenshots_v1/生成成功结果.png` | 已归档（暂定） | 显示完成状态、生成数量和 JSONL 产物 |
+| S06 | 校验成功结果 | `artifacts/stage5_web_screenshots_v1/校验成功结果.png` | 已归档（暂定） | 显示 Schema/语义、物理约束和配置编译结果 |
+| S07 | 校验失败结果 | `artifacts/stage5_web_screenshots_v1/校验失败结果.png` | 已归档（暂定） | 显示字段路径、错误原因和失败状态 |
+| S08 | 风险分析成功结果 | `artifacts/stage5_web_screenshots_v1/风险分析成功结果.png` | 已归档（暂定） | 标注 `observed_risk`、`heuristic_v2` 和证据来源 |
+| S09 | 任务管理页 | `artifacts/stage5_web_screenshots_v1/任务管理页.png` | 已归档（暂定） | 保留生成/校验/风险终态，以及 CARLA 显式确认/取消边界 |
+
+### 待正式冻结后补充或复核
+
+| 项目 | 推荐入口 | 当前状态 | 使用边界 |
+|---|---|---|---|
+| 一键演示成功和输出目录 | `tools/stage5_demo.cmd` | 待补采 | 必须同时保留 `demo_manifest.json`，标注默认离线 |
+| CARLA 运行结果 | Scene 04 + `metadata.json` | 待复核 | 只使用严格验收通过的真实记录 |
+| OpenSCENARIO 适配产物 | M08 输出目录 | 待补采 | 只能写“最小交换子集”，不写直执行兼容 |
 
 ## 证据边界
 

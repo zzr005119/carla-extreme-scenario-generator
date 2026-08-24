@@ -63,7 +63,7 @@ Get-FileHash artifacts\stage5_minimal_demo_v1\demo_manifest.json -Algorithm SHA2
 |---|---|
 | [`stage5_minimal_demo_and_interface_catalog_v1.md`](stage5_minimal_demo_and_interface_catalog_v1.md) | 一键链路、接口顺序和验收条件 |
 | [`stage5_user_operation_guide_v1.md`](stage5_user_operation_guide_v1.md) | 操作步骤、静态检查和真实运行边界 |
-| [`software_copyright_material_ledger_v1.md`](software_copyright_material_ledger_v1.md) | 软著前置台账、截图计划和冻结触发条件 |
+| [`software_copyright_material_ledger_v1.md`](software_copyright_material_ledger_v1.md) | 软著前置台账、S01–S09 截图归档和冻结触发条件 |
 | [`software_copyright_module_mapping_v1.md`](software_copyright_module_mapping_v1.md) | M01–M08 模块职责与软著章节映射 |
 | [`software_copyright_interface_spec_v1.md`](software_copyright_interface_spec_v1.md) | 命令入口、数据契约、输出和异常边界 |
 | [`stage4_quality_gate_and_experiment_closure_v1.md`](stage4_quality_gate_and_experiment_closure_v1.md) | 阶段四证据等级和研究结论边界 |
@@ -76,7 +76,7 @@ Get-FileHash artifacts\stage5_minimal_demo_v1\demo_manifest.json -Algorithm SHA2
 1. 冻结 V1.0 功能范围、软件名称、模块术语和最终提交。
 2. 在冻结提交上重新运行 M08、全量测试和 `compileall`。
 3. 将新的 `demo_manifest.json` SHA-256、运行日期和环境版本更新到本索引。
-4. 另行采集 Dashboard、M02 负例、CARLA 实机结果和风险分析截图；截图不得使用未冻结版本作为最终申请证据。
+4. 复核 `artifacts/stage5_web_screenshots_v1/` 中的 S01–S09 Web 截图，并另行采集一键演示、CARLA 实机结果和 OpenSCENARIO 适配产物截图；截图不得使用未冻结版本作为最终申请证据。
 5. 依据当期官方要求整理软件说明书、源代码鉴别材料和申请主体信息。
 
 在正式冻结前，本索引和 M08 清单属于工程底稿，不代表软著已经申请或登记。

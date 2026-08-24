@@ -53,7 +53,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 ## 阶段推进清单
 > 待办区只保留尚未完成的事项。完成一项后，从本清单删除，并在“当前工作”或对应文档中保留一条证据索引；`⏸` 表示明确暂缓，不计入当前完成条件。
 
-1. ⏸ **S5-WEB-03 Web 展示取证**：在功能冻结后采集 Dashboard、场景列表、详情和关键结果页面截图，登记到软著材料台账；当前不提前制作最终截图。
+1. ▶ **S5-WEB-03 Web 展示取证**：9 张 Web 功能截图已暂定归档到 `artifacts/stage5_web_screenshots_v1/` 并登记到软著台账；正式 V1.0 冻结后仍需复核截图与提交版本一致，并补采一键演示、CARLA 实机和 OpenSCENARIO 证据图。
 2. ⏸ **S5-SCALE-01 10,000 场景扩库**：降级为可扩展流水线设计和当前规模质量验证，不作为阶段五阻塞项。
 3. ▶ **S5-RL-01 CARLA 在线 RL**：已完成服务器 GPU1 上 PPO `2` 步真实 CARLA 在线链路冒烟，baseline/candidate 均严格验收通过；仍待多场景、多种子独立评估，不能写成 RL 泛化结论。证据见 `docs/carla_online_rl_smoke_v1.md`。
 4. ✅ **S5-XOSC-01 ScenarioRunner 单场景直执行**：服务器 CARLA 0.9.16 + ScenarioRunner 0.9.16 已完成 `seed_v1_high_0165` 真实加载、Storyboard 运行和清理流程；TM 使用 8100，主车位姿由 Town10HD_Opt spawn index 40 查询绑定。纯 XOSC 无 criteria，不产生风险 JSON/JUnit，末尾有一次官方二次销毁 ego actor 警告；证据与边界见 `docs/scenario_runner_direct_execution_v1.md`。
@@ -74,7 +74,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 
 ## 软著材料同步要求
 - Web 每新增一个可见模块，就同步更新 `docs/software_copyright_module_mapping_v1.md`、`docs/software_copyright_interface_spec_v1.md` 和 `docs/software_copyright_material_ledger_v1.md` 的入口、功能、证据和边界。
-- Web 页面截图、操作说明、代码鉴别材料和申请主体信息全部后置到最终冻结提交；当前只维护材料台账，不提前声称已完成申请。
+- Web 页面截图已先按暂定最终版本归档到 `artifacts/stage5_web_screenshots_v1/`；正式申请仍需基于最终冻结提交复核截图、操作说明、代码鉴别材料和申请主体信息，当前不声称已完成软著申请。
 
 ## 当前 Demo 子阶段
 1. ✅ 极端天气、多危险叠加和行人突发场景。
