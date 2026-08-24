@@ -55,4 +55,4 @@
 D:\ANACONDA\envs\Carla666-0916\python.exe -m unittest tests.test_web_app tests.test_web_task_orchestration tests.test_runtime_adapters -v
 ```
 
-当前覆盖 Web 页面表单、任务轮询契约、JSONL 校验、可微梯度、PyBullet 可选边界和 ScenarioRunner dry-run。结题报告和最终软著截图继续后置到核心证据收口后。
+当前覆盖 Web 页面表单、任务轮询契约、JSONL 校验、可微梯度、PyBullet 可选边界和 ScenarioRunner dry-run。9 张暂定 Web 功能截图已归档到 `artifacts/stage5_web_screenshots_v1/`；正式软著截图仍需在最终冻结提交上复核。
