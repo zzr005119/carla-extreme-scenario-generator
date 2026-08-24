@@ -21,7 +21,7 @@ _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1
 | 模块 | 主入口 | 输入 | 输出 | 当前状态 |
 | --- | --- | --- | --- | --- |
 | M01 | `generate_seed_dataset.py`、`generate_with_model.py`、`run_diffusion_comparison.py` | 条件、生成器、种子、模型工件 | 场景 JSON/JSONL、统一离线评估报告 | 已验证实现 / 原型 |
-| M02 | `scenario_validator.py`、`physical_constraints.py`、`check_physical_constraints.py` | 场景记录、Schema、基础配置 | Schema/语义校验、参数级物理约束结果、编译配置、JSON 报告 | 已验证实现 |
+| M02 | `scenario_validator.py`、`physical_constraints.py`、`differentiable_closed_loop.py`、`check_physical_constraints.py`、`run_differentiable_closed_loop.py` | 场景记录、Schema、基础配置、动作序列 | Schema/语义校验、参数级硬约束结果、Torch 可微代理损失、可选 PyBullet 离散校验、编译配置、统一 P4 JSON manifest | 已验证实现 / 代理边界 |
 | M03 | `build_scenario_library.py`、`query_scenario_library.py`、`core/scenario_query.py` | 来源清单、运行证据、质量门、结构化查询条件 | 场景库、索引、受控查询结果 | 已验证实现 |
 | M04 | `scene_04_parameterized.py`、`batch_runner.py` | JSON 配置、CARLA 服务、运行参数 | `metadata.json`、`telemetry.csv`、传感器帧 | 已验证实现 / 原型 |
 | M05 | `risk_metrics.py`、`analysis/` | 遥测、事件、运行元数据 | 风险分数、等级、分析报告 | 已验证实现 |
@@ -123,6 +123,14 @@ M04 的一次运行目录至少包含以下轻量证据：
 ### 证据边界
 
 M02 只负责“记录和配置是否合法”。`--validate-only` 只能证明静态契约，不证明 CARLA 服务在线、传感器能写盘或路线能执行。
+
+### P4 可微物理边界接口
+
+- `differentiable_rollout(actions, config)`：返回 `gap_m`、`ego_speed_mps`、碰撞概率软代理、显式损失组件和可反传 `loss`。证据类型为 `differentiable_kinematic_surrogate`。
+- `compose_p4_training_loss(rollout, adversarial_loss, physics_weight, control_weight)`：按 `L_total = L_adv + lambda_1 * L_physics + lambda_2 * L_control` 组合已有张量；它只是未来训练接入点，返回 `training_integrated=false`。
+- `PyBulletValidationAdapter.validate(rollout)`：在可选 `pybullet` 存在时执行 DIRECT 几何/接触回放；结果证据类型为 `optional_pybullet_discrete_check`，且 `differentiable=false`。
+- `build_p4_boundary_manifest(actions, config, hard_constraint_report=...)`：汇总梯度有限性、软损失、离散校验和硬门；硬门失败时返回 `quality_gate=blocked_hard_constraint`。
+- CLI：`tools\\p4_differentiable_boundary.cmd`。该入口不启动 CARLA、不启动在线 RL，不把代理损失写入 `observed_risk`。
 
 ## 💾 M03 场景库接口
 

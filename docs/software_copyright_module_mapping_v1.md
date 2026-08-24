@@ -59,7 +59,7 @@ flowchart LR
 | 编号 | 系统模块 | 当前状态 | 主要代码入口 | 现有证据 |
 | --- | --- | --- | --- | --- |
 | M01 | 场景生成与条件编译 | 已验证实现 / 原型 | `tools/generate_seed_dataset.py`、`tools/generate_with_model.py`、`models/`、`training/` | LHS、条件 GMM、条件表格 CVAE 和轻量条件表格 Diffusion 已完成离线生成与对照；生成模型仍属于研究分支 |
-| M02 | 场景约束与校验 | 已验证实现 | `core/scenario_validator.py`、`core/physical_constraints.py`、`tools/check_physical_constraints.py`、`schemas/` | Schema、语义校验、参数级物理约束和 CARLA 配置编译；256 条种子记录硬约束全部通过 |
+| M02 | 场景约束与校验 | 已验证实现 / P4 代理边界 | `core/scenario_validator.py`、`core/physical_constraints.py`、`core/differentiable_closed_loop.py`、`tools/check_physical_constraints.py`、`tools/run_differentiable_closed_loop.py`、`schemas/` | Schema、语义校验、参数级硬约束、Torch 可微运动学软损失、可选 PyBullet 离散几何校验和 CARLA 配置编译；256 条种子记录硬约束全部通过 |
 | M03 | 场景库管理 | 已验证实现 | `core/scenario_library.py`、`core/scenario_query.py`、`tools/build_scenario_library.py`、`tools/query_scenario_library.py` | 场景库 V1 收录 117 个独立场景、351 次来源批次严格验收运行；结构化条件/白名单关键词查询、Web API 和质量门回归通过 |
 | M04 | 仿真执行与多传感器采集 | 已验证实现 / 原型 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py`、`tools/check_scenario_runner_acceptance.py`、`batch_runner.py` | CARLA 0.9.16 实机回归；`seed_v1_high_0165` 通过 RGB、Depth、SemSeg、Collision、waypoint 路线、服务健康和清理统一验收 |
 | M05 | 风险评估与结果分析 | 已验证实现 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2`、TTC、车距、碰撞和遥测分析；风险反馈 V5 与 27 维代理冻结 |
@@ -86,6 +86,7 @@ flowchart LR
 - **输出：** 校验结果、错误路径信息，以及可直接交给 Scene 04 运行器的 JSON 配置。
 - **实现映射：** `core/scenario_validator.py` 的 `validate_scenario_record`、`require_valid_scenario`、`compile_carla_config` 和 `rebase_output_root`；`core/physical_constraints.py` 的参数级检查和 `tools/check_physical_constraints.py` 的 JSON 报告入口。
 - **证据边界：** 已验证的是参数级配置合法性和 CARLA 配置编译；它不等价于 CARLA 实机一定成功，实机可执行性由 M04 的运行和严格验收负责。
+- **P4 物理边界：** `differentiable_rollout` 只提供可反传的运动学代理损失；`PyBulletValidationAdapter` 只做脱离计算图的 DIRECT 几何/接触回放。`build_p4_boundary_manifest` 将 Torch 梯度、PyBullet 可用性和硬约束结果放在同一份 JSON 证据中，但不会宣称 PyBullet 可微刚体训练、CARLA 车辆动力学或训练已接入。
 
 ### M03 场景库管理
 

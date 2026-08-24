@@ -7,6 +7,8 @@ import xml.etree.ElementTree as ET
 import torch
 
 from core.differentiable_closed_loop import (
+    build_p4_boundary_manifest,
+    compose_p4_training_loss,
     DifferentiableLoopConfig,
     PyBulletValidationAdapter,
     differentiable_rollout,
@@ -31,12 +33,74 @@ class RuntimeAdapterTests(unittest.TestCase):
         self.assertTrue(torch.isfinite(actions.grad).all())
         self.assertFalse(result["pybullet_differentiable"])
 
+    def test_physics_loss_components_are_explicit_and_finite(self):
+        config = DifferentiableLoopConfig(horizon=5)
+        actions = torch.tensor([[0.0, 1.0, 2.0, 1.0, 0.0]], requires_grad=True)
+        result = differentiable_rollout(actions, config)
+        self.assertEqual(
+            set(result["loss_components"]),
+            {
+                "collision_soft_penalty",
+                "safe_gap_penalty",
+                "control_smoothness_penalty",
+                "acceleration_limit_penalty",
+            },
+        )
+        result["loss"].backward()
+        self.assertTrue(torch.isfinite(actions.grad).all())
+        self.assertTrue(torch.isfinite(result["loss"]))
+
+    def test_closing_actions_raise_surrogate_loss(self):
+        config = DifferentiableLoopConfig(horizon=16)
+        gentle = differentiable_rollout(torch.zeros(config.horizon), config)
+        closing = differentiable_rollout(torch.full((config.horizon,), 4.0), config)
+        self.assertGreater(float(closing["loss"]), float(gentle["loss"]))
+
+    def test_composed_training_contract_keeps_adversarial_gradient(self):
+        config = DifferentiableLoopConfig(horizon=4)
+        actions = torch.zeros(config.horizon, requires_grad=True)
+        rollout = differentiable_rollout(actions, config)
+        adversarial_loss = torch.tensor(2.0, requires_grad=True)
+        composed = compose_p4_training_loss(
+            rollout,
+            adversarial_loss,
+            physics_weight=0.5,
+            control_weight=2.0,
+        )
+        composed["total_loss"].backward()
+        expected = adversarial_loss.detach() + 0.5 * rollout["physics_loss"].detach() + 2.0 * rollout["control_loss"].detach()
+        self.assertAlmostEqual(float(composed["total_loss"].detach()), float(expected))
+        self.assertIsNotNone(actions.grad)
+        self.assertIsNotNone(adversarial_loss.grad)
+        self.assertEqual(float(adversarial_loss.grad), 1.0)
+        self.assertFalse(composed["training_integrated"])
+
+    def test_p4_manifest_keeps_hard_gate_and_claim_boundaries(self):
+        config = DifferentiableLoopConfig(horizon=4)
+        manifest = build_p4_boundary_manifest(
+            torch.zeros(config.horizon),
+            config,
+            hard_constraint_report={"record_count": 1, "invalid_count": 0},
+        )
+        self.assertEqual(manifest["quality_gate"], "pass")
+        self.assertTrue(manifest["torch_surrogate"]["gradient_check"]["finite"])
+        self.assertFalse(manifest["claims"]["pybullet_native_differentiable"])
+        self.assertFalse(manifest["claims"]["training_integrated"])
+
+        blocked = build_p4_boundary_manifest(
+            torch.zeros(config.horizon),
+            config,
+            hard_constraint_report={"record_count": 1, "invalid_count": 1},
+        )
+        self.assertEqual(blocked["quality_gate"], "blocked_hard_constraint")
+
     def test_pybullet_check_reports_optional_boundary(self):
         result = PyBulletValidationAdapter().validate(
             differentiable_rollout(torch.zeros(4), DifferentiableLoopConfig(horizon=4))
         )
         self.assertIn(result["validated"], (True, False))
         self.assertIn("evidence_kind", result)
+        self.assertFalse(result.get("differentiable", False))
 
     def test_scenario_runner_dry_run_is_explicit(self):
         with tempfile.TemporaryDirectory() as temp_dir:
