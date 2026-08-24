@@ -19,10 +19,10 @@ _更新日期：2026-08-24；用途：阶段五系统集成、论文/软著前�
 | 当前清单格式 | `stage5_minimal_demo_v1_manifest` / `v1` |
 | 当前运行模式 | `offline_static_and_evidence` |
 | 当前 CARLA 状态 | `carla_connected=false`；`new_carla_risk_evaluation=false` |
-| 当前清单 SHA-256 | `7d0e566bb45d75cf18fe946abd2a09ac57c30f2c938d05e5e002819c3e40abfd` |
+| 当前清单 SHA-256 | `f1e12575607d45178143d622ac577dfe249e65c69baa1269584d0b071582a824` |
 | 当前清单关键计数 | M03 `117` 个场景；M07 `117` 行、`351` 条严格验收来源证据 |
 
-当前 SHA-256 对应 2026-08-23 本机 `Carla666-0916` 环境的一次通过运行。由于 `artifacts/` 不入 Git，正式申请前必须在最终冻结提交上重新运行并更新本表，不得把当前哈希当作最终版本哈希。
+当前 SHA-256 对应 2026-08-24 本机 `Carla666-0916` 环境的一次通过运行。由于 `artifacts/` 不入 Git，正式申请前必须在最终冻结提交上重新运行并更新本表，不得把当前哈希当作最终版本哈希。
 
 ## 重建命令
 

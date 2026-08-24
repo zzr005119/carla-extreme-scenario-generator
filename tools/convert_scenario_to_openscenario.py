@@ -97,7 +97,9 @@ def _vehicle(parent, name, blueprint):
     vehicle = ET.SubElement(
         parent,
         "Vehicle",
-        {"name": str(name), "vehicleCategory": "car"},
+        # ScenarioRunner uses Vehicle/@name as the CARLA blueprint. The
+        # ScenarioObject name remains the stable logical entity reference.
+        {"name": str(blueprint), "vehicleCategory": "car"},
     )
     _bounding_box(vehicle, 1.9, 4.5, 1.5)
     ET.SubElement(
@@ -113,7 +115,6 @@ def _vehicle(parent, name, blueprint):
             "maxSteering": "0.5",
             "wheelDiameter": "0.7",
             "trackWidth": "1.6",
-            "wheelbase": "2.7",
             "positionX": "1.35",
             "positionZ": "0.35",
         },
@@ -125,7 +126,6 @@ def _vehicle(parent, name, blueprint):
             "maxSteering": "0.0",
             "wheelDiameter": "0.7",
             "trackWidth": "1.6",
-            "wheelbase": "2.7",
             "positionX": "-1.35",
             "positionZ": "0.35",
         },
@@ -140,7 +140,7 @@ def _pedestrian(parent, name, blueprint):
         "Pedestrian",
         {
             "name": str(name),
-            "model3d": str(blueprint),
+            "model": str(blueprint),
             "mass": "75.0",
             "pedestrianCategory": "pedestrian",
         },
@@ -150,12 +150,21 @@ def _pedestrian(parent, name, blueprint):
     return pedestrian
 
 
-def _world_position(parent):
+def _world_position(parent, transform=None):
+    transform = transform or (0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+    x, y, z, h, p, r = transform
     position = ET.SubElement(parent, "Position")
     world = ET.SubElement(
         position,
         "WorldPosition",
-        {"x": "0", "y": "0", "z": "0", "h": "0", "p": "0", "r": "0"},
+        {
+            "x": _number(x),
+            "y": _number(y),
+            "z": _number(z),
+            "h": _number(h),
+            "p": _number(p),
+            "r": _number(r),
+        },
     )
     return world
 
@@ -213,13 +222,6 @@ def _speed_action(parent, target_speed):
     ET.SubElement(target, "AbsoluteTargetSpeed", {"value": _number(target_speed)})
 
 
-def _user_defined_action(parent, command, payload):
-    private_action = ET.SubElement(parent, "PrivateAction")
-    user_defined = ET.SubElement(private_action, "UserDefinedAction")
-    custom = ET.SubElement(user_defined, "CustomCommandAction", {"type": command})
-    custom.text = json.dumps(payload, ensure_ascii=False, sort_keys=True)
-
-
 def _add_parameter(parent, name, parameter_type, value):
     ET.SubElement(
         parent,
@@ -232,7 +234,7 @@ def _add_parameter(parent, name, parameter_type, value):
     )
 
 
-def build_openscenario_xml(record, mapping, base_config=None):
+def build_openscenario_xml(record, mapping, base_config=None, ego_world_position=None):
     names = mapping["openscenario"]["entity_names"]
     duration = float(record["scenario"]["duration_seconds"])
     base_config = base_config or {}
@@ -260,7 +262,8 @@ def build_openscenario_xml(record, mapping, base_config=None):
     )
     parameters = ET.SubElement(root, "ParameterDeclarations")
     _add_parameter(parameters, "carla_target_risk_level", "string", record["conditions"]["target_risk_level"])
-    _add_parameter(parameters, "carla_traffic_manager_seed", "int", record["scenario"]["traffic_manager_seed"])
+    # OpenSCENARIO 1.0 uses `integer` rather than Python/C-style `int`.
+    _add_parameter(parameters, "carla_traffic_manager_seed", "integer", record["scenario"]["traffic_manager_seed"])
     for field, value in record["weather"].items():
         _add_parameter(parameters, f"carla_weather_{field}", "double", _number(value))
     _add_parameter(parameters, "carla_lead_vehicle_brake_intensity", "double", _number(record["lead_vehicle"]["brake_intensity"]))
@@ -283,6 +286,9 @@ def build_openscenario_xml(record, mapping, base_config=None):
     entities = ET.SubElement(root, "Entities")
     ego = ET.SubElement(entities, "ScenarioObject", {"name": names["ego"]})
     ego_vehicle = _vehicle(ego, "ego_vehicle", ego_blueprint)
+    # ScenarioRunner identifies externally controlled ego actors by this
+    # OpenSCENARIO property; without it the actor is parsed as traffic.
+    _property(ego_vehicle, "type", "ego_vehicle")
     _property(ego_vehicle, "carla:position_semantics", "ego_spawn_index")
     _property(ego_vehicle, "carla:ego_spawn_index_source", "base_config.scenario.ego_spawn_index")
     if ego_spawn_index is not None:
@@ -299,7 +305,7 @@ def build_openscenario_xml(record, mapping, base_config=None):
     ego_private = ET.SubElement(actions, "Private", {"entityRef": names["ego"]})
     ego_action = ET.SubElement(ego_private, "PrivateAction")
     teleport = ET.SubElement(ego_action, "TeleportAction")
-    _world_position(teleport)
+    _world_position(teleport, ego_world_position)
 
     lead_private = ET.SubElement(actions, "Private", {"entityRef": names["lead"]})
     lead_action = ET.SubElement(lead_private, "PrivateAction")
@@ -344,15 +350,9 @@ def build_openscenario_xml(record, mapping, base_config=None):
     pedestrian_maneuver = ET.SubElement(pedestrian_group, "Maneuver", {"name": "pedestrian_crossing_maneuver"})
     pedestrian_event = ET.SubElement(pedestrian_maneuver, "Event", {"name": "pedestrian_crossing_event", "priority": "overwrite", "maximumExecutionCount": "1"})
     pedestrian_action = ET.SubElement(pedestrian_event, "Action", {"name": "pedestrian_crossing_action"})
-    _user_defined_action(
-        pedestrian_action,
-        "CARLA:pedestrian_crossing",
-        {
-            "forward_distance_m": record["pedestrian"]["forward_distance_m"],
-            "roadside_offset_m": record["pedestrian"]["roadside_offset_m"],
-            "speed_mps": record["pedestrian"]["speed_mps"],
-        },
-    )
+    # Use the standard OpenSCENARIO action so ScenarioRunner can execute the
+    # minimal crossing approximation without a CARLA-specific plugin.
+    _speed_action(pedestrian_action, record["pedestrian"]["speed_mps"])
     _simulation_time_trigger(pedestrian_event, "pedestrian_crossing_trigger", record["pedestrian"]["trigger_seconds"])
     _time_trigger(pedestrian_act, "StartTrigger", "pedestrian_act_start", 0.0)
     _time_trigger(pedestrian_act, "StopTrigger", "pedestrian_act_stop", duration)
@@ -413,9 +413,9 @@ def validate_carla_config_shape(config):
     return []
 
 
-def convert_record(record, mapping, base_config, base_config_path):
+def convert_record(record, mapping, base_config, base_config_path, ego_world_position=None):
     require_valid_scenario(record)
-    root = build_openscenario_xml(record, mapping, base_config)
+    root = build_openscenario_xml(record, mapping, base_config, ego_world_position)
     xosc_errors = validate_openscenario_tree(root, record, mapping)
     if xosc_errors:
         raise AdapterValidationError("\n".join(xosc_errors))
@@ -437,6 +437,7 @@ def convert_record(record, mapping, base_config, base_config_path):
         "source_provenance": record["provenance"],
         "source_sha256": _sha256_bytes(json.dumps(record, ensure_ascii=False, sort_keys=True).encode("utf-8")),
         "base_config_sha256": _sha256_file(base_config_path),
+        "ego_world_position": list(ego_world_position) if ego_world_position is not None else None,
     }
 
 
@@ -452,6 +453,13 @@ def parse_args():
     parser.add_argument("--output-dir", default=None, help="输出 xosc、CARLA JSON 和适配清单的目录")
     parser.add_argument("--mapping", default=DEFAULT_MAPPING_PATH)
     parser.add_argument("--base-config", default=None)
+    parser.add_argument(
+        "--ego-world-position",
+        nargs=6,
+        type=float,
+        metavar=("X", "Y", "Z", "H", "P", "R"),
+        help="CARLA 地图中的主车世界位姿；按 spawn index 查询后传入，单位米/度",
+    )
     parser.add_argument("--validate-only", action="store_true", help="只校验映射、输入记录、XOSC 结构和 CARLA 配置形状")
     return parser.parse_args()
 
@@ -463,7 +471,9 @@ def main():
     record = load_json(input_path)
     base_config_path = _absolute_project_path(args.base_config or mapping["carla"]["base_config_path"])
     base_config = load_json(base_config_path)
-    root, compiled, manifest = convert_record(record, mapping, base_config, base_config_path)
+    root, compiled, manifest = convert_record(
+        record, mapping, base_config, base_config_path, args.ego_world_position
+    )
     if args.validate_only:
         print(f"[VALID] {input_path} -> OpenSCENARIO 1.0 minimal subset")
         print(f"[VALID] CARLA config sections={len(compiled)} mapping={mapping_path}")

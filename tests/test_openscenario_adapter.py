@@ -57,10 +57,54 @@ class OpenScenarioAdapterTests(unittest.TestCase):
             .get("value"),
             "4.654",
         )
-        custom = root.find(".//CustomCommandAction")
-        self.assertEqual(custom.get("type"), "CARLA:pedestrian_crossing")
-        self.assertIn("speed_mps", custom.text)
+        pedestrian_action = root.find(
+            ".//Event[@name='pedestrian_crossing_event']/.//LongitudinalAction"
+        )
+        self.assertIsNotNone(pedestrian_action)
+        self.assertIsNone(root.find(".//CustomCommandAction"))
         self.assertIsNotNone(root.find(".//Property[@name='carla:blueprint']"))
+
+    def test_parameter_types_follow_openscenario_10(self):
+        root = build_openscenario_xml(self.record, self.mapping)
+        params = {
+            node.get("name"): node.get("parameterType")
+            for node in root.findall("./ParameterDeclarations/ParameterDeclaration")
+        }
+        self.assertEqual(params["carla_traffic_manager_seed"], "integer")
+        self.assertNotIn("int", params.values())
+
+    def test_axle_attributes_follow_openscenario_10(self):
+        root = build_openscenario_xml(self.record, self.mapping)
+        for axle in root.findall(".//Axles/*"):
+            self.assertNotIn("wheelbase", axle.attrib)
+
+    def test_pedestrian_attributes_follow_openscenario_10(self):
+        root = build_openscenario_xml(self.record, self.mapping)
+        pedestrian = root.find(".//Pedestrian")
+        self.assertIn("model", pedestrian.attrib)
+        self.assertNotIn("model3d", pedestrian.attrib)
+
+    def test_ego_actor_is_marked_for_scenario_runner(self):
+        root = build_openscenario_xml(self.record, self.mapping)
+        ego = root.find(".//ScenarioObject[@name='ego']")
+        properties = {
+            node.get("name"): node.get("value")
+            for node in ego.findall(".//Property")
+        }
+        self.assertEqual(properties["type"], "ego_vehicle")
+
+    def test_vehicle_names_are_carla_blueprints_and_position_can_be_bound(self):
+        root = build_openscenario_xml(
+            self.record,
+            self.mapping,
+            self.base_config,
+            (106.0288, 67.4200, 0.6, -89.6093, 0.0, 0.0),
+        )
+        self.assertEqual(root.find(".//ScenarioObject[@name='ego']/Vehicle").get("name"), "vehicle.tesla.model3")
+        self.assertEqual(root.find(".//ScenarioObject[@name='lead_vehicle']/Vehicle").get("name"), "vehicle.audi.a2")
+        world = root.findall(".//WorldPosition")[0]
+        self.assertEqual(world.get("x"), "106.0288")
+        self.assertEqual(world.get("h"), "-89.6093")
 
     def test_conversion_compiles_scene04_config(self):
         root, compiled, manifest = convert_record(

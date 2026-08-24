@@ -49,8 +49,21 @@ class RuntimeAdapterTests(unittest.TestCase):
             result = run(plan, output_path=temp_dir / "manifest.json", execute=False)
             self.assertEqual(result["status"], "dry_run")
             self.assertFalse(result["execution_started"])
+            self.assertIn("--trafficManagerPort", result["command"])
+            self.assertNotIn("--waitForEgo", result["command"])
             self.assertTrue((temp_dir / "manifest.json").is_file())
             self.assertEqual(json.loads((temp_dir / "manifest.json").read_text(encoding="utf-8"))["status"], "dry_run")
+
+    def test_scenario_runner_record_flag_has_directory_argument(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_dir = Path(temp_dir)
+            xosc = temp_dir / "sample.xosc"
+            xosc.write_text("<OpenSCENARIO><FileHeader/><Storyboard/></OpenSCENARIO>", encoding="utf-8")
+            runner = temp_dir / "scenario_runner.py"
+            runner.write_text("print('stub')\n", encoding="utf-8")
+            plan = preflight(temp_dir, xosc, record=True)
+            index = plan["command"].index("--record")
+            self.assertEqual(plan["command"][index + 1], "records")
 
     def test_online_rl_plan_exposes_missing_optional_dependencies(self):
         with tempfile.TemporaryDirectory() as output_dir:
