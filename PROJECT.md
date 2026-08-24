@@ -48,14 +48,14 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - **生成模型**：LHS 作为工程基线，条件 GMM 作为统计对照，表格 C-VAE 作为当前生成式 AI 主线；轻量条件表格 Diffusion 已完成小规模可比实验，不替换已验证基线。
 - **物理约束**：先实现可单元测试、可报告的参数级物理约束校验；PyBullet 可作为独立适配模块，不能在没有实测证据时写成已完成的可微训练系统。
 - **仿真与风险**：CARLA `0.9.16` + `Carla666-0916`，复用 OpenSCENARIO 1.0 最小交换适配和 `heuristic_v2` 风险代理；`target_risk_level` 仅是设计条件，`observed_risk` 才是实测结果。
-- **计算资源**：Web、文档、静态校验和离线分析默认使用 CPU；需要 GPU 的模型实验优先使用 GPU1，但先检查并避让现有 TensorRT 服务；GPU0 的 vLLM 不修改；本轮 Web MVP 不启动 CARLA、不启动在线训练。
+- **计算资源**：Web、文档、静态校验和离线分析默认使用 CPU；需要 GPU 的模型实验优先使用 GPU1，但先检查并避让现有 TensorRT 服务；GPU0 的 vLLM 不修改；多场景 RL 已完成 CPU 计划生成和 dry-run，真实训练仍须服务器显式启动 CARLA 后运行。
 
 ## 阶段推进清单
 > 待办区只保留尚未完成的事项。完成一项后，从本清单删除，并在“当前工作”或对应文档中保留一条证据索引；`⏸` 表示明确暂缓，不计入当前完成条件。
 
 1. ▶ **S5-WEB-03 Web 展示取证**：9 张 Web 功能截图已暂定归档到 `artifacts/stage5_web_screenshots_v1/` 并登记到软著台账；正式 V1.0 冻结后仍需复核截图与提交版本一致，并补采一键演示、CARLA 实机和 OpenSCENARIO 证据图。
 2. ⏸ **S5-SCALE-01 10,000 场景扩库**：降级为可扩展流水线设计和当前规模质量验证，不作为阶段五阻塞项。
-3. ▶ **S5-RL-01 CARLA 在线 RL**：已完成服务器 GPU1 上 PPO `2` 步真实 CARLA 在线链路冒烟，baseline/candidate 均严格验收通过；仍待多场景、多种子独立评估，不能写成 RL 泛化结论。证据见 `docs/carla_online_rl_smoke_v1.md`。
+3. ▶ **S5-RL-01 CARLA 在线 RL**：已完成服务器 GPU1 上 PPO `2` 步真实 CARLA 在线链路冒烟，并完成多场景固定划分、checkpoint/断点训练、独立 test 评估入口；当前只完成 CPU 计划与 dry-run，尚未启动 `10,000` 步真实训练，不能写成 RL 泛化结论。协议见 `docs/carla_online_rl_multiscene_v1.md`，冒烟证据见 `docs/carla_online_rl_smoke_v1.md`。
 4. ✅ **S5-XOSC-01 ScenarioRunner 单场景直执行与关联完整验收**：服务器 CARLA 0.9.16 + ScenarioRunner 0.9.16 已完成 `seed_v1_high_0165` 原生 XOSC 加载、Storyboard 运行和清理；同一输入的 Scene 04 旁路配置又通过 RGB/Depth/Semantic/Collision、waypoint 路线、服务健康、风险和清理统一门。纯 XOSC 无 criteria，不产生风险 JSON/JUnit，仍不宣称 XOSC 原生承载完整语义；证据见 `docs/scenario_runner_direct_execution_v1.md` 和 `docs/scenario_runner_full_acceptance_v1.md`。
 5. ▶ **S5-PYBULLET-01 可微闭环**：`core/differentiable_closed_loop.py` 已完成 Torch 可微运动学；服务器 `Carla666-0916` 已安装 PyBullet 3.2.7，`tests.test_runtime_adapters` 的梯度和 DIRECT 离散校验 `4/4` 通过。真实 PyBullet 可微物理仍不宣称完成，边界见 `docs/differentiable_closed_loop_v1.md`。
 6. ⏸ **S5-ABL-01 完整消融实验与结题报告**：放在 Web、在线 RL、ScenarioRunner 和可微闭环证据收口后统一设计、执行和写作。
@@ -102,6 +102,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - 阶段五 M08 一键最小演示链路 V1 已建立：`tools/stage5_demo.cmd` 优先使用 `Carla666-0916` 环境，默认离线串联 M01 场景记录、M02 校验/编译、M03 场景库查询、M04 OpenSCENARIO 静态适配、M05 历史风险证据、M06 复现清单和 M07 Dashboard 数据校验，输出统一 `demo_manifest.json`；默认 `carla_connected=false`，不隐式启动 CARLA。接口清单见 `docs/stage5_minimal_demo_and_interface_catalog_v1.md`。
 - 阶段四综合质量门与实验结论已收口：硬运行门通过，工程接口门按证据等级归档，SAC/rule-guided LHS 泛化、风险代理升级和 CARLA 在线训练仍明确为未证明；ScenarioRunner 已完成一条最小 XOSC 实机直执行，但完整多传感器/风险语义仍后置。报告见 `docs/stage4_quality_gate_and_experiment_closure_v1.md`。
 - 当前进入阶段五，优先整合“生成、校验、场景库、仿真、风险分析、实验编排、Web Dashboard”的冻结入口，并准备软著、论文和结题材料；不继续无目标扩展阶段四 CARLA 实验。
+- 多场景 RL 泛化准备 V1 已完成：`core/carla_rl_plan.py` 和 `tools/prepare_carla_rl_multiscene_plan.py` 将场景库固定为 `train/dev/test=66/27/24`，按 12 个生成器×风险分层分配，并检查 canonical ID/scenario hash 泄漏；`tools/train_carla_rl.py` 保留单记录冒烟兼容，同时支持 SAC/PPO、多场景 sampler、`1,000` 步 checkpoint、`.zip` resume、run/checkpoint manifest；`tools/evaluate_carla_rl_multiscene.py` 只读取冻结 test split。服务器一键入口为 `tools/server_jobs/carla_rl_multiscene_v1.sh`。当前 dry-run 计划为 SAC `10,000` 步、约 `10,625` 次 CARLA 执行预算；未启动长时训练，未产生新的 CARLA 结论。说明见 `docs/carla_online_rl_multiscene_v1.md`。
 - Web 产品化首期 P0 已完成：统一入口 `tools/web_app.py`/`tools/web_app.cmd` 复用场景库 API，提供 Dashboard、场景列表、详情、受控查询、健康检查，以及生成/校验/风险分析三条可操作表单流程；提交后由 CPU worker 执行，页面轮询任务状态并展示成功产物、结构化失败和取消结果。已修复任务页内联 JavaScript 转义错误，并用 Edge 无界面浏览器确认 `/api/tasks` 结果可实际渲染到任务表；任务结果列已固定宽度并单行省略，完整内容通过悬浮提示查看。校验支持 JSON/JSONL、物理约束和可选 CARLA 配置编译；CARLA 任务显式确认或取消后仍转交外部入口，不由 Web 启动。全量回归为 `126 passed / 1 skipped`，真实 HTTP 冒烟覆盖页面 `200`、三类任务完成、CARLA 取消和 `carla_connected=false`。说明见 `docs/stage5_web_product_flow_v2.md`。
 - 后置能力入口已建立并分级：`tools/train_carla_rl.py` 仍是 Gymnasium/SB3 依赖预检与显式在线训练门；`tools/run_scenario_runner.py` 已支持 TM 端口、同步、地图和 ego 等参数，并完成一条真实单场景直执行；`core/differentiable_closed_loop.py` 提供 Torch 可微运动学及可选 PyBullet 离散校验。缺少可选依赖或 CARLA 服务时，入口明确返回阻塞/预检状态。
 - `S5-CORE-01` 参数级物理约束 V1 已完成：`core/physical_constraints.py` 和 `tools/check_physical_constraints.py` 提供有限值、时间窗口、行人横穿完成时间和运动学边界检查，并输出带字段路径/错误代码/指标的 `physical_constraint_report_v1`；本机和服务器 `Carla666-0916` 均完成种子数据集 `256/256` 条硬约束通过、`0` 条非法。该结果是 CPU 静态参数验证，不产生新的 CARLA 风险结果；说明见 `docs/physical_constraints_v1.md`。

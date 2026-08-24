@@ -1,0 +1,89 @@
+# CARLA 在线 RL 多场景泛化准备 V1
+
+## 🧭 目标与边界
+
+本准备链路把在线 RL 从“单条记录冒烟”提升为可复现的多场景实验协议：先冻结场景划分，再让训练只读取 `train`，模型选择使用 `dev`，最后只在独立 `test` 上做一次结果验收。生成计划、训练和评估均显式记录 CARLA `0.9.16`、算法、随机种子、计划哈希和 checkpoint。
+
+这不是训练完成证明。代理训练、静态校验和 dry-run 不能替代真实 CARLA；只有服务器上的真实运行结果才能支持风险、碰撞、传感器和路线结论。
+
+```mermaid
+flowchart LR
+    accTitle: Multi-Scene RL Evidence Flow
+    accDescr: The plan freezes stratified scenes before training. Training uses only the train split, development is reserved for selection, and the held-out test split is evaluated once after training.
+    library["117 场景库"] --> plan["固定计划\n12 个分层\ncanonical 去重"]
+    plan --> train["train 66\nSAC checkpoint chunks"]
+    plan --> dev["dev 27\n只做模型选择"]
+    plan --> test["test 24\n训练结束后独立评估"]
+    train --> checkpoint["每 1000 步\n可恢复 checkpoint"]
+    checkpoint --> result["CARLA 严格验收\n风险/碰撞/路线/传感器"]
+    test --> result
+```
+
+## 📐 固定计划
+
+当前本地生成的计划使用 `seed=20260824`，来源为场景库 `117` 条独立记录：
+
+| split | 条数 | 用途 |
+|---|---:|---|
+| train | 66 | 允许产生梯度更新和训练 reward |
+| dev | 27 | 仅用于选择 checkpoint 或超参数，不参与最终报告样本 |
+| test | 24 | 训练结束后才打开，作为独立泛化评估 |
+
+12 个 `generator × target_risk_level` 分层均有三份 split。`canonical_sample_id` 和 `scenario_hash` 均做跨 split 泄漏检查；计划文件自身带 `plan_sha256`，内容被修改后训练入口会拒绝执行。
+
+生成入口：
+
+```bash
+python tools/prepare_carla_rl_multiscene_plan.py \
+  --output /path/to/carla_rl_multiscene_plan_v1.json \
+  --seed 20260824
+```
+
+## 🧪 训练协议
+
+主线选择 **SAC**，因为当前动作空间是连续有界 Box；PPO 作为同预算对照，而不是默认主线。第一阶段不把 frozen proxy 结果写成 CARLA 策略效果。
+
+推荐顺序：
+
+1. 先运行 `256` 步 SAC canary，确认 Gymnasium、SB3、CARLA、端口、GPU1 和输出清理都正常。
+2. canary 通过后运行 `10,000` 步 SAC，按 `10 × 1,000` 步保存 checkpoint。
+3. 断线或服务器重启时，从最后一个 `.zip` checkpoint 执行 `resume`，已经完成的 chunk 不重算。
+4. 训练完成后才运行独立 `test` 评估；`dev` 只在需要选择 checkpoint 时使用。
+
+10,000 步按环境最多 16 个候选动作估算为约 `10,625` 次 CARLA 场景执行（每个 episode 另有一次 baseline）；按既有约 `29 秒/次` 的服务器观测，基础运行约 `86 小时`，实际应按 `4 天左右` 预留，并考虑失败重试、启动清理和服务器维护。该估算是单算法、单种子，不是已完成的运行结果。
+
+## 🖥️ 服务器一键入口
+
+服务器脚本：`tools/server_jobs/carla_rl_multiscene_v1.sh`。它只使用服务器 `Carla666-0916` 和 GPU1，不触碰 GPU0 的 vLLM，也不会杀掉不属于本任务的 CARLA/TensorRT 进程。CARLA 由服务器操作者显式启动并保持 RPC `2000` 可用。Windows 工作区的完整训练入口是 `tools/server_carla_rl_multiscene_v1.cmd`，它通过现有 `server_run.ps1` 放入服务器 tmux 并申请 CARLA/GPU1 资源锁。
+
+```bash
+bash tools/server_jobs/carla_rl_multiscene_v1.sh prepare
+bash tools/server_jobs/carla_rl_multiscene_v1.sh canary
+bash tools/server_jobs/carla_rl_multiscene_v1.sh train
+bash tools/server_jobs/carla_rl_multiscene_v1.sh resume /path/to/sac_seed_20260824_steps_0001000.zip
+bash tools/server_jobs/carla_rl_multiscene_v1.sh evaluate /path/to/sac_seed_20260824_final.zip
+```
+
+训练目录会包含：
+
+| 文件 | 作用 |
+|---|---|
+| `run_manifest.json` | 算法、种子、计划哈希、CARLA 版本、运行状态 |
+| `checkpoint_manifest.json` | 每个 chunk 的步数、checkpoint 路径和存在性 |
+| `models/*.zip` | 可恢复 checkpoint；不提交 Git |
+| `rl_training_summary.json` | 完成步数、采样覆盖和证据等级 |
+| `test_evaluation_summary.json` | 独立 test 运行的逐场景摘要 |
+
+原始传感器帧和模型权重只保留在服务器输出目录，结果回收时优先回收 JSON/CSV/Markdown 汇总，不在本机长期保存安装包或原始大文件。
+
+## 🚦 质量门
+
+训练任务只有在以下条件全部满足后才进入独立评估：
+
+- 计划哈希校验通过，train/dev/test 无 canonical ID 或场景哈希重叠；
+- 服务器 Python、CARLA 客户端/服务端均为 `0.9.16`；
+- 所有 checkpoint 的 `exists=true`，最终 `trained_num_timesteps=10000`；
+- 每个实际 CARLA 运行的传感器、服务健康、路线和 `heuristic_v2` 元数据可回溯；
+- 训练失败时保留 `run_manifest.json` 的失败状态，不自动把失败结果拼接进后续统计。
+
+即使质量门通过，也只能说明该固定场景集合上的可复现运行和独立比较；不能直接宣称 SAC 普遍优于 PPO、风险代理等价于实测风险，或跨地图泛化已经完成。
