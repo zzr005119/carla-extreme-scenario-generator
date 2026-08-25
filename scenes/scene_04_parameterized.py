@@ -1367,6 +1367,7 @@ def main():
         pedestrian_started = False
         pedestrian_finished = False
         brake_started = False
+        lead_brake_steer = None
         minimum_lead_distance = float("inf")
         minimum_lead_gap_m = float("inf")
 
@@ -1485,6 +1486,12 @@ def main():
                     )
                 )
                 if brake_started:
+                    if lead_brake_steer is None:
+                        lead_brake_steer = lead_applied_control.steer
+                    # Once the scripted brake starts, hold the steering that
+                    # was valid on the current lane instead of steering toward
+                    # a lookahead waypoint while the vehicle is stopped.
+                    lead_applied_control.steer = lead_brake_steer
                     apply_brake_override(lead_applied_control, brake_intensity)
 
                 ego_applied_control, ego_control_state = ego_route_follower.run_step()
