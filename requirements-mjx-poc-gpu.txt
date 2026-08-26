@@ -1,0 +1,3 @@
+# Optional P4.1 server GPU1 environment; keep separate from the CPU evidence env.
+jax[cuda13]==0.11.1
+mujoco-mjx==3.12.0
