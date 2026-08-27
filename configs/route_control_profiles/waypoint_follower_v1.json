@@ -17,7 +17,10 @@
     "route_length_m": 300.0,
     "route_step_m": 2.0,
     "route_deviation_tolerance_m": 3.0,
-    "auto_lane_change_enabled": false
+    "auto_lane_change_enabled": false,
+    "lead_stop_lock_enabled": true,
+    "lead_stop_lock_speed_kmh": 1.0,
+    "lead_stop_lock_confirm_steps": 3
   },
   "controller": {
     "target_speed_kmh": 29.0,

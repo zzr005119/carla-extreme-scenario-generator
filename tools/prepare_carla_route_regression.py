@@ -145,6 +145,15 @@ def apply_regression_profile(config, profile):
             "route_deviation_tolerance_m": float(
                 route["route_deviation_tolerance_m"]
             ),
+            "lead_stop_lock_enabled": bool(
+                route.get("lead_stop_lock_enabled", True)
+            ),
+            "lead_stop_lock_speed_kmh": float(
+                route.get("lead_stop_lock_speed_kmh", 1.0)
+            ),
+            "lead_stop_lock_confirm_steps": int(
+                route.get("lead_stop_lock_confirm_steps", 3)
+            ),
             "route_controller": copy.deepcopy(profile["controller"]),
         }
     )

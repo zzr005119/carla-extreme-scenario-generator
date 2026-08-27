@@ -31,6 +31,7 @@ from core.route_follower import (  # noqa: E402
     apply_brake_override,
 )
 from core.sensor_pipeline import SensorWritePipeline  # noqa: E402
+from core.stop_lock import advance_stop_lock  # noqa: E402
 
 
 DEFAULT_CONFIG = os.path.join(
@@ -151,6 +152,19 @@ def validate_config(config):
     ignore_lights = float(config["traffic"]["ignore_lights_percentage"])
     if not 0 <= ignore_lights <= 100:
         raise ValueError("traffic.ignore_lights_percentage 必须位于 0 到 100")
+    stop_lock_enabled = bool(config["traffic"].get("lead_stop_lock_enabled", True))
+    stop_lock_speed_kmh = float(
+        config["traffic"].get("lead_stop_lock_speed_kmh", 1.0)
+    )
+    stop_lock_confirm_steps = int(
+        config["traffic"].get("lead_stop_lock_confirm_steps", 3)
+    )
+    if stop_lock_enabled and (
+        not math.isfinite(stop_lock_speed_kmh) or stop_lock_speed_kmh <= 0
+    ):
+        raise ValueError("traffic.lead_stop_lock_speed_kmh 必须是正数")
+    if stop_lock_enabled and stop_lock_confirm_steps < 1:
+        raise ValueError("traffic.lead_stop_lock_confirm_steps 必须大于 0")
     route_lock_enabled = bool(config["traffic"].get("route_lock_enabled", False))
     if route_lock_enabled:
         route_control_mode = config["traffic"].get(
@@ -504,6 +518,15 @@ def deterministic_ego_brake(
     return brake, "+".join(reasons) if reasons else None
 
 
+def apply_stop_lock(control):
+    """Make a stopped lead vehicle insensitive to residual controller impulses."""
+    control.throttle = 0.0
+    control.brake = 1.0
+    control.steer = 0.0
+    control.hand_brake = True
+    return control
+
+
 def create_route_follower(
     vehicle,
     route_waypoints,
@@ -743,6 +766,15 @@ def main():
     route_tolerance_m = float(
         traffic_config.get("route_deviation_tolerance_m", 3.0)
     )
+    lead_stop_lock_enabled = bool(
+        traffic_config.get("lead_stop_lock_enabled", True)
+    )
+    lead_stop_lock_speed_kmh = float(
+        traffic_config.get("lead_stop_lock_speed_kmh", 1.0)
+    )
+    lead_stop_lock_confirm_steps = int(
+        traffic_config.get("lead_stop_lock_confirm_steps", 3)
+    )
     sensor_config = config["sensors"]
     camera_config = sensor_config["camera"]
     enabled_camera_names = [
@@ -790,10 +822,19 @@ def main():
         "collision_sensor": {
             "enabled": bool(sensor_config["collision"].get("enabled", False)),
             "sensor_type": "sensor.other.collision",
+            "attached_actors": (
+                ["ego_vehicle", "lead_vehicle"]
+                if sensor_config["collision"].get("enabled", False)
+                else []
+            ),
             "status": "disabled"
             if not sensor_config["collision"].get("enabled", False)
             else "pending",
             "event_count": 0,
+            "actor_callback_counts": {
+                "ego_vehicle": 0,
+                "lead_vehicle": 0,
+            },
             "complete": False,
         },
         "server_health": {"status": "not_checked"},
@@ -814,10 +855,24 @@ def main():
             "both_on_route_samples": 0,
             "maximum_ego_deviation_m": None,
             "maximum_lead_deviation_m": None,
+            "lead_stop_lock": {
+                "enabled": lead_stop_lock_enabled,
+                "speed_threshold_kmh": lead_stop_lock_speed_kmh,
+                "confirmation_steps": lead_stop_lock_confirm_steps,
+                "active": False,
+                "below_threshold_steps": 0,
+                "activated_elapsed_seconds": None,
+                "mode": None,
+            },
         },
         "result": {
             "status": "starting",
             "collision_count": 0,
+            "collision_counts": {
+                "ego_vehicle": 0,
+                "lead_vehicle": 0,
+            },
+            "first_collision_elapsed_seconds": None,
             "minimum_lead_distance_m": None,
             "minimum_lead_gap_m": None,
             "minimum_ttc_seconds": None,
@@ -854,6 +909,10 @@ def main():
     ego_hazard_brake_reason = None
     callback_condition = threading.Condition()
     active_sensor_callbacks = 0
+    lead_stop_locked = False
+    lead_stop_below_threshold_steps = 0
+    collision_seen_keys = set()
+    collision_actor_seen_keys = set()
 
     def record_event(event_type, elapsed_seconds, **details):
         event = {
@@ -954,6 +1013,18 @@ def main():
         collision_state["event_count"] = int(
             metadata["result"].get("collision_count", 0)
         )
+        collision_state["deduplicated_event_count"] = collision_state[
+            "event_count"
+        ]
+        collision_state["actor_callback_counts"] = dict(
+            collision_state.get("actor_callback_counts") or {}
+        )
+        metadata["result"]["collision_counts"] = {
+            actor_name: int(count)
+            for actor_name, count in (
+                metadata["result"].get("collision_counts") or {}
+            ).items()
+        }
         if collision_state["enabled"] and cleanup_status == "completed":
             collision_state["status"] = "completed"
             collision_state["complete"] = True
@@ -1243,19 +1314,21 @@ def main():
 
         if sensor_config["collision"]["enabled"]:
             collision_blueprint = blueprint_library.find("sensor.other.collision")
-            collision_sensor = world.spawn_actor(
-                collision_blueprint,
-                carla.Transform(),
-                attach_to=ego_vehicle,
+            collision_sensor_specs = (
+                ("ego_vehicle", ego_vehicle),
+                ("lead_vehicle", lead_vehicle),
             )
-            actors.append(collision_sensor)
-            sensor_actors.append(collision_sensor)
             with metadata_lock:
                 metadata["collision_sensor"].update(
-                    {"status": "active", "complete": False}
+                    {
+                        "status": "active",
+                        "complete": False,
+                        "sensor_actor_ids": {},
+                        "deduplication_key": "(frame, sorted_actor_pair)",
+                    }
                 )
 
-            def on_collision(event):
+            def collision_callback(actor_name, attached_actor, event):
                 impulse = event.normal_impulse
                 intensity = math.sqrt(
                     impulse.x ** 2 + impulse.y ** 2 + impulse.z ** 2
@@ -1267,19 +1340,72 @@ def main():
                     if start_time
                     else 0.0
                 )
+                other_actor = getattr(event, "other_actor", None)
+                other_actor_id = int(getattr(other_actor, "id", 0) or 0)
+                other_actor_type = getattr(other_actor, "type_id", "unknown")
+                frame = int(getattr(event, "frame", 0) or 0)
+                actor_pair = tuple(sorted((int(attached_actor.id), other_actor_id)))
+                deduplication_key = (frame, actor_pair)
                 with metadata_lock:
-                    metadata["result"]["collision_count"] += 1
-                    metadata["collision_sensor"]["event_count"] += 1
+                    collision_state = metadata["collision_sensor"]
+                    callback_counts = collision_state["actor_callback_counts"]
+                    callback_counts[actor_name] = int(
+                        callback_counts.get(actor_name, 0)
+                    ) + 1
+                    result = metadata["result"]
+                    collision_counts = result["collision_counts"]
+                    actor_event_key = (deduplication_key, actor_name)
+                    if actor_event_key not in collision_actor_seen_keys:
+                        collision_actor_seen_keys.add(actor_event_key)
+                        collision_counts[actor_name] = int(
+                            collision_counts.get(actor_name, 0)
+                        ) + 1
+                    if deduplication_key in collision_seen_keys:
+                        return
+                    collision_seen_keys.add(deduplication_key)
+                    result["collision_count"] += 1
+                    first_collision = result["first_collision_elapsed_seconds"]
+                    if first_collision is None or float(elapsed) < float(
+                        first_collision
+                    ):
+                        result["first_collision_elapsed_seconds"] = round(
+                            float(elapsed),
+                            3,
+                        )
+                    collision_state["event_count"] = result["collision_count"]
                 record_event(
                     "collision",
                     elapsed,
-                    frame=event.frame,
-                    other_actor=event.other_actor.type_id,
+                    actor=actor_name,
+                    frame=frame,
+                    actor_pair=list(actor_pair),
+                    other_actor=other_actor_type,
+                    other_actor_id=other_actor_id,
                     impulse=round(intensity, 3),
                 )
                 collision_detected.set()
 
-            collision_sensor.listen(guarded_callback(on_collision))
+            for actor_name, attached_actor in collision_sensor_specs:
+                collision_sensor = world.spawn_actor(
+                    collision_blueprint,
+                    carla.Transform(),
+                    attach_to=attached_actor,
+                )
+                actors.append(collision_sensor)
+                sensor_actors.append(collision_sensor)
+                with metadata_lock:
+                    metadata["collision_sensor"]["sensor_actor_ids"][actor_name] = int(
+                        collision_sensor.id
+                    )
+                collision_sensor.listen(
+                    guarded_callback(
+                        lambda event, name=actor_name, vehicle=attached_actor: collision_callback(
+                            name,
+                            vehicle,
+                            event,
+                        )
+                    )
+                )
 
         if route_lock_enabled and route_control_mode == "waypoint_follower":
             ego_vehicle.set_autopilot(False, tm_port)
@@ -1438,14 +1564,68 @@ def main():
                 record_event("lead_vehicle_brake", elapsed, intensity=brake_intensity)
                 print(f"[EVENT {elapsed:5.2f}s] 前车开始急刹")
 
-            if brake_started and route_control_mode != "waypoint_follower":
-                lead_vehicle.apply_control(
-                    carla.VehicleControl(
-                        throttle=0.0,
-                        brake=brake_intensity,
-                        hand_brake=False,
-                    )
+            lead_velocity_before_control = lead_vehicle.get_velocity()
+            lead_speed_before_control = vehicle_speed_kmh(
+                lead_velocity_before_control
+            )
+            just_locked = False
+            if brake_started and lead_stop_lock_enabled:
+                lock_transition = advance_stop_lock(
+                    braking=True,
+                    speed_kmh=lead_speed_before_control,
+                    locked=lead_stop_locked,
+                    below_threshold_steps=lead_stop_below_threshold_steps,
+                    speed_threshold_kmh=lead_stop_lock_speed_kmh,
+                    confirmation_steps=lead_stop_lock_confirm_steps,
                 )
+                lead_stop_locked = bool(lock_transition["locked"])
+                lead_stop_below_threshold_steps = int(
+                    lock_transition["below_threshold_steps"]
+                )
+                just_locked = bool(lock_transition["just_locked"])
+            elif not brake_started:
+                lead_stop_locked = False
+                lead_stop_below_threshold_steps = 0
+
+            with metadata_lock:
+                stop_lock_metadata = metadata["route_control"]["lead_stop_lock"]
+                stop_lock_metadata.update(
+                    {
+                        "active": lead_stop_locked,
+                        "below_threshold_steps": lead_stop_below_threshold_steps,
+                        "mode": (
+                            "hand_brake"
+                            if lead_stop_locked
+                            else "brake_control"
+                            if brake_started
+                            else None
+                        ),
+                    }
+                )
+                if just_locked:
+                    stop_lock_metadata["activated_elapsed_seconds"] = round(
+                        float(elapsed),
+                        3,
+                    )
+
+            if just_locked:
+                record_event(
+                    "lead_vehicle_stop_locked",
+                    elapsed,
+                    speed_kmh=round(lead_speed_before_control, 3),
+                    confirmation_steps=lead_stop_lock_confirm_steps,
+                )
+                print(f"[EVENT {elapsed:5.2f}s] 前车已驻车锁定", flush=True)
+
+            if brake_started and route_control_mode != "waypoint_follower":
+                lead_control = carla.VehicleControl(
+                    throttle=0.0,
+                    brake=brake_intensity,
+                    hand_brake=False,
+                )
+                if lead_stop_locked:
+                    apply_stop_lock(lead_control)
+                lead_vehicle.apply_control(lead_control)
 
             ego_location = ego_vehicle.get_location()
             lead_location = lead_vehicle.get_location()
@@ -1492,6 +1672,8 @@ def main():
                         min(0.25, float(lead_applied_control.steer)),
                     )
                     apply_brake_override(lead_applied_control, brake_intensity)
+                    if lead_stop_locked:
+                        apply_stop_lock(lead_applied_control)
 
                 ego_applied_control, ego_control_state = ego_route_follower.run_step()
                 hazard_brake, hazard_reason = deterministic_ego_brake(
@@ -1591,6 +1773,8 @@ def main():
                     "lead_control_throttle": round(lead_applied_control.throttle, 4),
                     "lead_control_brake": round(lead_applied_control.brake, 4),
                     "lead_control_steer": round(lead_applied_control.steer, 4),
+                    "lead_stop_lock_active": lead_stop_locked,
+                    "lead_stop_lock_below_threshold_steps": lead_stop_below_threshold_steps,
                     "ego_road_id": ego_route_state["road_id"],
                     "ego_lane_id": ego_route_state["lane_id"],
                     "ego_planned_road_id": ego_route_state["planned_road_id"],

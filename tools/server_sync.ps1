@@ -14,17 +14,35 @@ $branch = [string]$config.git.branch
 $bareRepository = [string]$config.git.bare_repository
 $projectDirectory = [string]$config.git.project_directory
 $remoteUrl = "{0}:{1}" -f $context.Target, $bareRepository
+$knownUserChange = "data/scenarios/seed_v1/example_record.json"
 
 Push-Location $context.ProjectRoot
 try {
     $status = Get-LocalGitValue -Arguments @("status", "--porcelain")
     if ($status) {
-        if ($DryRun) {
-            Write-Warning "Local repository is dirty; a real sync would stop until changes are committed."
-            Write-Host $status
+        $statusLines = @(
+            $status -split "`n" | Where-Object { $_.Trim() }
+        )
+        $dirtyPaths = @(
+            $statusLines | ForEach-Object {
+                if ($_.Length -ge 3) { $_.Substring(3).Trim() }
+                else { $_.Trim() }
+            }
+        )
+        $onlyKnownUserChange = (
+            $dirtyPaths.Count -eq 1 -and $dirtyPaths[0] -eq $knownUserChange
+        )
+        if (-not $onlyKnownUserChange) {
+            if ($DryRun) {
+                Write-Warning "Local repository has changes outside the permitted user-owned file; a real sync would stop."
+                Write-Host $status
+            }
+            else {
+                throw "Local repository is dirty outside the permitted user-owned file '$knownUserChange'. Commit or discard other changes before syncing.`n$status"
+            }
         }
         else {
-            throw "Local repository is dirty. Commit or discard changes before syncing.`n$status"
+            Write-Warning "Leaving known user-owned change out of deployment: $knownUserChange"
         }
     }
 

@@ -22,7 +22,10 @@
   "traffic": {
     "force_green_lights": true,
     "ignore_lights_percentage": 100.0,
-    "leading_distance_m": 2.5
+    "leading_distance_m": 2.5,
+    "lead_stop_lock_enabled": true,
+    "lead_stop_lock_speed_kmh": 1.0,
+    "lead_stop_lock_confirm_steps": 3
   },
   "ego_vehicle": {
     "blueprint": "vehicle.tesla.model3"

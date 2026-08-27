@@ -23,6 +23,8 @@ TELEMETRY_FIELDS = [
     "lead_control_throttle",
     "lead_control_brake",
     "lead_control_steer",
+    "lead_stop_lock_active",
+    "lead_stop_lock_below_threshold_steps",
     "ego_road_id",
     "ego_lane_id",
     "ego_planned_road_id",
