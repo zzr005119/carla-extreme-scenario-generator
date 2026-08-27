@@ -96,6 +96,7 @@ def run_record(record_path, output_root, name, traffic_manager_port, timeout):
             "target_risk_level": record["conditions"]["target_risk_level"],
             "traffic_manager_seed": record["scenario"]["traffic_manager_seed"],
             "repeat_round": 1,
+            "source": "carla_record_recheck_v1",
             "expected_run_root": str(run_root),
         },
         route_lock_required=True,
