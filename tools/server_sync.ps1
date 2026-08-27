@@ -25,8 +25,7 @@ try {
         )
         $dirtyPaths = @(
             $statusLines | ForEach-Object {
-                if ($_.Length -ge 3) { $_.Substring(3).Trim() }
-                else { $_.Trim() }
+                ($_ -replace "^[ MADRCU?!]{1,2}\s+", "").Trim()
             }
         )
         $onlyKnownUserChange = (
