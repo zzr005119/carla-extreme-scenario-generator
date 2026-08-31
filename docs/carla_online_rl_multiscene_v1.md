@@ -79,6 +79,8 @@ python -u tools/check_carla_rl_training.py \
 
 按 episode 审计只改变统计范围，不删除、修改或重新解释历史 `execution_result.json`；只有当前 episode 门通过后，才可进入 dev/test 评估。
 
+本项目 `2026-08-31` 的主训练证据如下：从 `2,000` 步 checkpoint 恢复后，`trained_num_timesteps=10000`，10 个 checkpoint 和最终模型均存在。输出目录的全量历史审计为 `14/15`，其中 `11` 条失败记录全部来自恢复前 episode；本次恢复 episode 的 `8,477/8,477` 条运行严格通过，按 episode 质量门为 `16/16`。全量门和当前 episode 门均保留，历史记录未被删除或覆盖。
+
 训练目录会包含：
 
 | 文件 | 作用 |
