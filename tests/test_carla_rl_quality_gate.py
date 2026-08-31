@@ -70,6 +70,38 @@ class CarlaRLQualityGateTests(unittest.TestCase):
             self.assertEqual(result["status"], "failed")
             self.assertIn("all_executions_strict", result["failed_checks"])
 
+    def test_episode_scope_excludes_historical_failure(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self._make_completed_run(root)
+            current_path = next(root.glob("episodes/**/execution_result.json"))
+            payload = json.loads(current_path.read_text(encoding="utf-8"))
+            payload["result"]["strict_acceptance_passed"] = False
+            self._write(
+                root
+                / "episodes"
+                / "historical"
+                / "steps"
+                / "00_baseline"
+                / "execution_result.json",
+                payload,
+            )
+
+            aggregate = audit_training(root, 256, "SAC")
+            self.assertEqual(aggregate["status"], "failed")
+            scoped = audit_training(root, 256, "SAC", "episode")
+            self.assertEqual(scoped["status"], "passed")
+            self.assertEqual(scoped["audit_scope"]["mode"], "episode")
+            self.assertEqual(scoped["audit_scope"]["episode_id"], "episode")
+            self.assertEqual(scoped["execution_result_count"], 1)
+
+    def test_episode_id_rejects_path_traversal(self):
+        with tempfile.TemporaryDirectory() as temp:
+            for episode_id in ("../episode", ".."):
+                with self.subTest(episode_id=episode_id):
+                    with self.assertRaises(ValueError):
+                        audit_training(Path(temp), 256, "SAC", episode_id)
+
 
 if __name__ == "__main__":
     unittest.main()

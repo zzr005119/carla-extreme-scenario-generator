@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import re
 
 
 def _load_json(path):
@@ -14,8 +15,36 @@ def _load_json(path):
         raise RuntimeError(f"无法读取 JSON: {path}") from exc
 
 
-def audit_training(output_root, expected_steps, expected_algorithm="SAC"):
+_EPISODE_ID_RE = re.compile(r"^[A-Za-z0-9._-]+$")
+
+
+def _validate_episode_id(episode_id):
+    if episode_id is None:
+        return None
+    episode_id = str(episode_id).strip()
+    if (
+        episode_id in {".", ".."}
+        or not episode_id
+        or not _EPISODE_ID_RE.fullmatch(episode_id)
+    ):
+        raise ValueError(
+            "episode_id 只能包含 ASCII 字母、数字、点、下划线和短横线"
+        )
+    return episode_id
+
+
+def audit_training(
+    output_root,
+    expected_steps,
+    expected_algorithm="SAC",
+    episode_id=None,
+):
     root = Path(output_root).expanduser().resolve()
+    episode_id = _validate_episode_id(episode_id)
+    audit_scope = {
+        "mode": "episode" if episode_id else "all_episodes",
+        "episode_id": episode_id,
+    }
     checks = []
 
     def check(name, passed, actual=None, expected=None):
@@ -40,7 +69,9 @@ def audit_training(output_root, expected_steps, expected_algorithm="SAC"):
         True,
     )
     if not all(item["passed"] for item in checks):
-        return _result(root, expected_steps, expected_algorithm, checks, [])
+        return _result(
+            root, expected_steps, expected_algorithm, checks, [], audit_scope
+        )
 
     summary = _load_json(summary_path)
     run_manifest = _load_json(run_manifest_path)
@@ -83,14 +114,35 @@ def audit_training(output_root, expected_steps, expected_algorithm="SAC"):
         int(expected_steps),
     )
 
+    execution_root = root / "episodes"
+    if episode_id:
+        scoped_root = execution_root / episode_id
+        check("episode_scope_exists", scoped_root.is_dir(), str(scoped_root), True)
+        execution_paths = (
+            sorted(scoped_root.rglob("execution_result.json"))
+            if scoped_root.is_dir()
+            else []
+        )
+        audit_scope["execution_root"] = str(scoped_root)
+    else:
+        execution_paths = sorted(execution_root.rglob("execution_result.json"))
+        audit_scope["execution_root"] = str(execution_root)
+
     execution_rows = []
-    for path in sorted(root.glob("episodes/**/execution_result.json")):
+    for path in execution_paths:
         payload = _load_json(path)
         result = payload.get("result") if isinstance(payload.get("result"), dict) else payload
         acceptance = payload.get("acceptance") or {}
+        relative_parts = path.relative_to(root).parts
+        row_episode_id = (
+            relative_parts[1]
+            if len(relative_parts) > 2 and relative_parts[0] == "episodes"
+            else None
+        )
         execution_rows.append(
             {
                 "path": str(path),
+                "episode_id": row_episode_id,
                 "status": result.get("status"),
                 "run_valid": result.get("run_valid"),
                 "strict_acceptance_passed": result.get("strict_acceptance_passed"),
@@ -138,10 +190,24 @@ def audit_training(output_root, expected_steps, expected_algorithm="SAC"):
         ),
         len(execution_rows),
     )
-    return _result(root, expected_steps, expected_algorithm, checks, execution_rows)
+    return _result(
+        root,
+        expected_steps,
+        expected_algorithm,
+        checks,
+        execution_rows,
+        audit_scope,
+    )
 
 
-def _result(root, expected_steps, expected_algorithm, checks, execution_rows):
+def _result(
+    root,
+    expected_steps,
+    expected_algorithm,
+    checks,
+    execution_rows,
+    audit_scope,
+):
     passed = all(item["passed"] for item in checks)
     return {
         "format": "carla_online_rl_training_quality_gate_v1",
@@ -149,6 +215,7 @@ def _result(root, expected_steps, expected_algorithm, checks, execution_rows):
         "output_root": str(root),
         "expected_algorithm": expected_algorithm.upper(),
         "expected_steps": int(expected_steps),
+        "audit_scope": audit_scope,
         "check_count": len(checks),
         "passed_check_count": sum(item["passed"] for item in checks),
         "failed_checks": [item["name"] for item in checks if not item["passed"]],
@@ -162,13 +229,22 @@ def parse_args():
     parser.add_argument("--output-root", required=True)
     parser.add_argument("--expected-steps", type=int, required=True)
     parser.add_argument("--expected-algorithm", choices=("PPO", "SAC"), default="SAC")
+    parser.add_argument(
+        "--episode-id",
+        help="只审计 episodes/<episode-id> 下的运行；默认审计整个输出目录",
+    )
     parser.add_argument("--output")
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
-    result = audit_training(args.output_root, args.expected_steps, args.expected_algorithm)
+    result = audit_training(
+        args.output_root,
+        args.expected_steps,
+        args.expected_algorithm,
+        args.episode_id,
+    )
     output = Path(args.output).expanduser().resolve() if args.output else Path(args.output_root).expanduser().resolve() / "quality_gate.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

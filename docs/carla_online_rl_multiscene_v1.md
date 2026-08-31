@@ -65,7 +65,19 @@ python tools/prepare_carla_rl_multiscene_plan.py \
 | 04 | `tools/server_carla_rl_04_evaluate_dev_v1.cmd` | 在冻结 dev split 上运行最终模型，供人工复核 |
 | 05 | `tools/server_carla_rl_05_evaluate_test_v1.cmd` | 仅在 dev 结果存在后运行冻结 test split |
 
-阶段 01 和阶段 02 完成后，`tools/check_carla_rl_training.py` 会核对训练状态、准确步数、最终模型、checkpoint、只使用 train split、所有 CARLA 执行的严格验收、服务健康和客户端/服务端 `0.9.16`。任何失败都会让远程任务返回非零，不能直接进入下一阶段。
+阶段 01 和阶段 02 完成后，`tools/check_carla_rl_training.py` 会核对训练状态、准确步数、最终模型、checkpoint、只使用 train split、所有 CARLA 执行的严格验收、服务健康和客户端/服务端 `0.9.16`。默认模式审计输出目录内全部 episode；当同一目录包含断点恢复前的历史运行时，历史失败会继续保留在 `quality_gate.json`，不能被新运行覆盖。阶段 03 恢复入口同时读取当前 `run_manifest.json` 的 `episode_id`，生成 `quality_gate_current_episode.json`，并以当前 episode 的质量门作为远程任务退出依据。
+
+也可以手动按 episode 审计既有结果：
+
+```bash
+python -u tools/check_carla_rl_training.py \
+  --output-root /path/to/sac_seed_20260824_10000 \
+  --expected-algorithm SAC --expected-steps 10000 \
+  --episode-id <episode-id> \
+  --output /path/to/sac_seed_20260824_10000/quality_gate_current_episode.json
+```
+
+按 episode 审计只改变统计范围，不删除、修改或重新解释历史 `execution_result.json`；只有当前 episode 门通过后，才可进入 dev/test 评估。
 
 训练目录会包含：
 
@@ -76,7 +88,8 @@ python tools/prepare_carla_rl_multiscene_plan.py \
 | `models/*.zip` | 可恢复 checkpoint；不提交 Git |
 | `rl_training_summary.json` | 完成步数、采样覆盖和证据等级 |
 | `test_evaluation_summary.json` | 独立 test 运行的逐场景摘要 |
-| `quality_gate.json` | canary/主训练自动质量门及失败项 |
+| `quality_gate.json` | 输出目录内全部 episode 的历史/全量质量门及失败项 |
+| `quality_gate_current_episode.json` | 恢复入口按当前训练 episode 单独审计的质量门；不覆盖全量历史结果 |
 
 原始传感器帧和模型权重只保留在服务器输出目录，结果回收时优先回收 JSON/CSV/Markdown 汇总，不在本机长期保存安装包或原始大文件。
 
@@ -89,5 +102,6 @@ python tools/prepare_carla_rl_multiscene_plan.py \
 - 所有 checkpoint 的 `exists=true`，最终 `trained_num_timesteps=10000`；
 - 每个实际 CARLA 运行的传感器、服务健康、路线和 `heuristic_v2` 元数据可回溯；
 - 训练失败时保留 `run_manifest.json` 的失败状态，不自动把失败结果拼接进后续统计。
+- 断点恢复时同时保留全量历史门和当前 episode 门；历史失败不得通过删除记录或放宽阈值消除。
 
 即使质量门通过，也只能说明该固定场景集合上的可复现运行和独立比较；不能直接宣称 SAC 普遍优于 PPO、风险代理等价于实测风险，或跨地图泛化已经完成。
