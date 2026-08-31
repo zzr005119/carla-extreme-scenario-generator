@@ -134,6 +134,7 @@ def propose_with_retries(
                 "clipped": bool(proposal.get("clipped", False)),
                 "fingerprint": proposal.get("fingerprint"),
                 "error": proposal.get("error"),
+                "constraint_projection": proposal.get("constraint_projection"),
             }
         )
         if proposal["valid"]:

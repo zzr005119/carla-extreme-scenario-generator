@@ -7,6 +7,7 @@
 - 当前场景仍以 `schemas/generated_scenario.schema.json` 为事实源。
 - 动作是 15 维归一化增量，范围 `[-1, 1]`，按 `step_size=0.08` 映射到当前 15 维归一化参数。
 - 参数变异后重新执行 Schema 与语义校验；天气标签必须继续满足原场景请求。超出动作范围的值会被裁剪并在 transition 中标记。
+- 在线多场景配置默认启用 `candidate_constraints.project_requested_weather=true`：当动作使请求天气标签缺失时，只把对应天气参数投影到最近的可行阈值（例如 `wetness=60`），不修改其他维度；`constraint_projection` 会记录原始标签、投影后标签和变更字段。投影无法满足条件时仍按无效候选终止。代理原始动作和投影诊断必须分开解释，不能把投影后的可执行率写成策略原生有效率。
 
 ## 观测空间
 

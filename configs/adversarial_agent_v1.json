@@ -60,5 +60,8 @@
     "terminate_on_run_failure": true,
     "truncate_on_repeated_scene": true,
     "truncate_on_max_steps": true
+  },
+  "candidate_constraints": {
+    "project_requested_weather": true
   }
 }

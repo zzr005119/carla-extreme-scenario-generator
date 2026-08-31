@@ -80,6 +80,32 @@ class AdversarialAgentTests(unittest.TestCase):
         self.assertTrue(proposal["clipped"])
         self.assertEqual(proposal["action"][0], 1.0)
 
+    def test_requested_weather_is_projected_after_policy_delta(self):
+        record = copy.deepcopy(self.record)
+        record["weather"]["wetness"] = 65.0
+        agent = AdversarialTestAgentV1(self.config)
+        agent.reset(record)
+        action = [0.0] * 15
+        action[7] = -1.0
+        proposal = agent.propose(action)
+        self.assertTrue(proposal["valid"], proposal["error"])
+        projection = proposal["constraint_projection"]
+        self.assertTrue(projection["enabled"])
+        self.assertTrue(projection["applied"])
+        self.assertTrue(projection["satisfied"])
+        self.assertEqual(projection["changed_fields"][0]["feature"], "weather.wetness")
+        self.assertIn("wet_road", proposal["candidate"]["conditions"]["weather_tags"])
+
+    def test_weather_projection_can_be_disabled_for_ablation(self):
+        config = copy.deepcopy(self.config)
+        config["candidate_constraints"]["project_requested_weather"] = False
+        record = copy.deepcopy(self.record)
+        record["weather"]["wetness"] = 65.0
+        proposal = propose_candidate(record, [0.0] * 7 + [-1.0] + [0.0] * 7, config=config)
+        self.assertFalse(proposal["valid"])
+        self.assertIn("wet_road", proposal["error"])
+        self.assertFalse(proposal["constraint_projection"]["enabled"])
+
     def test_risk_delta_collision_and_event_rewards(self):
         agent = AdversarialTestAgentV1(self.config)
         agent.reset(self.record)

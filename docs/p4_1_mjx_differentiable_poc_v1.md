@@ -2,7 +2,7 @@
 
 ## 目的
 
-P4 当前边界已经证明了 Torch 可微运动学代理、PyBullet 离散接触校验和参数级硬约束可以协同工作。P4.1 进一步验证一个真正的可微刚体后端是否值得接入生成模型训练，但范围限定为服务器 Linux CPU 小场景 PoC，不启动 CARLA、不启动 SAC、不使用 GPU。Windows 侧仅保留可选测试入口，不作为正式实验环境。
+P4 当前边界已经证明了 Torch 可微运动学代理、PyBullet 离散接触校验和参数级硬约束可以协同工作。P4.1 进一步验证一个真正的可微刚体后端是否值得接入生成模型训练。主证据采用服务器 Linux CPU 小场景 PoC，并用独立 GPU1 环境做同参数受控复核；两类运行都不启动 CARLA、不启动 SAC。Windows 侧仅保留可选测试入口，不作为正式实验环境。
 
 ## 本轮实现
 
@@ -134,13 +134,16 @@ tools/run_mjx_differentiable_poc_gpu1.sh --horizon 128 --force 5 --compare-worka
 - `ego=3.0, lead=-3.0` 的相向场景最大穿透为 `0.080471 m`，分类为 `contact_penetration_unstable`；
 - 其余 `2` 组未接触，分类为 `no_contact_stable`；
 - CPU manifest：`artifacts/p4_1_mjx_differentiable_poc_v1/server_cpu_contact_boundary_v1/manifest.json`；
-- GPU1 复核未执行：检查时 GPU1 显存 `7178/49140 MiB`、利用率 `41%`，但 CARLA 持有项目 GPU1 锁；阻塞记录见 `artifacts/p4_1_mjx_differentiable_poc_v1/manifest_server_gpu1_contact_boundary_blocked_v1.json`。
+- 服务器 GPU1：同一 `6` 组参数复核完成，JAX 设备显示 `cuda:0`（由 `CUDA_VISIBLE_DEVICES=1` 映射到物理 GPU1），`6/6` 组数值门通过，`4` 组发生接触，其中 `3` 组接触门通过；最大穿透为 `0.080471 m`。
+- CPU/GPU1 对比：最大最小间距绝对差 `9.77e-15 m`，最大损失绝对差 `7.02e-14`，最大解析梯度绝对差 `7.65e-14`，6 组分类完全一致；GPU1 与原生 MuJoCo 最大位置误差 `9.55e-14 m`、间距误差 `1.91e-13 m`。
+- GPU1 任务 `mjx-contact-boundary-gpu1-v1_20260831_121712` 正常退出并释放项目锁，结束后显存回落至 `916 MiB`；GPU0 显存占用保持 `44052 MiB`，未修改 vLLM 或其他服务。
+- CPU manifest：`artifacts/p4_1_mjx_differentiable_poc_v1/server_cpu_contact_boundary_v1/manifest.json`；GPU1 manifest：`artifacts/p4_1_mjx_differentiable_poc_v1/server_gpu1_contact_boundary_v1/manifest.json`；汇总对比：`artifacts/p4_1_mjx_differentiable_poc_v1/manifest_server_cpu_gpu1_contact_boundary_comparison_v1.json`。
 
-因此，本轮只证明相向运动下数值路径可追踪，并定位了接触穿透边界；整体 `contact_realism_gate_passed=false`，不把局部通过样本写成物理真实性通过。GPU1 结果待 CARLA 停止后按同一参数集复核，不能用 CPU 结果替代 GPU 证据。
+因此，本轮证明 CPU/GPU1 在相向运动下的数值路径可复现，并定位了共同的接触穿透边界；整体 `contact_realism_gate_passed=false`，不把局部通过样本写成物理真实性通过。GPU1 复核已完成，但不能据此宣称车辆动力学真实性或训练闭环完成。
 
 ## 结论与边界
 
-这证明 MJX-JAX 可以作为后续可微刚体研究后端，并且前向梯度在最小场景中数值可信；相向运动扫描同时表明接触真实性仍有明确失败区间。当前没有形成可扩展的生成模型训练闭环，不能写成“MJX 已接入 CVAE/Diffusion/RL”或“CARLA 车辆动力学已经可微”。下一步应先完成 GPU1 同参数复核，并评估接触稳定性与批量反向成本；在此之前继续保留 P4 现有 Torch + PyBullet 边界。
+这证明 MJX-JAX 可以作为后续可微刚体研究后端，并且 CPU/GPU1 前向梯度在最小场景中数值可信；相向运动扫描同时表明接触真实性仍有明确失败区间。当前没有形成可扩展的生成模型训练闭环，不能写成“MJX 已接入 CVAE/Diffusion/RL”或“CARLA 车辆动力学已经可微”。下一步应评估接触稳定性改进与批量反向成本；在此之前继续保留 P4 现有 Torch + PyBullet 边界。
 
 ## 复现
 

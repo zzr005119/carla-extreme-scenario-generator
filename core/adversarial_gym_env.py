@@ -170,6 +170,17 @@ class AdversarialEnvCore:
                 "reward_channels_available",
                 [],
             ),
+            "run_valid": transition["info"].get("run_valid"),
+            "strict_acceptance_passed": transition["info"].get(
+                "strict_acceptance_passed"
+            ),
+            "carla_service_healthy": transition["info"].get(
+                "carla_service_healthy"
+            ),
+            "risk_method": transition["info"].get("risk_method"),
+            "constraint_projection": transition["info"].get(
+                "constraint_projection"
+            ),
             "reward_breakdown": transition["reward_breakdown"],
             "termination_reason": transition["reason"],
         }

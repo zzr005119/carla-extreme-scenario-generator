@@ -44,6 +44,7 @@ FEATURE_LOW = np.asarray([spec[1] for spec in FEATURE_SPECS], dtype=np.float64)
 FEATURE_HIGH = np.asarray([spec[2] for spec in FEATURE_SPECS], dtype=np.float64)
 FEATURE_DIM = len(FEATURE_SPECS)
 CONDITION_DIM = len(RISK_LEVELS) + len(WEATHER_TAGS)
+FEATURE_INDEX = {name: index for index, (name, _low, _high) in enumerate(FEATURE_SPECS)}
 
 
 def load_jsonl(path):
@@ -171,6 +172,98 @@ def weather_request_satisfied(requested_tags, actual_tags):
         elif tag not in actual:
             return False
     return True
+
+
+def project_requested_weather_constraints(normalized_values, requested_tags):
+    """Project a candidate onto the requested weather-label constraints.
+
+    The policy still supplies the original 15-dimensional action.  This helper
+    only moves the smallest number of weather parameters needed to keep the
+    requested condition labels true after a bounded action.  It returns an
+    auditable description of every changed field so evaluation can distinguish
+    a constrained candidate from an unconstrained policy output.
+    """
+    values = np.asarray(normalized_values, dtype=np.float64).reshape(-1)
+    if values.shape != (FEATURE_DIM,):
+        raise ValueError(f"特征维度必须为 {FEATURE_DIM}，实际为 {values.shape}")
+    requested = tuple(dict.fromkeys(requested_tags))
+    validate_requested_conditions("low", requested)
+    projected = np.clip(values, 0.0, 1.0).copy()
+    initial_tags = derive_weather_tags(vector_to_sections(projected)["weather"])
+    changes = []
+
+    # Each option is (feature name, physical target, direction).  For labels
+    # with aliases (rain/fog), the least-displacing option is selected.
+    options = {
+        "rain": (("weather.precipitation", 20.0, "min"),),
+        "heavy_rain": (("weather.precipitation", 80.0, "min"),),
+        "fog": (("weather.fog_density", 30.0, "min"),
+                ("weather.fog_distance", 30.0, "max")),
+        "dense_fog": (("weather.fog_density", 85.0, "min"),
+                      ("weather.fog_distance", 8.0, "max")),
+        "night": (("weather.sun_altitude_angle", -0.001, "max"),),
+        "day": (("weather.sun_altitude_angle", 0.0, "min"),),
+        "wet_road": (("weather.wetness", 60.0, "min"),),
+        "strong_wind": (("weather.wind_intensity", 70.0, "min"),),
+    }
+
+    for tag in requested:
+        actual = derive_weather_tags(vector_to_sections(projected)["weather"])
+        if weather_request_satisfied(requested, actual):
+            break
+        if tag in actual or weather_request_satisfied((tag,), actual):
+            continue
+        candidates = []
+        for feature_name, target, direction in options.get(tag, ()):
+            index = FEATURE_INDEX[feature_name]
+            current_physical = float(denormalize_vector(projected, clip=True)[index])
+            if direction == "min":
+                target_physical = max(current_physical, float(target))
+            else:
+                target_physical = min(current_physical, float(target))
+            trial = projected.copy()
+            trial[index] = float(
+                np.clip(
+                    (target_physical - FEATURE_LOW[index])
+                    / (FEATURE_HIGH[index] - FEATURE_LOW[index]),
+                    0.0,
+                    1.0,
+                )
+            )
+            trial_tags = derive_weather_tags(vector_to_sections(trial)["weather"])
+            if weather_request_satisfied((tag,), trial_tags):
+                displacement = abs(float(trial[index]) - float(projected[index]))
+                candidates.append((displacement, feature_name, target_physical, trial))
+        if not candidates:
+            continue
+        _displacement, feature_name, target_physical, selected = min(
+            candidates, key=lambda item: (item[0], item[1])
+        )
+        index = FEATURE_INDEX[feature_name]
+        before_physical = float(denormalize_vector(projected, clip=True)[index])
+        projected = selected
+        after_physical = float(denormalize_vector(projected, clip=True)[index])
+        changes.append(
+            {
+                "tag": tag,
+                "feature": feature_name,
+                "before": round(before_physical, 6),
+                "after": round(after_physical, 6),
+                "target": round(float(target_physical), 6),
+            }
+        )
+
+    final_tags = derive_weather_tags(vector_to_sections(projected)["weather"])
+    return projected.tolist(), {
+        "enabled": True,
+        "applied": bool(changes),
+        "requested_tags": list(requested),
+        "before_tags": list(initial_tags),
+        "raw_satisfied": weather_request_satisfied(requested, initial_tags),
+        "after_tags": list(final_tags),
+        "changed_fields": changes,
+        "satisfied": weather_request_satisfied(requested, final_tags),
+    }
 
 
 def condition_text_zh(target_risk_level, weather_tags):

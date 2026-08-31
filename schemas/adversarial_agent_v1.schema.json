@@ -63,6 +63,14 @@
         "truncate_on_repeated_scene": {"type": "boolean"},
         "truncate_on_max_steps": {"type": "boolean"}
       }
+    },
+    "candidate_constraints": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["project_requested_weather"],
+      "properties": {
+        "project_requested_weather": {"type": "boolean"}
+      }
     }
   }
 }

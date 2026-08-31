@@ -22,6 +22,7 @@ from core.scenario_features import (
     encode_record_condition,
     normalize_vector,
     parameter_vector,
+    project_requested_weather_constraints,
 )
 from core.scenario_validator import load_json, require_valid_scenario
 from core.scenario_validator import validate_schema_value
@@ -240,11 +241,28 @@ def propose_candidate(record, action, step_index=0, config=None):
         min(1.0, max(0.0, current[index] + normalized_action[index] * step_size))
         for index in range(FEATURE_DIM)
     ]
+    constraints = config.get("candidate_constraints", {})
+    projection = {
+        "enabled": bool(constraints.get("project_requested_weather", False)),
+        "applied": False,
+        "requested_tags": list(record["conditions"]["weather_tags"]),
+        "before_tags": None,
+        "raw_satisfied": None,
+        "after_tags": None,
+        "changed_fields": [],
+        "satisfied": None,
+    }
+    candidate_values = proposed
+    if projection["enabled"]:
+        candidate_values, projection = project_requested_weather_constraints(
+            proposed,
+            record["conditions"]["weather_tags"],
+        )
     sample_suffix = f"_adv_{int(step_index):04d}"
     sample_id = f"{_base_sample_id(record['sample_id'])[:64 - len(sample_suffix)]}{sample_suffix}"
     try:
         candidate = build_generated_record(
-            proposed,
+            candidate_values,
             record["conditions"]["target_risk_level"],
             record["conditions"]["weather_tags"],
             sample_id=sample_id,
@@ -264,6 +282,7 @@ def propose_candidate(record, action, step_index=0, config=None):
             "fingerprint": None,
             "error": str(exc),
             "step_index": int(step_index),
+            "constraint_projection": projection,
         }
     return {
         "valid": True,
@@ -273,6 +292,7 @@ def propose_candidate(record, action, step_index=0, config=None):
         "fingerprint": canonical_parameter_fingerprint(candidate),
         "error": None,
         "step_index": int(step_index),
+        "constraint_projection": projection,
     }
 
 
@@ -672,6 +692,16 @@ class AdversarialTestAgentV1:
             "reward_channels_available": (
                 list(result.reward_channels_available) if result else []
             ),
+            "run_valid": result.run_valid if result else None,
+            "strict_acceptance_passed": (
+                result.strict_acceptance_passed if result else None
+            ),
+            "carla_service_healthy": (
+                result.carla_service_healthy if result else None
+            ),
+            "risk_method": result.risk_method if result else None,
+            "run_dir": result.run_dir if result else None,
+            "constraint_projection": proposal.get("constraint_projection"),
         }
         return AgentTransition(
             observation=observation,

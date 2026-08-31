@@ -97,6 +97,20 @@ python -u tools/check_carla_rl_training.py \
 
 ## 🚦 质量门
 
+### 独立评估四项验收口径
+
+`dev`/`test` 评估的通过条件拆成四个互不替代的门，结果统一写入
+`test_evaluation_summary.json.acceptance`：
+
+1. **baseline_strict_acceptance**：每个 split 场景的 baseline 必须完成真实 CARLA 严格验收。
+2. **candidate_condition_validity**：每次策略动作生成的候选必须通过 Schema、语义和请求天气标签校验；缺失 `wet_road` 等标签不得被记为通过。
+3. **candidate_runtime_strict_acceptance**：每个 split 场景至少有一条候选真实执行，且候选的传感器、路线、服务健康、风险方法和严格验收均通过。
+4. **candidate_evidence_completeness**：每个场景必须同时保留候选 `run_dir`、实测风险分/档、风险方法、运行有效性和服务健康字段。
+
+候选生成默认启用 `candidate_constraints.project_requested_weather=true`。该层只对策略动作造成的天气标签缺失执行有界参数投影（例如 `wetness>=60`），并在每条 transition 的
+`constraint_projection` 中记录原始/投影标签和变更字段；它不放宽 Schema、语义、CARLA、路线或风险验收。投影无法满足约束时仍按
+`invalid_candidate` 终止并由四项验收门报告失败。此前 dev 的 `4/27` 条无效候选属于投影修复前证据，必须在新代码提交上重新运行 dev 后，才允许启动第 05 步 test。
+
 训练任务只有在以下条件全部满足后才进入独立评估：
 
 - 计划哈希校验通过，train/dev/test 无 canonical ID 或场景哈希重叠；

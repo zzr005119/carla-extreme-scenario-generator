@@ -30,6 +30,82 @@ def _write_json(path, value):
     path.write_text(json.dumps(value, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def _evaluation_acceptance(rows):
+    """Summarize the four independent evaluation gates without inference."""
+    expected = len(rows)
+    baseline_strict = sum(
+        bool((row.get("baseline") or {}).get("strict_acceptance_passed"))
+        for row in rows
+    )
+    candidate_steps = [
+        transition
+        for row in rows
+        for transition in row.get("transitions", [])
+    ]
+    candidate_proposals = len(candidate_steps)
+    valid_proposals = sum(
+        bool(transition.get("proposal_valid")) for transition in candidate_steps
+    )
+    condition_valid_rows = sum(
+        int((row.get("candidate_stats") or {}).get("invalid_proposal_count", 0)) == 0
+        and int((row.get("candidate_stats") or {}).get("valid_proposal_count", 0)) > 0
+        for row in rows
+    )
+    runtime_strict_rows = sum(
+        int((row.get("candidate_stats") or {}).get("execution_count", 0)) > 0
+        and int((row.get("candidate_stats") or {}).get("failed_execution_count", 0)) == 0
+        and int((row.get("candidate_stats") or {}).get("strict_execution_count", 0))
+        == int((row.get("candidate_stats") or {}).get("execution_count", 0))
+        for row in rows
+    )
+    evidence_complete = sum(
+        bool((row.get("candidate_coverage") or {}).get("candidate_run_completed"))
+        and all(
+            (row.get("candidate_acceptance") or {}).get(name) not in (None, "")
+            for name in (
+                "run_dir",
+                "observed_risk_score",
+                "observed_risk_level",
+                "risk_method",
+            )
+        )
+        and bool((row.get("candidate_acceptance") or {}).get("run_valid"))
+        and bool((row.get("candidate_acceptance") or {}).get("carla_service_healthy"))
+        for row in rows
+    )
+    checks = {
+        "baseline_strict_acceptance": {
+            "passed": baseline_strict == expected,
+            "actual": baseline_strict,
+            "expected": expected,
+        },
+        "candidate_condition_validity": {
+            "passed": condition_valid_rows == expected,
+            "actual": condition_valid_rows,
+            "expected": expected,
+        },
+        "candidate_runtime_strict_acceptance": {
+            "passed": runtime_strict_rows == expected,
+            "actual": runtime_strict_rows,
+            "expected": expected,
+        },
+        "candidate_evidence_completeness": {
+            "passed": evidence_complete == expected,
+            "actual": evidence_complete,
+            "expected": expected,
+        },
+    }
+    return {
+        "status": "passed" if all(item["passed"] for item in checks.values()) else "failed",
+        "check_count": len(checks),
+        "passed_check_count": sum(item["passed"] for item in checks.values()),
+        "checks": checks,
+        "row_count": expected,
+        "candidate_transition_count": candidate_proposals,
+        "candidate_valid_transition_count": valid_proposals,
+    }
+
+
 def evaluate(plan_path, config_path, model_path, output_root, algorithm, *, split="test", seed=None, max_scenarios=0):
     import gymnasium  # noqa: F401
     from stable_baselines3 import PPO, SAC
@@ -71,23 +147,81 @@ def evaluate(plan_path, config_path, model_path, output_root, algorithm, *, spli
         for index in range(len(rows)):
             observation, reset_info = env.reset(seed=eval_seed if index == 0 else None)
             transitions = []
+            last_candidate = None
+            last_candidate_info = None
+            successful_candidate = None
+            successful_candidate_info = None
+            candidate_stats = {
+                "proposal_count": 0,
+                "valid_proposal_count": 0,
+                "invalid_proposal_count": 0,
+                "execution_count": 0,
+                "strict_execution_count": 0,
+                "failed_execution_count": 0,
+                "projection_count": 0,
+                "raw_constraint_violation_count": 0,
+                "projected_fields": [],
+            }
             for _ in range(max_steps):
                 action, _ = model.predict(observation, deterministic=True)
                 observation, reward, terminated, truncated, info = env.step(action)
+                candidate_stats["proposal_count"] += 1
+                proposal_valid = bool(info.get("proposal_valid"))
+                projection_info = info.get("constraint_projection") or {}
+                if projection_info.get("raw_satisfied") is False:
+                    candidate_stats["raw_constraint_violation_count"] += 1
+                if proposal_valid:
+                    candidate_stats["valid_proposal_count"] += 1
+                    candidate_stats["execution_count"] += 1
+                    if info.get("strict_acceptance_passed") is True:
+                        candidate_stats["strict_execution_count"] += 1
+                    else:
+                        candidate_stats["failed_execution_count"] += 1
+                    if projection_info.get("applied"):
+                        candidate_stats["projection_count"] += 1
+                        candidate_stats["projected_fields"].extend(
+                            item.get("feature")
+                            for item in projection_info.get("changed_fields", [])
+                            if item.get("feature")
+                        )
+                else:
+                    candidate_stats["invalid_proposal_count"] += 1
+                transition = env.core.last_transition or {}
+                if proposal_valid:
+                    last_candidate = transition.get("candidate") or last_candidate
+                    last_candidate_info = dict(info)
+                    if (
+                        info.get("run_valid") is True
+                        and info.get("strict_acceptance_passed") is True
+                        and info.get("carla_service_healthy") is True
+                        and info.get("run_dir")
+                    ):
+                        successful_candidate = transition.get("candidate")
+                        successful_candidate_info = dict(info)
                 transitions.append(
                     {
                         "reward": float(reward),
                         "terminated": bool(terminated),
                         "truncated": bool(truncated),
                         "failure_reason": info.get("failure_reason"),
+                        "proposal_valid": proposal_valid,
+                        "constraint_projection": info.get("constraint_projection"),
+                        "run_valid": info.get("run_valid"),
+                        "strict_acceptance_passed": info.get("strict_acceptance_passed"),
+                        "carla_service_healthy": info.get("carla_service_healthy"),
+                        "risk_method": info.get("risk_method"),
                     }
                 )
                 if terminated or truncated:
                     break
             final_transition = env.core.last_transition or {}
-            candidate = final_transition.get("candidate") or {}
+            candidate = successful_candidate or last_candidate or final_transition.get("candidate") or {}
             candidate_risk = candidate.get("observed_risk") or {}
+            acceptance_info = last_candidate_info or successful_candidate_info or {}
             baseline = reset_info.get("baseline_result") or {}
+            candidate_stats["projected_fields"] = sorted(
+                set(candidate_stats["projected_fields"])
+            )
             rows_out.append(
                 {
                     "index": index,
@@ -106,9 +240,26 @@ def evaluate(plan_path, config_path, model_path, output_root, algorithm, *, spli
                         "level": candidate_risk.get("level"),
                         "run_dir": candidate_risk.get("run_dir"),
                     },
+                    "candidate_acceptance": {
+                        "observed_risk_score": candidate_risk.get("score"),
+                        "observed_risk_level": candidate_risk.get("level"),
+                        "risk_method": acceptance_info.get("risk_method"),
+                        "run_valid": acceptance_info.get("run_valid"),
+                        "strict_acceptance_passed": acceptance_info.get("strict_acceptance_passed"),
+                        "carla_service_healthy": acceptance_info.get("carla_service_healthy"),
+                        "run_dir": candidate_risk.get("run_dir"),
+                    },
+                    "candidate_stats": candidate_stats,
                     "transition_count": len(transitions),
                     "transitions": transitions,
                     "termination_reason": (final_transition.get("reason")),
+                    "candidate_coverage": {
+                        "candidate_run_completed": bool(successful_candidate),
+                        "constraint_projection": {
+                            "count": candidate_stats["projection_count"],
+                            "fields": candidate_stats["projected_fields"],
+                        },
+                    },
                 }
             )
     finally:
@@ -123,9 +274,19 @@ def evaluate(plan_path, config_path, model_path, output_root, algorithm, *, spli
         "test_count": len(rows_out),
         "seed": eval_seed,
         "rows": rows_out,
+        "acceptance": _evaluation_acceptance(rows_out),
         "evidence_kind": "carla_online_rl_independent_test_runtime",
     }
     _write_json(output_root / "test_evaluation_summary.json", summary)
+    if summary["acceptance"]["status"] != "passed":
+        raise RuntimeError(
+            "RL 独立评估四项验收未通过: "
+            + ", ".join(
+                name
+                for name, check in summary["acceptance"]["checks"].items()
+                if not check["passed"]
+            )
+        )
     return summary
 
 
