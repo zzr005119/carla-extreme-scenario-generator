@@ -141,9 +141,50 @@ tools/run_mjx_differentiable_poc_gpu1.sh --horizon 128 --force 5 --compare-worka
 
 因此，本轮证明 CPU/GPU1 在相向运动下的数值路径可复现，并定位了共同的接触穿透边界；整体 `contact_realism_gate_passed=false`，不把局部通过样本写成物理真实性通过。GPU1 复核已完成，但不能据此宣称车辆动力学真实性或训练闭环完成。
 
+## 接触稳定性参数优化复核（服务器 CPU/GPU1）
+
+原始 `timestep=0.02, horizon=128, iterations=4` 压力配置继续保留，作为“高压力下会出现穿透失稳”的基准边界。本节只增加独立参数复核，不覆盖或删除原始失败证据。为保持可比性，步长变化时将总物理时长保持在约 `2.56 s`，先在服务器 CPU 上筛选；CARLA dev 作业完成并释放 GPU1 后，已完成同配置复核。
+
+最高相向力（`ego=3.0, lead=-3.0`）的步长敏感性结果如下。数值门仍为有限梯度、有限差分相对误差 `<1e-2` 和原生 MuJoCo 对齐 `<1e-5 m`；接触门为最大穿透 `<=0.05 m`。
+
+| `timestep` | `horizon` | `iterations` | 最大穿透 | 覆盖 | 接触门 |
+|---:|---:|---:|---:|---|---|
+| `0.02000` | `128` | `4` | `0.080471 m` | 原始基准 | 失败 |
+| `0.01250` | `205` | `4` | `0.023454 m` | 最高力单点 | 通过 |
+| `0.01000` | `256` | `4` | `0.049071 m` | 全 6 组 | 通过 |
+| `0.00800` | `320` | `4` | `0.022404 m` | 最高力单点 | 通过 |
+| `0.00625` | `410` | `4` | `0.021240 m` | 最高力单点 | 通过 |
+| `0.00500` | `512` | `4` | `0.050855 m` | 最高力单点 | 失败 |
+
+候选 `timestep=0.00625, horizon=410, iterations=4` 的 CPU/GPU1 全 6 组复核均为：数值门 `6/6`，实际接触 `4` 组且接触门 `4/4`，全组最大穿透约 `0.033941 m`。CPU/GPU1 的 6 组分类完全一致，最大最小间距差 `8.88e-16 m`，最大损失差 `1.78e-15`，最大解析梯度差 `1.11e-15`；GPU1 与原生 MuJoCo 最大位置误差 `1.17e-11 m`、间距误差 `2.34e-11 m`。最高力案例的自定义 VJP 在两设备上与 `jacfwd` 最大绝对差均为 `0`，有限差分相对误差为 CPU `2.54e-4`、GPU1 `3.33e-4`。因此该配置可以作为本 toy 场景的**受控稳定工作区间**，但不升级为车辆物理真实性结论。
+
+这组结果还显示，减小步长并不会单调改善接触，`0.005 s` 反而重新越过阈值；把求解迭代从 `8` 增到 `16` 在该配置中没有改变结果。故不通过放宽阈值、只挑通过样本或把 `iterations=1` 设为默认来“美化”结论。推荐配置只作为显式研究 profile，原始压力配置仍需保留用于边界报告。
+
+`timestep=0.010` 的 `iterations=4/8` 与 `timestep=0.005` 的 `iterations=8/16` 原始对照副本在逐项指标上相同；为减少冗余，已删除两份副本，配置、哈希和等价性记录保存在 `F:\Carla\project-transfer\server-results\mjx_optimization_screen_20260902\cpu_gpu1_optimization_comparison_v1.json` 的 `iteration_sensitivity` 节点。
+
+复现入口（服务器 CPU）：
+
+```bash
+bash tools/run_mjx_multibody_contact_boundary_cpu.sh \
+  --horizon 410 --timestep 0.00625 --solver-iterations 4 \
+  --output /home/zhaozirong/outputs/mjx_poc_linux_v1/optimization_screen_v1/contact_dt00625_i4.json
+```
+
+复现入口（服务器 GPU1，必须显式限制到物理 GPU1）：
+
+```bash
+bash tools/run_mjx_multibody_contact_boundary_gpu1.sh \
+  --horizon 410 --timestep 0.00625 --solver-iterations 4 \
+  --output /home/zhaozirong/outputs/mjx_poc_linux_v1/optimization_screen_v1/contact_dt00625_i4_gpu1.json
+```
+
+最高力自定义 VJP 的独立产物为 `contact_dt00625_i4_high_custom_vjp.json` 与 `contact_dt00625_i4_gpu1_high_custom_vjp.json`；GPU1 复核作业 `mjx-contact-boundary-optimization-gpu1-v1_20260902` 和 `mjx-contact-boundary-optimization-gpu1-custom-v1_20260902` 均以退出码 `0` 完成。运行环境未安装可选 `warp`，日志中的导入提示已保留，实际计算使用标准 MJX-JAX 路径并通过全部既定门。JAX 报告设备为 `cuda:0`（`CUDA_VISIBLE_DEVICES=1` 映射到物理 GPU1），运行期间项目锁被持有，结束后锁恢复为空闲；GPU1 运行中采样显存约 `1.6 GiB`，结束后回落至约 `914 MiB`，仅保留外部 TensorRT 服务，GPU0 vLLM 显存约 `44050 MiB` 未改变，CARLA RPC/进程均已关闭。可机器读取的逐组对比、哈希和资源记录见 `F:\Carla\project-transfer\server-results\mjx_optimization_screen_20260902\cpu_gpu1_optimization_comparison_v1.json`；CPU 推荐 manifest SHA-256 为 `7B9CC3C042F1854BCD588E84EDDF8AF3D66C7622F39835E3F7AC901D9B461C8E`，GPU1 manifest SHA-256 为 `E88735C18CE13B260EBA78DED56A98577193701FC296A3F684B536A911D48C9E`。
+
+本节仍不代表真实车辆动力学、PyBullet 原生可微或生成模型/RL 训练已接入；GPU1 复核只补充设备一致性证据，不改变整体真实性边界。
+
 ## 结论与边界
 
-这证明 MJX-JAX 可以作为后续可微刚体研究后端，并且 CPU/GPU1 前向梯度在最小场景中数值可信；相向运动扫描同时表明接触真实性仍有明确失败区间。当前没有形成可扩展的生成模型训练闭环，不能写成“MJX 已接入 CVAE/Diffusion/RL”或“CARLA 车辆动力学已经可微”。下一步应评估接触稳定性改进与批量反向成本；在此之前继续保留 P4 现有 Torch + PyBullet 边界。
+这证明 MJX-JAX 可以作为后续可微刚体研究后端，并且 CPU/GPU1 前向梯度在最小场景中数值可信；参数复核进一步给出了一个受控稳定 profile，同时保留了高压力失败边界。当前没有形成可扩展的生成模型训练闭环，不能写成“MJX 已接入 CVAE/Diffusion/RL”或“CARLA 车辆动力学已经可微”。在没有车辆模型、摩擦接触和 CARLA 相关性证据前，继续采用该 profile 做小规模研究或回退 P4 的 Torch + PyBullet 分层边界。
 
 ## 复现
 
