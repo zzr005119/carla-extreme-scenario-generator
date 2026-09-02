@@ -180,6 +180,12 @@ bash tools/run_mjx_multibody_contact_boundary_gpu1.sh \
 
 最高力自定义 VJP 的独立产物为 `contact_dt00625_i4_high_custom_vjp.json` 与 `contact_dt00625_i4_gpu1_high_custom_vjp.json`；GPU1 复核作业 `mjx-contact-boundary-optimization-gpu1-v1_20260902` 和 `mjx-contact-boundary-optimization-gpu1-custom-v1_20260902` 均以退出码 `0` 完成。运行环境未安装可选 `warp`，日志中的导入提示已保留，实际计算使用标准 MJX-JAX 路径并通过全部既定门。JAX 报告设备为 `cuda:0`（`CUDA_VISIBLE_DEVICES=1` 映射到物理 GPU1），运行期间项目锁被持有，结束后锁恢复为空闲；GPU1 运行中采样显存约 `1.6 GiB`，结束后回落至约 `914 MiB`，仅保留外部 TensorRT 服务，GPU0 vLLM 显存约 `44050 MiB` 未改变，CARLA RPC/进程均已关闭。可机器读取的逐组对比、哈希和资源记录见 `F:\Carla\project-transfer\server-results\mjx_optimization_screen_20260902\cpu_gpu1_optimization_comparison_v1.json`；CPU 推荐 manifest SHA-256 为 `7B9CC3C042F1854BCD588E84EDDF8AF3D66C7622F39835E3F7AC901D9B461C8E`，GPU1 manifest SHA-256 为 `E88735C18CE13B260EBA78DED56A98577193701FC296A3F684B536A911D48C9E`。
 
+### GPU1 复核与证据清理收口
+
+2026-09-02 15:44（`+08:00`）的只读资源复核显示：GPU0 显存 `44050 MiB`，由 vLLM 进程占用；GPU1 显存 `914 MiB`、利用率 `0%`，仅有外部 TensorRT `python3` 服务（PID `10050`，约 `896 MiB`）。未发现 MJX/CARLA 运行进程，项目 GPU1 锁不存在，GPU0 和外部服务均未操作。已对本地回收的对比 manifest 重新检查 `status`、6 组分类一致性、GPU1 数值/接触门、自定义 VJP、设备映射和真实性边界，共 `9/9` 项通过；已有完整 GPU1 运行证据，因此本次不重复运行同一相向运动 pair。
+
+为保持服务器输出与汇总清单一致，2026-09-02 15:49:24（`+08:00`）在确认目标目录和锁状态后，删除两份仅用于迭代次数对照的冗余 raw manifest：`contact_dt005_i16.json`（SHA-256 `D7E6313AB5349AB883ED7494AA2BD48FDC6B8F6D113368284BFE6F9FB9F94B6B`）和 `contact_dt010_i8.json`（SHA-256 `0A70868E068DC40AC203683C4DFA7C26AABE8D64DF5D4805FA1A1D97C76D17A1`）。代表性 `iterations=8`/`4` 文件、推荐 CPU/GPU1 manifest、两份自定义 VJP、步长敏感性汇总、GPU1 日志和原始压力失败边界均保留；删除记录及逐项等价性仍见 `cpu_gpu1_optimization_comparison_v1.json` 的 `iteration_sensitivity` 节点。
+
 本节仍不代表真实车辆动力学、PyBullet 原生可微或生成模型/RL 训练已接入；GPU1 复核只补充设备一致性证据，不改变整体真实性边界。
 
 ## 结论与边界
