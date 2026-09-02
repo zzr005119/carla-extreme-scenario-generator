@@ -178,6 +178,7 @@ class AdversarialEnvCore:
                 "carla_service_healthy"
             ),
             "risk_method": transition["info"].get("risk_method"),
+            "run_dir": transition["info"].get("run_dir"),
             "constraint_projection": transition["info"].get(
                 "constraint_projection"
             ),

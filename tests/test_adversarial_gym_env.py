@@ -80,6 +80,7 @@ class AdversarialEnvCoreTests(unittest.TestCase):
         self.assertFalse(terminated)
         self.assertFalse(truncated)
         self.assertEqual(info["proposal_valid"], True)
+        self.assertEqual(info["run_dir"], "mock://candidate")
         self.assertEqual(
             [call[1:] for call in executor.calls],
             [("baseline", -1), ("candidate", 0)],

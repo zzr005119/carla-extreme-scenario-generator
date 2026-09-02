@@ -247,7 +247,7 @@ def evaluate(plan_path, config_path, model_path, output_root, algorithm, *, spli
                         "run_valid": acceptance_info.get("run_valid"),
                         "strict_acceptance_passed": acceptance_info.get("strict_acceptance_passed"),
                         "carla_service_healthy": acceptance_info.get("carla_service_healthy"),
-                        "run_dir": candidate_risk.get("run_dir"),
+                        "run_dir": acceptance_info.get("run_dir") or candidate_risk.get("run_dir"),
                     },
                     "candidate_stats": candidate_stats,
                     "transition_count": len(transitions),
