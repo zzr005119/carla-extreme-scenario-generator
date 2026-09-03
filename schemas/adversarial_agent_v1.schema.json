@@ -43,6 +43,9 @@
         "risk_delta_weight": {"type": "number"},
         "collision_event_reward": {"type": "number"},
         "event_reward": {"type": "number"},
+        "action_l2_penalty_weight": {"type": "number", "minimum": 0.0},
+        "boundary_saturation_penalty_weight": {"type": "number", "minimum": 0.0},
+        "boundary_tolerance": {"type": "number", "minimum": 0.0, "maximum": 0.5},
         "invalid_candidate_penalty": {"type": "number"},
         "duplicate_penalty": {"type": "number"},
         "run_failure_penalty": {"type": "number"},
@@ -70,6 +73,25 @@
       "required": ["project_requested_weather"],
       "properties": {
         "project_requested_weather": {"type": "boolean"}
+      }
+    },
+    "evaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["selection_mode", "early_stop"],
+      "properties": {
+        "selection_mode": {"enum": ["last_successful", "best_so_far"]},
+        "early_stop": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "target_score", "patience_steps", "min_improvement"],
+          "properties": {
+            "enabled": {"type": "boolean"},
+            "target_score": {"type": "number", "minimum": 0.0, "maximum": 100.0},
+            "patience_steps": {"type": "integer", "minimum": 1},
+            "min_improvement": {"type": "number", "minimum": 0.0, "maximum": 100.0}
+          }
+        }
       }
     }
   }

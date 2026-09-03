@@ -38,6 +38,7 @@ def audit_training(
     expected_steps,
     expected_algorithm="SAC",
     episode_id=None,
+    require_continuity=False,
 ):
     root = Path(output_root).expanduser().resolve()
     episode_id = _validate_episode_id(episode_id)
@@ -113,6 +114,71 @@ def audit_training(
         checkpoints[-1].get("trained_num_timesteps") if checkpoints else None,
         int(expected_steps),
     )
+    continuity_required = bool(require_continuity) or checkpoint_manifest.get(
+        "format"
+    ) == "carla_online_rl_checkpoint_manifest_v2"
+    if continuity_required:
+        check(
+            "checkpoint_continuity_format",
+            checkpoint_manifest.get("format")
+            == "carla_online_rl_checkpoint_manifest_v2",
+            checkpoint_manifest.get("format"),
+            "carla_online_rl_checkpoint_manifest_v2",
+        )
+        continuity_rows = []
+        for item in checkpoints:
+            artifacts = item.get("artifacts") or {}
+            artifact_checks = {}
+            for name in ("model", "replay_buffer", "sampler_state"):
+                artifact = artifacts.get(name) or {}
+                required = bool(artifact.get("required"))
+                path = Path(str(artifact.get("path") or ""))
+                exists = path.is_file() if required else True
+                artifact_checks[name] = {
+                    "required": required,
+                    "path": str(path) if required else None,
+                    "exists": exists,
+                }
+            sampler_check = artifact_checks["sampler_state"]
+            sampler_format_valid = True
+            if sampler_check["required"] and sampler_check["exists"]:
+                try:
+                    sampler_format_valid = (
+                        _load_json(sampler_check["path"]).get("format")
+                        == "carla_online_rl_sampler_state_v2"
+                    )
+                except RuntimeError:
+                    sampler_format_valid = False
+            expected_replay = expected_algorithm.upper() == "SAC"
+            expected_sampler = summary.get("scenario_plan_sha256") is not None
+            continuity_rows.append(
+                {
+                    "trained_num_timesteps": item.get("trained_num_timesteps"),
+                    "manifest_complete": item.get("continuity_complete") is True,
+                    "expected_replay_buffer": expected_replay,
+                    "expected_sampler_state": expected_sampler,
+                    "artifact_checks": artifact_checks,
+                    "sampler_format_valid": sampler_format_valid,
+                    "passed": (
+                        item.get("continuity_complete") is True
+                        and artifact_checks["model"]["required"]
+                        and artifact_checks["model"]["exists"]
+                        and artifact_checks["replay_buffer"]["required"]
+                        == expected_replay
+                        and artifact_checks["replay_buffer"]["exists"]
+                        and artifact_checks["sampler_state"]["required"]
+                        == expected_sampler
+                        and artifact_checks["sampler_state"]["exists"]
+                        and sampler_format_valid
+                    ),
+                }
+            )
+        check(
+            "checkpoint_resume_continuity",
+            bool(continuity_rows) and all(row["passed"] for row in continuity_rows),
+            continuity_rows,
+            "all checkpoint model/replay/sampler artifacts complete",
+        )
 
     execution_root = root / "episodes"
     if episode_id:
@@ -210,7 +276,7 @@ def _result(
 ):
     passed = all(item["passed"] for item in checks)
     return {
-        "format": "carla_online_rl_training_quality_gate_v1",
+        "format": "carla_online_rl_training_quality_gate_v2",
         "status": "passed" if passed else "failed",
         "output_root": str(root),
         "expected_algorithm": expected_algorithm.upper(),
@@ -233,6 +299,11 @@ def parse_args():
         "--episode-id",
         help="只审计 episodes/<episode-id> 下的运行；默认审计整个输出目录",
     )
+    parser.add_argument(
+        "--require-continuity",
+        action="store_true",
+        help="要求 V2 checkpoint 模型/replay buffer/sampler state 三件套",
+    )
     parser.add_argument("--output")
     return parser.parse_args()
 
@@ -244,6 +315,7 @@ def main():
         args.expected_steps,
         args.expected_algorithm,
         args.episode_id,
+        args.require_continuity,
     )
     output = Path(args.output).expanduser().resolve() if args.output else Path(args.output_root).expanduser().resolve() / "quality_gate.json"
     output.parent.mkdir(parents=True, exist_ok=True)

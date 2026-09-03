@@ -102,6 +102,63 @@ class CarlaRLQualityGateTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         audit_training(Path(temp), 256, "SAC", episode_id)
 
+    def test_v2_requires_model_replay_buffer_and_sampler_state(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            self._make_completed_run(root)
+            summary_path = root / "rl_training_summary.json"
+            summary = json.loads(summary_path.read_text(encoding="utf-8"))
+            summary["scenario_plan_sha256"] = "plan-sha"
+            self._write(summary_path, summary)
+
+            manifest_path = root / "checkpoint_manifest.json"
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            checkpoint = Path(manifest["checkpoints"][0]["path"])
+            replay = checkpoint.with_name(checkpoint.stem + "_replay_buffer.pkl")
+            sampler = checkpoint.with_name(checkpoint.stem + "_sampler_state.json")
+            replay.write_bytes(b"replay")
+            self._write(
+                sampler,
+                {"format": "carla_online_rl_sampler_state_v2"},
+            )
+            manifest["format"] = "carla_online_rl_checkpoint_manifest_v2"
+            manifest["checkpoints"][0].update(
+                {
+                    "continuity_complete": True,
+                    "artifacts": {
+                        "model": {
+                            "required": True,
+                            "path": str(checkpoint),
+                            "exists": True,
+                        },
+                        "replay_buffer": {
+                            "required": True,
+                            "path": str(replay),
+                            "exists": True,
+                        },
+                        "sampler_state": {
+                            "required": True,
+                            "path": str(sampler),
+                            "exists": True,
+                        },
+                    },
+                }
+            )
+            self._write(manifest_path, manifest)
+            passed = audit_training(root, 256, "SAC", require_continuity=True)
+            self.assertEqual(passed["status"], "passed")
+            self.assertTrue(
+                next(
+                    item
+                    for item in passed["checks"]
+                    if item["name"] == "checkpoint_resume_continuity"
+                )["passed"]
+            )
+
+            replay.unlink()
+            failed = audit_training(root, 256, "SAC", require_continuity=True)
+            self.assertIn("checkpoint_resume_continuity", failed["failed_checks"])
+
 
 if __name__ == "__main__":
     unittest.main()

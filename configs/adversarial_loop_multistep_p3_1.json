@@ -1,0 +1,39 @@
+{
+  "format": "adversarial_loop_v1",
+  "agent_config_path": "configs/adversarial_agent_p3_1.json",
+  "base_carla_config_path": "configs/multi_hazard_rainy_night.json",
+  "route_profile_path": "configs/route_control_profiles/waypoint_follower_v1.json",
+  "max_agent_steps": 8,
+  "fixed_action": [
+    0.0,
+    0.0,
+    0.0,
+    0.0,
+    0.25,
+    -0.25,
+    -0.1,
+    0.0,
+    -0.4,
+    -0.25,
+    0.3,
+    -0.1,
+    0.0,
+    -0.1,
+    0.25
+  ],
+  "runtime": {
+    "output_subdirectory": "adversarial_loop_p3_1",
+    "scene_timeout_seconds": 300,
+    "traffic_manager_port": 8100
+  },
+  "acceptance_requirements": {
+    "sensor_status": "completed",
+    "server_status": "healthy",
+    "minimum_rgb_frames": 100,
+    "route_control_mode": "waypoint_follower",
+    "minimum_route_both_on_rate": 1.0,
+    "maximum_route_deviation_m": 3.0,
+    "route_verification_scope": "pre_collision_for_collision_runs",
+    "carla_version": "0.9.16"
+  }
+}

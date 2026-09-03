@@ -182,6 +182,18 @@ class AdversarialEnvCore:
             "constraint_projection": transition["info"].get(
                 "constraint_projection"
             ),
+            "action_l2_mean": transition["info"].get("action_l2_mean"),
+            "boundary_saturation_fraction": transition["info"].get(
+                "boundary_saturation_fraction"
+            ),
+            "observed_risk_score": transition["info"].get(
+                "observed_risk_score"
+            ),
+            "observed_risk_level": transition["info"].get(
+                "observed_risk_level"
+            ),
+            "collision_count": transition["info"].get("collision_count"),
+            "event_count": transition["info"].get("event_count"),
             "reward_breakdown": transition["reward_breakdown"],
             "termination_reason": transition["reason"],
         }

@@ -125,6 +125,15 @@ def load_agent_config(
         raise AgentContractError(f"缺少奖励配置: {missing}")
     if reward["comparison_mode"] != "relative_capped_delta":
         raise AgentContractError("reward.comparison_mode 必须为 relative_capped_delta")
+    for name in (
+        "action_l2_penalty_weight",
+        "boundary_saturation_penalty_weight",
+    ):
+        if float(reward.get(name, 0.0)) < 0.0:
+            raise AgentContractError(f"reward.{name} 不能小于 0")
+    boundary_tolerance = float(reward.get("boundary_tolerance", 0.02))
+    if not 0.0 <= boundary_tolerance <= 0.5:
+        raise AgentContractError("reward.boundary_tolerance 必须位于 [0, 0.5]")
     return config
 
 
@@ -258,6 +267,16 @@ def propose_candidate(record, action, step_index=0, config=None):
             proposed,
             record["conditions"]["weather_tags"],
         )
+    boundary_tolerance = float(
+        config.get("reward", {}).get("boundary_tolerance", 0.02)
+    )
+    action_l2_mean = math.sqrt(
+        sum(value * value for value in normalized_action) / FEATURE_DIM
+    )
+    boundary_saturation_fraction = sum(
+        value <= boundary_tolerance or value >= 1.0 - boundary_tolerance
+        for value in candidate_values
+    ) / FEATURE_DIM
     sample_suffix = f"_adv_{int(step_index):04d}"
     sample_id = f"{_base_sample_id(record['sample_id'])[:64 - len(sample_suffix)]}{sample_suffix}"
     try:
@@ -283,6 +302,10 @@ def propose_candidate(record, action, step_index=0, config=None):
             "error": str(exc),
             "step_index": int(step_index),
             "constraint_projection": projection,
+            "action_l2_mean": round(float(action_l2_mean), 8),
+            "boundary_saturation_fraction": round(
+                float(boundary_saturation_fraction), 8
+            ),
         }
     return {
         "valid": True,
@@ -293,6 +316,10 @@ def propose_candidate(record, action, step_index=0, config=None):
         "error": None,
         "step_index": int(step_index),
         "constraint_projection": projection,
+        "action_l2_mean": round(float(action_l2_mean), 8),
+        "boundary_saturation_fraction": round(
+            float(boundary_saturation_fraction), 8
+        ),
     }
 
 
@@ -562,6 +589,8 @@ class AdversarialTestAgentV1:
             "risk_delta": 0.0,
             "collision_event": 0.0,
             "event": 0.0,
+            "action_magnitude": 0.0,
+            "boundary_saturation": 0.0,
             "invalid_candidate": 0.0,
             "duplicate": 0.0,
             "run_failure": 0.0,
@@ -573,6 +602,12 @@ class AdversarialTestAgentV1:
             return breakdown
         if proposal.get("duplicate_count", 0) > 0:
             breakdown["duplicate"] = float(reward_config["duplicate_penalty"])
+        breakdown["action_magnitude"] = -float(
+            reward_config.get("action_l2_penalty_weight", 0.0)
+        ) * float(proposal.get("action_l2_mean", 0.0))
+        breakdown["boundary_saturation"] = -float(
+            reward_config.get("boundary_saturation_penalty_weight", 0.0)
+        ) * float(proposal.get("boundary_saturation_fraction", 0.0))
         if not result.successful:
             breakdown["run_failure"] = float(reward_config["run_failure_penalty"])
             return breakdown
@@ -702,6 +737,18 @@ class AdversarialTestAgentV1:
             "risk_method": result.risk_method if result else None,
             "run_dir": result.run_dir if result else None,
             "constraint_projection": proposal.get("constraint_projection"),
+            "action_l2_mean": proposal.get("action_l2_mean"),
+            "boundary_saturation_fraction": proposal.get(
+                "boundary_saturation_fraction"
+            ),
+            "observed_risk_score": (
+                result.observed_risk_score if result else None
+            ),
+            "observed_risk_level": (
+                result.observed_risk_level if result else None
+            ),
+            "collision_count": result.collision_count if result else None,
+            "event_count": result.event_count if result else None,
         }
         return AgentTransition(
             observation=observation,

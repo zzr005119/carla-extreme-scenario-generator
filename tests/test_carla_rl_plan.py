@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from core.carla_rl_plan import (
+    SAMPLER_STATE_FORMAT,
     PlannedScenarioSampler,
     build_multiscene_plan,
     load_multiscene_plan,
@@ -47,6 +48,24 @@ class CarlaRLPlanTests(unittest.TestCase):
                 min(20, 66),
             )
 
+    def test_sampler_state_restores_exact_next_selection(self):
+        with tempfile.TemporaryDirectory() as temp:
+            plan_path = Path(temp) / "plan.json"
+            plan = build_multiscene_plan(ENTRIES, MANIFEST, plan_path, seed=13)
+            rows = plan["splits"]["train"]
+            original = PlannedScenarioSampler(rows, seed=13)
+            for index in range(70):
+                original(13 if index == 0 else None)
+            state = json.loads(json.dumps(original.state_dict()))
+            self.assertEqual(state["format"], SAMPLER_STATE_FORMAT)
+            expected_record, expected_info = original()
+
+            restored = PlannedScenarioSampler(rows, seed=13)
+            restored.load_state_dict(state)
+            actual_record, actual_info = restored()
+            self.assertEqual(actual_record, expected_record)
+            self.assertEqual(actual_info, expected_info)
+
     def test_training_plan_keeps_legacy_smoke_and_adds_multiscene_budget(self):
         with tempfile.TemporaryDirectory() as temp:
             plan_path = Path(temp) / "plan.json"
@@ -63,6 +82,16 @@ class CarlaRLPlanTests(unittest.TestCase):
             self.assertEqual(plan["carla_episode_budget"], 10625)
             self.assertEqual(plan["split_counts"], {"train": 66, "dev": 27, "test": 24})
             self.assertEqual(plan["checkpoint_every"], 1000)
+            self.assertEqual(plan["format"], "carla_online_rl_training_plan_v2")
+            self.assertEqual(plan["sac_replay_buffer_capacity"], 10000)
+            self.assertEqual(
+                plan["checkpoint_continuity"],
+                {
+                    "model": "required",
+                    "replay_buffer": "required",
+                    "sampler_state": "required",
+                },
+            )
 
 
 if __name__ == "__main__":

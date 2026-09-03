@@ -1,0 +1,79 @@
+{
+  "agent_id": "adversarial_test_agent_v1",
+  "mode": "scene_between_episodes",
+  "action_space": {
+    "type": "normalized_delta",
+    "dimension": 15,
+    "low": -1.0,
+    "high": 1.0,
+    "step_size": 0.04,
+    "clip_out_of_range": true,
+    "feature_names": [
+      "weather.cloudiness",
+      "weather.precipitation",
+      "weather.precipitation_deposits",
+      "weather.wind_intensity",
+      "weather.fog_density",
+      "weather.fog_distance",
+      "weather.sun_altitude_angle",
+      "weather.wetness",
+      "lead_vehicle.initial_distance_m",
+      "lead_vehicle.brake_trigger_seconds",
+      "lead_vehicle.brake_intensity",
+      "pedestrian.forward_distance_m",
+      "pedestrian.roadside_offset_m",
+      "pedestrian.trigger_seconds",
+      "pedestrian.speed_mps"
+    ]
+  },
+  "observation_space": {
+    "type": "box",
+    "dimension": 34,
+    "low": 0.0,
+    "high": 1.0,
+    "feedback_fields": [
+      "observed_risk_score",
+      "collision_count",
+      "event_count",
+      "run_valid",
+      "strict_acceptance_passed",
+      "repeat_count",
+      "step_fraction"
+    ]
+  },
+  "reward": {
+    "comparison_mode": "relative_capped_delta",
+    "risk_delta_weight": 1.0,
+    "collision_event_reward": 0.0,
+    "event_reward": 0.0,
+    "action_l2_penalty_weight": 0.02,
+    "boundary_saturation_penalty_weight": 0.1,
+    "boundary_tolerance": 0.02,
+    "invalid_candidate_penalty": -1.0,
+    "duplicate_penalty": -0.25,
+    "run_failure_penalty": -1.0,
+    "collision_event_cap": 1,
+    "event_cap": 4,
+    "event_types": ["ego_safety_brake"]
+  },
+  "termination": {
+    "max_steps": 8,
+    "max_consecutive_duplicates": 3,
+    "terminate_on_invalid_candidate": true,
+    "terminate_on_run_failure": true,
+    "truncate_on_repeated_scene": true,
+    "truncate_on_max_steps": true
+  },
+  "candidate_constraints": {
+    "project_requested_weather": true
+  },
+  "evaluation": {
+    "selection_mode": "best_so_far",
+    "early_stop": {
+      "enabled": true,
+      "target_score": 95.0,
+      "patience_steps": 3,
+      "min_improvement": 0.5
+    }
+  }
+}

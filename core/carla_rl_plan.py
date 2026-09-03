@@ -18,6 +18,7 @@ from core.scenario_validator import require_valid_scenario
 
 
 PLAN_FORMAT = "carla_online_rl_multiscene_plan_v1"
+SAMPLER_STATE_FORMAT = "carla_online_rl_sampler_state_v2"
 SPLITS = ("train", "dev", "test")
 DEFAULT_FRACTIONS = {"train": 0.6, "dev": 0.2, "test": 0.2}
 
@@ -268,6 +269,19 @@ class PlannedScenarioSampler:
         self.cursor = 0
         self.selection_count = 0
         self.selected = []
+        self.selected_canonical_ids = set()
+        self.selected_splits = set()
+
+    def _rows_sha256(self):
+        identity = [
+            {
+                "canonical_sample_id": row["canonical_sample_id"],
+                "scenario_hash": row.get("scenario_hash"),
+                "split": row["split"],
+            }
+            for row in self.rows
+        ]
+        return hashlib.sha256(_canonical_json(identity).encode("utf-8")).hexdigest()
 
     def _reset(self, seed):
         self.rng = np.random.default_rng(int(seed))
@@ -293,13 +307,70 @@ class PlannedScenarioSampler:
             "sampler_seed": self.seed,
         }
         self.selected.append(info)
+        self.selected_canonical_ids.add(info["canonical_sample_id"])
+        self.selected_splits.add(info["plan_split"])
         return copy.deepcopy(row["record"]), info
 
     def snapshot(self):
         return {
             "selection_count": self.selection_count,
-            "unique_canonical_sample_id_count": len(
-                {item["canonical_sample_id"] for item in self.selected}
-            ),
-            "selected_splits": sorted({item["plan_split"] for item in self.selected}),
+            "unique_canonical_sample_id_count": len(self.selected_canonical_ids),
+            "selected_splits": sorted(self.selected_splits),
+            "cursor": self.cursor,
+            "rows_sha256": self._rows_sha256(),
         }
+
+    def state_dict(self):
+        if self.rng is None:
+            raise CarlaRLPlanError("sampler 尚未初始化，不能保存恢复状态")
+        return {
+            "format": SAMPLER_STATE_FORMAT,
+            "seed": self.seed,
+            "rows_sha256": self._rows_sha256(),
+            "row_count": len(self.rows),
+            "rng_state": copy.deepcopy(self.rng.bit_generator.state),
+            "order": list(self.order),
+            "cursor": self.cursor,
+            "selection_count": self.selection_count,
+            "selected_canonical_sample_ids": sorted(self.selected_canonical_ids),
+            "selected_splits": sorted(self.selected_splits),
+        }
+
+    def load_state_dict(self, state):
+        if not isinstance(state, dict) or state.get("format") != SAMPLER_STATE_FORMAT:
+            raise CarlaRLPlanError("sampler 恢复状态格式不受支持")
+        if int(state.get("seed", -1)) != self.seed:
+            raise CarlaRLPlanError("sampler 恢复状态 seed 不一致")
+        if (
+            int(state.get("row_count", -1)) != len(self.rows)
+            or state.get("rows_sha256") != self._rows_sha256()
+        ):
+            raise CarlaRLPlanError("sampler 恢复状态与当前 split 不一致")
+        order = list(state.get("order") or [])
+        if sorted(order) != list(range(len(self.rows))):
+            raise CarlaRLPlanError("sampler 恢复状态 order 不是完整排列")
+        cursor = int(state.get("cursor", -1))
+        if cursor < 0 or cursor > len(order):
+            raise CarlaRLPlanError("sampler 恢复状态 cursor 越界")
+        selected_ids = set(state.get("selected_canonical_sample_ids") or [])
+        valid_ids = {row["canonical_sample_id"] for row in self.rows}
+        if not selected_ids.issubset(valid_ids):
+            raise CarlaRLPlanError("sampler 恢复状态包含当前 split 之外的场景")
+        rng = np.random.default_rng()
+        try:
+            rng.bit_generator.state = copy.deepcopy(state["rng_state"])
+        except (KeyError, TypeError, ValueError) as exc:
+            raise CarlaRLPlanError("sampler RNG 状态无效") from exc
+        self.rng = rng
+        self.order = order
+        self.cursor = cursor
+        self.selection_count = int(state.get("selection_count", 0))
+        if self.selection_count < 0:
+            raise CarlaRLPlanError("sampler selection_count 不能为负数")
+        self.selected = []
+        self.selected_canonical_ids = selected_ids
+        self.selected_splits = set(state.get("selected_splits") or [])
+        valid_splits = {row["split"] for row in self.rows}
+        if not self.selected_splits.issubset(valid_splits):
+            raise CarlaRLPlanError("sampler 恢复状态包含当前 split 之外的标记")
+        return self

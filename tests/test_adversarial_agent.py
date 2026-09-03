@@ -139,6 +139,42 @@ class AdversarialAgentTests(unittest.TestCase):
         self.assertAlmostEqual(second.reward_breakdown["event"], 0.05)
         self.assertGreater(second.reward, 0.0)
 
+    def test_p3_1_reward_penalizes_action_and_does_not_double_count_events(self):
+        config = load_agent_config(
+            os.path.join(PROJECT_ROOT, "configs", "adversarial_agent_p3_1.json")
+        )
+        agent = AdversarialTestAgentV1(config)
+        agent.reset(
+            self.record,
+            {
+                "status": "completed",
+                "observed_risk_score": 40.0,
+                "observed_risk_level": "medium",
+                "collision_count": 0,
+                "event_count": 0,
+                "strict_acceptance_passed": True,
+                "run_dir": "F:\\Carla\\baseline",
+            },
+        )
+        transition = agent.step(
+            [1.0] * 15,
+            {
+                "status": "completed",
+                "observed_risk_score": 50.0,
+                "observed_risk_level": "high",
+                "collision_count": 1,
+                "event_count": 3,
+                "strict_acceptance_passed": True,
+                "run_dir": "F:\\Carla\\candidate",
+            },
+        )
+        self.assertAlmostEqual(transition.reward_breakdown["risk_delta"], 0.1)
+        self.assertEqual(transition.reward_breakdown["collision_event"], 0.0)
+        self.assertEqual(transition.reward_breakdown["event"], 0.0)
+        self.assertAlmostEqual(transition.reward_breakdown["action_magnitude"], -0.02)
+        self.assertLessEqual(transition.reward_breakdown["boundary_saturation"], 0.0)
+        self.assertLess(transition.reward, 0.1)
+
     def test_existing_collision_and_events_are_not_rewarded_again(self):
         agent = AdversarialTestAgentV1(self.config)
         agent.reset(

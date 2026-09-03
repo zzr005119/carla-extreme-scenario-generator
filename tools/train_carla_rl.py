@@ -27,11 +27,19 @@ from tools.run_adversarial_episode import (  # noqa: E402
 )
 
 
+TRAINING_PLAN_FORMAT = "carla_online_rl_training_plan_v2"
+CHECKPOINT_MANIFEST_FORMAT = "carla_online_rl_checkpoint_manifest_v2"
+
+
 def dependency_status():
     return {
         "gymnasium": bool(importlib.util.find_spec("gymnasium")),
         "stable_baselines3": bool(importlib.util.find_spec("stable_baselines3")),
     }
+
+
+def _sac_replay_buffer_capacity(requested_steps):
+    return min(max(int(requested_steps), 10_000), 100_000)
 
 
 def build_training_plan(
@@ -61,7 +69,7 @@ def build_training_plan(
     )
     dependency = dependency_status()
     plan = {
-        "format": "carla_online_rl_training_plan_v1",
+        "format": TRAINING_PLAN_FORMAT,
         "algorithm": algorithm.upper(),
         "requested_steps": int(steps),
         "checkpoint_every": int(checkpoint_every),
@@ -73,7 +81,14 @@ def build_training_plan(
         "carla_server_started_by_script": False,
         "status": "blocked_optional_dependency" if not all(dependency.values()) else "ready",
         "evidence_kind": "online_rl_preflight",
+        "checkpoint_continuity": {
+            "model": "required",
+            "replay_buffer": "required" if algorithm.upper() == "SAC" else "not_applicable",
+            "sampler_state": "required" if scenario_plan is not None else "not_applicable",
+        },
     }
+    if algorithm.upper() == "SAC":
+        plan["sac_replay_buffer_capacity"] = _sac_replay_buffer_capacity(steps)
     if scenario_plan is not None:
         agent_config = load_agent_config(_project_path(config["agent_config_path"]))
         max_steps = int(agent_config["termination"]["max_steps"])
@@ -107,6 +122,97 @@ def _ppo_rollout_steps(requested_steps):
         if int(requested_steps) % value == 0:
             return value
     return 2
+
+
+def _resume_entry(manifest, resume, *, algorithm, training_seed, scenario_plan):
+    if manifest.get("format") != CHECKPOINT_MANIFEST_FORMAT:
+        raise RuntimeError(
+            "resume 拒绝缺少 replay buffer/sampler state 的旧 checkpoint manifest"
+        )
+    if (
+        manifest.get("algorithm") != algorithm
+        or int(manifest.get("training_seed", -1)) != training_seed
+    ):
+        raise RuntimeError("resume checkpoint manifest 与当前算法/种子不一致")
+    if (
+        scenario_plan
+        and manifest.get("scenario_plan_sha256") != scenario_plan["plan_sha256"]
+    ):
+        raise RuntimeError("resume checkpoint manifest 与当前多场景计划不一致")
+    resume_path = Path(resume).expanduser().resolve()
+    checkpoints = list(manifest.get("checkpoints") or [])
+    entry = next(
+        (
+            item
+            for item in checkpoints
+            if Path(str(item.get("path") or "")).expanduser().resolve() == resume_path
+        ),
+        None,
+    )
+    if entry is None:
+        raise RuntimeError("resume checkpoint 未登记在 checkpoint_manifest.json 中")
+    if not checkpoints or entry is not checkpoints[-1]:
+        raise RuntimeError("resume 只允许从 manifest 中最新的 checkpoint 继续")
+    artifacts = entry.get("artifacts") or {}
+    required = ["model"]
+    if algorithm == "SAC":
+        required.append("replay_buffer")
+    if scenario_plan is not None:
+        required.append("sampler_state")
+    missing = []
+    for name in required:
+        artifact = artifacts.get(name) or {}
+        path = Path(str(artifact.get("path") or ""))
+        if artifact.get("required") is not True or not path.is_file():
+            missing.append(name)
+    if missing or entry.get("continuity_complete") is not True:
+        raise RuntimeError(
+            "resume checkpoint 连续性产物不完整: " + ", ".join(missing or ["manifest"])
+        )
+    return entry
+
+
+def _checkpoint_entry(model, sampler, model_dir, prefix, algorithm, chunk_index, chunk):
+    trained_steps = int(model.num_timesteps)
+    checkpoint_path = model_dir / f"{prefix}_steps_{trained_steps:06d}.zip"
+    replay_buffer_path = model_dir / f"{prefix}_steps_{trained_steps:06d}_replay_buffer.pkl"
+    sampler_state_path = model_dir / f"{prefix}_steps_{trained_steps:06d}_sampler_state.json"
+    model.save(str(checkpoint_path))
+    if algorithm == "SAC":
+        model.save_replay_buffer(str(replay_buffer_path))
+    if sampler is not None:
+        _write_json(sampler_state_path, sampler.state_dict())
+    artifacts = {
+        "model": {
+            "required": True,
+            "path": str(checkpoint_path),
+            "exists": checkpoint_path.is_file(),
+        },
+        "replay_buffer": {
+            "required": algorithm == "SAC",
+            "path": str(replay_buffer_path) if algorithm == "SAC" else None,
+            "exists": replay_buffer_path.is_file() if algorithm == "SAC" else None,
+        },
+        "sampler_state": {
+            "required": sampler is not None,
+            "path": str(sampler_state_path) if sampler is not None else None,
+            "exists": sampler_state_path.is_file() if sampler is not None else None,
+        },
+    }
+    continuity_complete = all(
+        not artifact["required"] or artifact["exists"] for artifact in artifacts.values()
+    )
+    if not continuity_complete:
+        raise RuntimeError("checkpoint 连续性产物写入不完整")
+    return {
+        "chunk_index": int(chunk_index),
+        "chunk_steps": int(chunk),
+        "trained_num_timesteps": trained_steps,
+        "path": str(checkpoint_path),
+        "exists": checkpoint_path.is_file(),
+        "artifacts": artifacts,
+        "continuity_complete": continuity_complete,
+    }
 
 
 def train(
@@ -174,23 +280,24 @@ def train(
     run_manifest_path = output_root / "run_manifest.json"
     checkpoint_every = max(1, int(chunk_steps or plan.get("checkpoint_every") or 1000))
     checkpoints = []
+    resume_checkpoint = None
     if resume and not manifest_path.is_file():
         raise RuntimeError("resume 需要同一输出目录下的 checkpoint_manifest.json")
     if resume and manifest_path.is_file():
         try:
             previous_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            if previous_manifest.get("algorithm") != algorithm or int(previous_manifest.get("training_seed", -1)) != training_seed:
-                raise RuntimeError("resume checkpoint manifest 与当前算法/种子不一致")
-            if scenario_plan and previous_manifest.get("scenario_plan_sha256") != scenario_plan["plan_sha256"]:
-                raise RuntimeError("resume checkpoint manifest 与当前多场景计划不一致")
             checkpoints = previous_manifest.get("checkpoints", [])
-            resume_path = str(Path(resume).expanduser().resolve())
-            if not any(item.get("path") == resume_path for item in checkpoints):
-                raise RuntimeError("resume checkpoint 未登记在 checkpoint_manifest.json 中")
+            resume_checkpoint = _resume_entry(
+                previous_manifest,
+                resume,
+                algorithm=algorithm,
+                training_seed=training_seed,
+                scenario_plan=scenario_plan,
+            )
         except (OSError, json.JSONDecodeError):
             raise RuntimeError("无法读取 resume checkpoint manifest")
     run_manifest = {
-        "format": "carla_online_rl_run_manifest_v1",
+        "format": "carla_online_rl_run_manifest_v2",
         "status": "running",
         "algorithm": algorithm,
         "training_seed": training_seed,
@@ -204,6 +311,7 @@ def train(
         "carla_server_started_by_script": False,
         "checkpoint_manifest": str(manifest_path),
         "resume_from": str(Path(resume).expanduser().resolve()) if resume else None,
+        "checkpoint_continuity": plan.get("checkpoint_continuity"),
     }
     _write_json(run_manifest_path, run_manifest)
     model = None
@@ -214,12 +322,29 @@ def train(
             # Keep rollout collection within the explicit CARLA step budget.
             rollout_steps = _ppo_rollout_steps(plan["requested_steps"])
             model_kwargs.update({"n_steps": rollout_steps, "batch_size": rollout_steps})
+        else:
+            model_kwargs["buffer_size"] = int(plan["sac_replay_buffer_capacity"])
         if resume:
             resume_path = Path(resume).expanduser().resolve()
             if not resume_path.is_file():
                 raise FileNotFoundError(f"找不到 resume checkpoint: {resume_path}")
+            sampler_artifact = (resume_checkpoint.get("artifacts") or {}).get(
+                "sampler_state"
+            ) or {}
+            if sampler is not None:
+                sampler_state = json.loads(
+                    Path(sampler_artifact["path"]).read_text(encoding="utf-8")
+                )
+                sampler.load_state_dict(sampler_state)
             model = model_cls.load(str(resume_path), env=env, device="auto")
+            if algorithm == "SAC":
+                replay_artifact = (resume_checkpoint.get("artifacts") or {}).get(
+                    "replay_buffer"
+                ) or {}
+                model.load_replay_buffer(str(replay_artifact["path"]))
             trained_before = int(model.num_timesteps)
+            if trained_before != int(resume_checkpoint["trained_num_timesteps"]):
+                raise RuntimeError("模型步数与 checkpoint manifest 不一致")
         else:
             model = model_cls("MlpPolicy", env, **model_kwargs)
         target_steps = int(plan["requested_steps"])
@@ -236,25 +361,28 @@ def train(
                 progress_bar=False,
             )
             trained_before = int(model.num_timesteps)
-            checkpoint_path = model_dir / f"{prefix}_steps_{trained_before:06d}.zip"
-            model.save(str(checkpoint_path))
-            checkpoints.append(
-                {
-                    "chunk_index": chunk_index,
-                    "chunk_steps": int(chunk),
-                    "trained_num_timesteps": trained_before,
-                    "path": str(checkpoint_path),
-                    "exists": checkpoint_path.is_file(),
-                }
+            checkpoint = _checkpoint_entry(
+                model,
+                sampler,
+                model_dir,
+                prefix,
+                algorithm,
+                chunk_index,
+                chunk,
             )
+            checkpoints.append(checkpoint)
             _write_json(
                 manifest_path,
                 {
-                    "format": "carla_online_rl_checkpoint_manifest_v1",
+                    "format": CHECKPOINT_MANIFEST_FORMAT,
                     "algorithm": algorithm,
                     "training_seed": training_seed,
                     "requested_steps": target_steps,
                     "scenario_plan_sha256": scenario_plan["plan_sha256"] if scenario_plan else None,
+                    "checkpoint_continuity": plan.get("checkpoint_continuity"),
+                    "sac_replay_buffer_capacity": plan.get(
+                        "sac_replay_buffer_capacity"
+                    ),
                     "checkpoints": checkpoints,
                 },
             )
