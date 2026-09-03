@@ -53,7 +53,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 ## 阶段推进清单
 > 待办区只保留尚未完成的事项。完成一项后，从本清单删除，并在“当前工作”或对应文档中保留一条证据索引；`⏸` 表示明确暂缓，不计入当前完成条件。
 
-1. ▶ **S5-RL-P3.1 对抗搜索机制修复**：独立 P3.1 配置、最佳候选保留、提前终止、动作/边界惩罚、SAC replay buffer 与 sampler 状态连续恢复、dev-only checkpoint 选择和晋级门已完成离线实现；尚需依次运行 `256` 步 canary、`2,000` 步 pilot 和同口径 dev 评估。dev 未同时达到平均风险增量 `> 0` 和过半场景风险上升时，不扩大训练预算。
+1. ▶ **S5-RL-P3.1 对抗搜索机制修复**：离线机制和 `256` 步 canary 已完成；canary 训练质量门 `17/17`、CARLA 严格执行 `289/289` 和模型/replay buffer/sampler state 三件套连续性门全部通过。下一步运行 `2,000` 步 pilot，再对 `1,000/2,000` checkpoint 做同口径 dev 评估；dev 未同时达到平均风险增量 `> 0` 和过半场景风险上升时，不扩大训练预算。
 2. ▶ **S5-WEB-03 Web 展示取证**：9 张 Web 功能截图已暂定归档到 `artifacts/stage5_web_screenshots_v1/` 并登记到软著台账；等待功能冻结后复核截图与提交版本一致，并补采一键演示、CARLA 实机和 OpenSCENARIO 证据图。
 3. ⏸ **S5-SCALE-01 10,000 场景扩库**：降级为可扩展流水线设计和当前规模质量验证，不作为阶段五阻塞项。
 4. ⏸ **S5-ABL-01 完整消融实验与结题报告**：放在 Web、在线 RL、ScenarioRunner 和可微闭环证据收口后统一设计、执行和写作。
@@ -103,7 +103,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - 多场景 RL 实验已完成：固定计划为 `train/dev/test=66/27/24`，SAC canary、从 `2,000` 步 checkpoint 恢复到 `10,000/10,000` 步、当前 episode `16/16` 质量门以及冻结 dev/test 均完成。dev 作业 `carla-rl-04-evaluate-dev-v1_20260902_115107` 的四项门为 `27/27`，候选执行 `432/432` 严格通过；test 作业 `carla-rl-05-evaluate-test-v1_20260902_160817` 的四项门为 `24/24`，候选执行 `384/384` 严格通过，均以退出码 `0` 结束。test 上最终候选相对 baseline 的平均风险变化为 `-9.193`，仅 `9/24` 上升，因此结论是工程链路与独立验收完成，但未证明 SAC 的总体对抗性风险提升或普遍泛化。完整口径、分组结果和证据哈希见 `docs/carla_online_rl_multiscene_v1.md`。
 - Web 产品化首期 P0 已完成：统一入口 `tools/web_app.py`/`tools/web_app.cmd` 复用场景库 API，提供 Dashboard、场景列表、详情、受控查询、健康检查，以及生成/校验/风险分析三条可操作表单流程；提交后由 CPU worker 执行，页面轮询任务状态并展示成功产物、结构化失败和取消结果。已修复任务页内联 JavaScript 转义错误，并用 Edge 无界面浏览器确认 `/api/tasks` 结果可实际渲染到任务表；任务结果列已固定宽度并单行省略，完整内容通过悬浮提示查看。校验支持 JSON/JSONL、物理约束和可选 CARLA 配置编译；CARLA 任务显式确认或取消后仍转交外部入口，不由 Web 启动。最新项目环境全量回归为 `174 tests / 5 skipped`（1 项可选 SB3 依赖、4 项 MJX-JAX 测试默认关闭），`compileall` 和冻结内容门均通过；真实 HTTP 冒烟覆盖页面 `200`、三类任务完成、CARLA 取消和 `carla_connected=false`。说明见 `docs/stage5_web_product_flow_v2.md`。
 - RL 独立评估口径与实机收口已完成：天气标签约束投影保留原始违规和变更字段，`test_evaluation_summary.json.acceptance` 固定四项独立门，提交 `569eb6d` 修复候选 `run_dir` 证据透传；最终 dev/test 四项门全部通过。工程验收通过不替代效果结论，冻结 test 的总体风险变化为负，当前不追加同预算重复训练。
-- `S5-RL-P3.1` 已完成 CPU/离线机制实现：V1 配置和历史证据保持冻结，新配置将动作步长降为 `0.04`、场景步数限为 `8`，评估使用 `best_so_far` 并支持目标分/停滞早停；碰撞与事件额外奖励归零，增加动作 RMS L2 和参数边界饱和惩罚。每个 SAC checkpoint 强制保存模型、replay buffer 和 sampler RNG/排列/游标三件套，旧 V1 checkpoint 默认拒绝恢复；checkpoint 只能由同口径 dev V2 摘要选择，既有 test 不再参与 P3.1 选择或最终证明。全量离线回归为 `174 tests / 5 skipped`；尚未产生 P3.1 CARLA 运行或效果证据，运行协议见 `docs/carla_online_rl_p3_1.md`。
+- `S5-RL-P3.1` 已完成 CPU/离线机制和首个实机运行门：V1 配置和历史证据保持冻结，新配置将动作步长降为 `0.04`、场景步数限为 `8`，评估使用 `best_so_far` 并支持目标分/停滞早停；碰撞与事件额外奖励归零，增加动作 RMS L2 和参数边界饱和惩罚。作业 `carla-rl-p3-1-01-canary_20260903_135717` 在提交 `caeb92f` 上以退出码 `0` 完成，SAC 准确训练 `256/256` 步，训练质量门 `17/17`、CARLA `0.9.16` 严格执行 `289/289`，仅选择 train split；模型、replay buffer 和 sampler RNG/排列/游标三件套均存在且连续性门通过。该 canary 不提供策略效果证据；pilot/dev 尚未运行，既有 test 不再参与 P3.1 选择或最终证明。运行协议见 `docs/carla_online_rl_p3_1.md`。
 - 后置能力入口已建立并分级：`tools/train_carla_rl.py` 仍是 Gymnasium/SB3 依赖预检与显式在线训练门；`tools/run_scenario_runner.py` 已支持 TM 端口、同步、地图和 ego 等参数，并完成一条真实单场景直执行；`core/differentiable_closed_loop.py` 提供 Torch 可微运动学及可选 PyBullet 离散校验。缺少可选依赖或 CARLA 服务时，入口明确返回阻塞/预检状态。
 - `S5-CORE-01` 参数级物理约束 V1 已完成：`core/physical_constraints.py` 和 `tools/check_physical_constraints.py` 提供有限值、时间窗口、行人横穿完成时间和运动学边界检查，并输出带字段路径/错误代码/指标的 `physical_constraint_report_v1`；本机和服务器 `Carla666-0916` 均完成种子数据集 `256/256` 条硬约束通过、`0` 条非法。该结果是 CPU 静态参数验证，不产生新的 CARLA 风险结果；说明见 `docs/physical_constraints_v1.md`。
 - `S5-PYBULLET-01` P4 边界收口：`build_p4_boundary_manifest` 将可微 Torch 代理、`L_adv + lambda_1 L_physics + lambda_2 L_control` 组合点、PyBullet 离散回放和参数级硬门汇总为可审计 JSON；固定环境本机适配测试为 `9/9`，服务器 PyBullet `3.2.7` contact probe 为 `63` 个负间距步、`41` 个接触点。本机缺少可选 PyBullet 按契约跳过；该成果证明接口和离散边界，不证明真实 PyBullet 可微刚体、CARLA 车辆物理或生成模型/RL 训练接入；说明见 `docs/differentiable_closed_loop_v1.md` 和 `docs/p4_server_validation_v1.md`。
@@ -358,7 +358,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 6. **版本与数据边界**：服务器运行结果必须能够追溯到 Git 提交、配置、随机种子和输出目录。服务器工作区不直接编辑；发现问题后回笔记本修改、提交并重新同步。GitHub `origin` 用于阶段备份和对外同步，内网 `lab` 用于高频开发部署；两者均只接收已验证且不含大文件或敏感信息的提交。
 
 ## 下一步
-1. 先运行 P3.1 `256` 步 canary；仅在训练质量门和 checkpoint 三件套连续性门全部通过后运行 `2,000` 步 pilot。pilot 的 `1,000/2,000` checkpoint 必须用同一 dev 口径选择，晋级门未通过即停止，不直接追加 `10,000` 步。
+1. P3.1 `256` 步 canary 已通过；下一步运行 `2,000` 步 pilot。pilot 的 `1,000/2,000` checkpoint 必须用同一 dev 口径选择，晋级门未通过即停止，不直接追加 `10,000` 步。
 2. dev 晋级后也不复用已参与诊断的 P3 test 证明泛化；先设计新的独立盲测集，再决定是否扩大预算。运行前重新检查 GPU 服务和显存，GPU0 的 vLLM 与 GPU1 的外部 TensorRT 均不修改。
 3. P3.1 阶段结束后进入 Web 产品流程的真实演示取证并复核软著材料；`S5-WEB-03` 等待功能冻结后执行。计划书指标 baseline 已补齐，但实车路测、人工计时和行业覆盖分母仍需单独证据，不能用当前代理替代。
 4. 保持阶段四冻结实验的原始口径和负向效果结论，以 `docs/stage4_quality_gate_and_experiment_closure_v1.md` 作为论文、软著与结题材料的证据边界入口。

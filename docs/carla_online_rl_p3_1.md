@@ -4,7 +4,19 @@
 
 P3.1 针对冻结 P3 test 上“工程四门通过，但最终候选平均风险变化为负”的问题修复搜索机制。该阶段不覆盖 P3/V1 配置、模型和证据，不把离线测试或 dev 结果写成泛化证明。
 
-当前仓库完成的是代码、配置、恢复契约和 CPU 静态回归。尚未运行 P3.1 的 CARLA canary、pilot 或 dev 评估，因此不能宣称策略效果已经改善。
+当前仓库已完成代码、配置、恢复契约和 CPU 静态回归，并完成 P3.1 的 CARLA canary。尚未运行 pilot 或 dev 评估，因此不能宣称策略效果已经改善。
+
+## Canary 运行证据
+
+2026-09-03，服务器作业 `carla-rl-p3-1-01-canary_20260903_135717` 在提交 `caeb92f9364858232dd5c48b14ea1b702357b9ed` 上完成，退出码为 `0`：
+
+- SAC 准确训练到 `256/256` 步，训练状态为 `completed`；
+- V2 训练质量门 `17/17` 通过，CARLA `0.9.16` 严格执行 `289/289`；
+- sampler 只选择 `train` split，共选择 `33` 个不同场景；
+- checkpoint 模型、replay buffer 和 sampler state 三件套均存在，连续性门通过；
+- 运行根目录为 `/home/zhaozirong/software/output/carla-0.9.16/carla_rl_p3_1_v1/canary_sac_seed_20260903_256`。
+
+该 canary 只证明新训练与恢复证据链可运行，不是策略效果或泛化证据。
 
 ## 独立配置
 
