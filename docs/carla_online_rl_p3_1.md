@@ -4,7 +4,7 @@
 
 P3.1 针对冻结 P3 test 上“工程四门通过，但最终候选平均风险变化为负”的问题修复搜索机制。该阶段不覆盖 P3/V1 配置、模型和证据，不把离线测试或 dev 结果写成泛化证明。
 
-当前仓库已完成代码、配置、恢复契约和 CPU 静态回归，并完成 P3.1 的 CARLA canary。尚未运行 pilot 或 dev 评估，因此不能宣称策略效果已经改善。
+当前仓库已完成代码、配置、恢复契约和 CPU 静态回归，并完成 P3.1 的 CARLA canary 与 `2,000` 步 pilot。pilot 的训练质量门和 CARLA 严格执行门均通过；dev 评估尚未运行，因此不能宣称策略效果已经改善或已通过晋级门。
 
 ## Canary 运行证据
 
@@ -17,6 +17,20 @@ P3.1 针对冻结 P3 test 上“工程四门通过，但最终候选平均风险
 - 运行根目录为 `/home/zhaozirong/software/output/carla-0.9.16/carla_rl_p3_1_v1/canary_sac_seed_20260903_256`。
 
 该 canary 只证明新训练与恢复证据链可运行，不是策略效果或泛化证据。
+
+## Pilot 运行证据
+
+2026-09-03 至 2026-09-04，服务器作业 `carla-rl-p3-1-02-pilot_20260903_160538` 在提交 `f858fca94a4375d0dc792abea89615bfaf856a55` 上完成，退出码为 `0`：
+
+- SAC 准确训练到 `2,000/2,000` 步；
+- V2 训练质量门 `17/17` 通过，CARLA `0.9.16` 严格执行 `2,251/2,251`；
+- sampler 只使用 `train` split，覆盖 `66` 个训练场景；
+- `1,000` 和 `2,000` 两个 checkpoint 的模型、SAC replay buffer、sampler state 三件套均存在，连续性门通过；
+- 运行根目录为 `/home/zhaozirong/software/output/carla-0.9.16/carla_rl_p3_1_v1/pilot_sac_seed_20260903_2000`。
+
+训练日志的最后一条中间记录为 `total_timesteps=1,984`、`ep_rew_mean=-0.196`、`actor_loss=-67.7`、`critic_loss=0.0838`、`ent_coef=0.569`；`ep_rew_mean` 在记录区间内约为 `-0.137` 至 `-0.254`，没有稳定单调上升。对 pilot 的训练轨迹做描述性聚合（不是独立评估）得到 `250` 个完整场景 episode：每个 episode 的 `best_so_far` 候选相对 baseline 平均 `+9.920`、`204/250` 个为正，而最后一个候选平均 `-3.729`、`121/250` 个为正。这说明搜索链路能找到较高风险候选，但不能证明 SAC 策略在未见场景上稳定有效。
+
+该 pilot 只完成训练和运行证据收集；尚未生成 dev 摘要，也尚未作 checkpoint 晋级决定。
 
 ## 独立配置
 
@@ -66,8 +80,8 @@ P3.1 针对冻结 P3 test 上“工程四门通过，但最终候选平均风险
 
 执行顺序为：
 
-1. `256` 步 canary，只验证训练、三件套 checkpoint 和严格运行质量门；
-2. canary 通过后从头运行 `2,000` 步 pilot，保存 `1,000/2,000` 两个 checkpoint；
+1. `256` 步 canary，只验证训练、三件套 checkpoint 和严格运行质量门（已完成）；
+2. canary 通过后从头运行 `2,000` 步 pilot，保存 `1,000/2,000` 两个 checkpoint（已完成）；
 3. pilot 中断时只运行 resume 脚本，不重跑 canary；
 4. 对两个 pilot checkpoint 使用完全相同的 dev split、种子和 P3.1 配置评估；
 5. `tools/select_carla_rl_checkpoint.py` 仅接受四门通过的 dev V2 摘要，先按平均风险增量，再按风险上升比例和候选均值选择 checkpoint。
