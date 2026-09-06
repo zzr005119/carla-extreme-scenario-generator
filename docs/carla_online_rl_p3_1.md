@@ -76,6 +76,29 @@ CARLA 盲测实机入口：
 
 该入口会读取已通过 dev 晋级门的 `dev_checkpoint_selection.json`，不会重新训练；完成后用输出的作业 ID 查询状态。盲测作业完成前，P3.1 只能写成“dev 晋级门通过、独立盲测待执行”。
 
+## 独立盲测实机结果
+
+2026-09-06，服务器作业 `carla-rl-p3-1-04-evaluate-blind_20260906_151941` 在提交 `bd23352a8ac86e160f53ddebc0e59d9f375fdb38` 上完成，退出码为 `0`。结果摘要位于服务器：
+
+`/home/zhaozirong/software/output/carla-0.9.16/carla_rl_p3_1_v1/blind_sac_seed_20260903_steps_001000/test_evaluation_summary.json`
+
+回收副本位于：
+
+`F:\Carla\project-transfer\server-results\blind_sac_seed_20260903_steps_001000_20260906_173315\test_evaluation_summary.json`
+
+摘要 SHA-256：`B1959F5FFD742341BA69DD60CA7E15599A49AD7DF65F6C292AA246FC78B48C1F`。
+
+结果为：
+
+- blind split `24` 条，评估种子 `22260903`，模型为 `1,000` 步 SAC checkpoint；
+- 四项工程门全部通过：baseline 严格验收 `24/24`、候选条件有效性 `24/24`、候选运行严格验收 `24/24`、候选证据完整性 `24/24`；候选 transition `104/104` 有效；
+- baseline 平均风险 `42.718292`，选中候选平均风险 `43.079208`，配对平均增量 `+0.360917`，中位数 `+0.3045`；`17/24` 上升、`7/24` 下降；
+- `best_so_far` 选中候选的最后候选对照增益为 `+1.314125`：最后候选平均增量为 `-0.953208`，说明本结果依赖当前选择机制，不能解读为每一步候选都有效；
+- 按生成器的平均增量：`lhs +0.500375`、`gmm +0.419625`、`cvae +0.162750`；按目标风险档：`high +0.608833`、`medium +0.403167`、`low +0.214667`、`critical +0.217000`；
+- baseline/candidate 碰撞总数分别为 `573/313`，所有 `24` 个 candidate 均路线、传感器和 CARLA 服务严格通过。
+
+该结果可以支持“在一组预先冻结、未参与 checkpoint 选择的独立场景上，当前 checkpoint 的选中候选平均风险小幅上升”的描述性结论；不能单独升级为跨地图、跨生成分布或总体泛化证明。盲测场景数量有限、候选采用 `best_so_far` 选择，后续论文/结题材料应同时保留最后候选负增量和工程边界。若需要正式统计推断，应预先固定重复场景/交通种子和分层统计方案后再扩展。
+
 ## 独立配置
 
 - 循环配置：`configs/adversarial_loop_multistep_p3_1.json`
