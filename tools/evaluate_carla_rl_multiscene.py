@@ -279,8 +279,8 @@ def evaluate(plan_path, config_path, model_path, output_root, algorithm, *, spli
 
     plan = load_multiscene_plan(plan_path)
     config = load_loop_config(config_path)
-    if split not in ("dev", "test"):
-        raise ValueError("独立评估 split 只能为 dev 或 test")
+    if split not in ("dev", "test", "blind"):
+        raise ValueError("独立评估 split 只能为 dev、test 或 blind")
     rows = plan["splits"][split]
     if max_scenarios:
         rows = rows[: int(max_scenarios)]
@@ -290,7 +290,7 @@ def evaluate(plan_path, config_path, model_path, output_root, algorithm, *, spli
     sampler = PlannedScenarioSampler(rows, seed=eval_seed)
     output_root = Path(output_root).expanduser().resolve()
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    episode_id = _safe_name(f"rl_test_{algorithm.lower()}_{eval_seed}_{timestamp}")
+    episode_id = _safe_name(f"rl_{split}_{algorithm.lower()}_{eval_seed}_{timestamp}")
     episode_dir = output_root / "episodes" / episode_id
     runtime_root = output_root / "runtime" / episode_id
     base_config = load_json(_project_path(config["base_carla_config_path"]))
@@ -503,13 +503,13 @@ def evaluate(plan_path, config_path, model_path, output_root, algorithm, *, spli
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="在固定 dev/test split 上评估 CARLA RL checkpoint")
+    parser = argparse.ArgumentParser(description="在固定 dev/test/blind split 上评估 CARLA RL checkpoint")
     parser.add_argument("--scenario-plan", required=True)
     parser.add_argument("--config", default=str(PROJECT_ROOT / "configs" / "adversarial_loop_multistep_v1.json"))
     parser.add_argument("--model", required=True)
     parser.add_argument("--output-root", required=True)
     parser.add_argument("--algorithm", choices=("PPO", "SAC"), required=True)
-    parser.add_argument("--split", choices=("dev", "test"), default="test")
+    parser.add_argument("--split", choices=("dev", "test", "blind"), default="test")
     parser.add_argument("--seed", type=int)
     parser.add_argument("--max-scenarios", type=int, default=0)
     parser.add_argument("--allow-online-carla", action="store_true")

@@ -4,7 +4,7 @@
 
 P3.1 针对冻结 P3 test 上“工程四门通过，但最终候选平均风险变化为负”的问题修复搜索机制。该阶段不覆盖 P3/V1 配置、模型和证据，不把离线测试或 dev 结果写成泛化证明。
 
-当前仓库已完成代码、配置、恢复契约和 CPU 静态回归，并完成 P3.1 的 CARLA canary 与 `2,000` 步 pilot。pilot 的训练质量门和 CARLA 严格执行门均通过；dev 评估尚未运行，因此不能宣称策略效果已经改善或已通过晋级门。
+当前仓库已完成代码、配置、恢复契约和 CPU 静态回归，并完成 P3.1 的 CARLA canary、`2,000` 步 pilot、dev 评估和独立盲测计划冻结。pilot 的训练质量门、dev 工程门和 dev 晋级门均通过；独立盲测尚未运行，因此不能把 dev 结果写成泛化证明。
 
 ## Canary 运行证据
 
@@ -46,6 +46,35 @@ P3.1 针对冻结 P3 test 上“工程四门通过，但最终候选平均风险
 `/home/zhaozirong/software/output/carla-0.9.16/carla_rl_p3_1_v1/pilot_sac_seed_20260903_2000/models/sac_seed_20260903_steps_001000.zip`
 
 这个 gate 只用于 P3.1 的 dev 训练决策。它证明修复后的搜索机制在保留的 dev 场景上满足当前阈值，不证明总体泛化、统计显著性或真实道路风险提升；test split 未参与选择。
+
+## 独立盲测计划
+
+独立盲测计划已冻结到 `data/scenarios/carla_rl_p3_1_independent_blind_v1/carla_rl_multiscene_plan_p3_1_blind_v1.json`，计划哈希为：
+
+`28e23ff5c60464ce38e874e04ea09cb22124d52f5d9eb3f54e3239b77c0143c6`
+
+设计口径如下：
+
+- `3` 个生成器分层（`lhs/gmm/cvae`）× `4` 个目标风险档（`low/medium/high/critical`）× 每层 `2` 条，共 `24` 条；
+- 生成种子为 `20260906`，基础 train/dev/test 划分种子保持 `20260903`；
+- 场景由独立参数空间采样生成，使用新的 `canonical_sample_id` 和 `scenario_hash`，不直接复制现有 `117` 条场景；
+- 与旧场景库的 ID/hash 重叠均为 `0`，与旧 train/dev/test 计划也通过全局泄漏校验；最小归一化参数距离为 `0.1006879`；
+- baseline 与 RL candidate 在同一盲测场景内成对执行，使用已晋级的 `1,000` 步 SAC checkpoint，不追加训练；
+- 结果只作逐场景配对的描述性结论，至少报告四项工程门、平均/中位风险增量、上升比例、分层结果、碰撞/路线失败和 best-so-far 与 last-candidate 差异。
+
+计划生成和本地校验入口：
+
+```cmd
+python tools\prepare_carla_rl_p3_1_blind_plan.py
+```
+
+CARLA 盲测实机入口：
+
+```cmd
+.\tools\server_carla_rl_p3_1_04_evaluate_blind.cmd
+```
+
+该入口会读取已通过 dev 晋级门的 `dev_checkpoint_selection.json`，不会重新训练；完成后用输出的作业 ID 查询状态。盲测作业完成前，P3.1 只能写成“dev 晋级门通过、独立盲测待执行”。
 
 ## 独立配置
 
@@ -91,6 +120,7 @@ P3.1 针对冻结 P3 test 上“工程四门通过，但最终候选平均风险
 .\tools\server_carla_rl_p3_1_02_pilot.cmd
 .\tools\server_carla_rl_p3_1_02_resume_pilot.cmd
 .\tools\server_carla_rl_p3_1_03_evaluate_dev.cmd
+.\tools\server_carla_rl_p3_1_04_evaluate_blind.cmd
 ```
 
 执行顺序为：
@@ -100,6 +130,7 @@ P3.1 针对冻结 P3 test 上“工程四门通过，但最终候选平均风险
 3. pilot 中断时只运行 resume 脚本，不重跑 canary；
 4. 对两个 pilot checkpoint 使用完全相同的 dev split、种子和 P3.1 配置评估（已完成）；
 5. `tools/select_carla_rl_checkpoint.py` 仅接受四门通过的 dev V2 摘要，先按平均风险增量，再按风险上升比例和候选均值选择 checkpoint（已选择 `1,000` 步 checkpoint）。
+6. 使用冻结的独立 blind split 评估已选择 checkpoint；盲测未完成前不作泛化结论。
 
 dev 脚本可在中断后重启：已存在摘要只有在模型、配置、计划、评估种子哈希/标识和四项验收全部匹配时才复用，不会无条件重复已完成的 checkpoint 评估。
 
@@ -111,6 +142,6 @@ pilot 晋级门要求所选 checkpoint 在 dev 上同时满足：平均风险增
 - pilot 训练门失败：只从最新完整三件套恢复。
 - dev 工程门失败：先修证据或运行质量，不进行效果解释。
 - dev 晋级门失败：停止扩大 SAC 预算，优先比较非学习搜索或调整状态/动作设计。
-- dev 晋级门通过：冻结选中的 `1,000` 步 checkpoint，先设计新的独立盲测集，再决定是否扩大训练预算；既有 P3 test 已用于诊断，不重复作为 P3.1 最终证明集。
+- dev 晋级门通过：冻结选中的 `1,000` 步 checkpoint，运行新的独立盲测集；既有 P3 test 已用于诊断，不重复作为 P3.1 最终证明集。
 
-最终“总体对抗性风险提升或普遍泛化”至少需要未参与训练、调参和问题诊断的新盲测场景，并报告逐场景配对结果、均值/中位数、上升比例和不确定性。当前 P3.1 不满足这一证明条件。
+最终“总体对抗性风险提升或普遍泛化”至少需要未参与训练、调参和问题诊断的新盲测场景，并报告逐场景配对结果、均值/中位数、上升比例和不确定性。当前 P3.1 的独立盲测计划已冻结，但在盲测实机作业完成并分析前仍不满足这一证明条件。

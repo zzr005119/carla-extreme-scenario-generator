@@ -20,6 +20,7 @@ from core.scenario_validator import require_valid_scenario
 PLAN_FORMAT = "carla_online_rl_multiscene_plan_v1"
 SAMPLER_STATE_FORMAT = "carla_online_rl_sampler_state_v2"
 SPLITS = ("train", "dev", "test")
+OPTIONAL_SPLITS = ("blind",)
 DEFAULT_FRACTIONS = {"train": 0.6, "dev": 0.2, "test": 0.2}
 
 
@@ -240,19 +241,42 @@ def load_multiscene_plan(path):
             if row.get("split") != split or row.get("record", {}).get("provenance", {}).get("split") != expected_record_split:
                 raise CarlaRLPlanError(f"{split} split provenance 不一致")
             require_valid_scenario(row["record"])
-    ids = {split: {row["canonical_sample_id"] for row in plan["splits"][split]} for split in SPLITS}
+    present_optional = [
+        split for split in OPTIONAL_SPLITS if split in plan.get("splits", {})
+    ]
+    for split in present_optional:
+        rows = plan["splits"][split]
+        if not isinstance(rows, list) or not rows:
+            raise CarlaRLPlanError(f"{split} split 不能为空")
+        for row in rows:
+            if (
+                row.get("split") != split
+                or row.get("record", {}).get("provenance", {}).get("split")
+                != "inference"
+            ):
+                raise CarlaRLPlanError(f"{split} split provenance 不一致")
+            require_valid_scenario(row["record"])
+
+    all_splits = tuple(SPLITS) + tuple(present_optional)
+    ids = {split: {row["canonical_sample_id"] for row in plan["splits"][split]} for split in all_splits}
     hashes = {
         split: {row.get("scenario_hash") for row in plan["splits"][split] if row.get("scenario_hash")}
-        for split in SPLITS
+        for split in all_splits
     }
-    for index, left in enumerate(SPLITS):
-        for right in SPLITS[index + 1 :]:
+    for index, left in enumerate(all_splits):
+        for right in all_splits[index + 1 :]:
             if ids[left] & ids[right]:
                 raise CarlaRLPlanError(f"加载计划发现 split 泄漏: {left}/{right}")
             if hashes[left] & hashes[right]:
                 raise CarlaRLPlanError(f"加载计划发现 scenario_hash 泄漏: {left}/{right}")
     if plan.get("leakage_check", {}).get("scenario_hash_overlap") != 0:
         raise CarlaRLPlanError("计划 leakage_check 未声明为零")
+    if "blind" in present_optional:
+        blind_check = plan.get("leakage_check", {})
+        if blind_check.get("blind_canonical_sample_id_overlap") != 0:
+            raise CarlaRLPlanError("盲测计划 canonical_sample_id 泄漏检查未通过")
+        if blind_check.get("blind_scenario_hash_overlap") != 0:
+            raise CarlaRLPlanError("盲测计划 scenario_hash 泄漏检查未通过")
     return plan
 
 
