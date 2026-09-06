@@ -32,6 +32,21 @@ P3.1 针对冻结 P3 test 上“工程四门通过，但最终候选平均风险
 
 该 pilot 只完成训练和运行证据收集；尚未生成 dev 摘要，也尚未作 checkpoint 晋级决定。
 
+## Dev 评估与 checkpoint 选择
+
+2026-09-06，服务器作业 `carla-rl-p3-1-03-evaluate-dev_20260906_105620` 在提交 `818ed65a0ab3bad226f50a30bf178d835436d235` 上完成，退出码为 `0`。两个 pilot checkpoint 均使用相同的 dev split、配置和评估种子 `20360903`，每个 checkpoint 覆盖 `27` 个 dev 场景；两个摘要的四项独立工程门均为 `27/27` 通过：baseline 严格验收、候选条件有效性、候选运行严格验收和候选证据完整性。
+
+评估效果为：
+
+- `1,000` 步 checkpoint：baseline 平均风险 `53.640407`，选中候选平均风险 `59.357667`，平均增量 `+5.717259`，中位数增量 `+0.528`，`22/27` 个场景上升（`81.48%`）；
+- `2,000` 步 checkpoint：baseline 平均风险 `53.896741`，选中候选平均风险 `58.413963`，平均增量 `+4.517222`，中位数增量 `+0.131`，`16/27` 个场景上升（`59.26%`）。
+
+因此 `dev_checkpoint_selection.json` 的 promotion gate 为 `passed`，按“平均增量、上升比例、候选均值、训练步数”的顺序选择了 `1,000` 步 checkpoint：
+
+`/home/zhaozirong/software/output/carla-0.9.16/carla_rl_p3_1_v1/pilot_sac_seed_20260903_2000/models/sac_seed_20260903_steps_001000.zip`
+
+这个 gate 只用于 P3.1 的 dev 训练决策。它证明修复后的搜索机制在保留的 dev 场景上满足当前阈值，不证明总体泛化、统计显著性或真实道路风险提升；test split 未参与选择。
+
 ## 独立配置
 
 - 循环配置：`configs/adversarial_loop_multistep_p3_1.json`
@@ -83,8 +98,8 @@ P3.1 针对冻结 P3 test 上“工程四门通过，但最终候选平均风险
 1. `256` 步 canary，只验证训练、三件套 checkpoint 和严格运行质量门（已完成）；
 2. canary 通过后从头运行 `2,000` 步 pilot，保存 `1,000/2,000` 两个 checkpoint（已完成）；
 3. pilot 中断时只运行 resume 脚本，不重跑 canary；
-4. 对两个 pilot checkpoint 使用完全相同的 dev split、种子和 P3.1 配置评估；
-5. `tools/select_carla_rl_checkpoint.py` 仅接受四门通过的 dev V2 摘要，先按平均风险增量，再按风险上升比例和候选均值选择 checkpoint。
+4. 对两个 pilot checkpoint 使用完全相同的 dev split、种子和 P3.1 配置评估（已完成）；
+5. `tools/select_carla_rl_checkpoint.py` 仅接受四门通过的 dev V2 摘要，先按平均风险增量，再按风险上升比例和候选均值选择 checkpoint（已选择 `1,000` 步 checkpoint）。
 
 dev 脚本可在中断后重启：已存在摘要只有在模型、配置、计划、评估种子哈希/标识和四项验收全部匹配时才复用，不会无条件重复已完成的 checkpoint 评估。
 
@@ -96,6 +111,6 @@ pilot 晋级门要求所选 checkpoint 在 dev 上同时满足：平均风险增
 - pilot 训练门失败：只从最新完整三件套恢复。
 - dev 工程门失败：先修证据或运行质量，不进行效果解释。
 - dev 晋级门失败：停止扩大 SAC 预算，优先比较非学习搜索或调整状态/动作设计。
-- dev 晋级门通过：再单独设计训练预算和新的盲测集；既有 P3 test 已用于诊断，不重复作为 P3.1 最终证明集。
+- dev 晋级门通过：冻结选中的 `1,000` 步 checkpoint，先设计新的独立盲测集，再决定是否扩大训练预算；既有 P3 test 已用于诊断，不重复作为 P3.1 最终证明集。
 
 最终“总体对抗性风险提升或普遍泛化”至少需要未参与训练、调参和问题诊断的新盲测场景，并报告逐场景配对结果、均值/中位数、上升比例和不确定性。当前 P3.1 不满足这一证明条件。
