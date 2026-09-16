@@ -64,7 +64,8 @@
 - 随机抽取的 SB3 checkpoint ZIP 完整性测试通过，无损坏成员。
 - 经 `/home/zhaozirong/software/output` 软链接写入、读取和删除临时文件通过。
 - 后台任务脚本由 `bash` 显式解释，不再对 NTFS 任务文件调用不受支持的 `chmod`；对应两项回归测试通过。
-- 迁移期间及结束后均无 CARLA、RL、ScenarioRunner 或项目后台任务运行。
+- 部署提交 `34f341b` 后，CPU 后台作业 `storage-migration-smoke_20260916_203528` 在 `/data/zhaozirong/software/output/carla-0.9.16/remote_jobs/` 完整创建并以退出码 `0` 结束，日志输出 `storage-smoke-ok`。
+- 除上述显式 CPU 冒烟外，迁移期间未运行 CARLA、RL 或 ScenarioRunner；冒烟结束后无项目后台任务残留。
 
 ## 保留在 `/home` 的目录
 
