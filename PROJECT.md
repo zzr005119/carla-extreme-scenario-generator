@@ -5,7 +5,7 @@
 ## 基本信息
 - **项目名称**：基于生成式AI的自动驾驶极端场景库构建与仿真测试平台
 - **软著登记名称**：基于CARLA的自动驾驶极端场景生成与仿真测试系统 V1.0
-- **终极目标**：完成可运行的软件 V1.0，并申请一项计算机软件著作权登记
+- **长期目标**：持续打磨生成、管理、仿真、评估一体化系统；待功能、体验和证据链稳定后再冻结正式版本并申请计算机软件著作权登记
 - **GitHub**：https://github.com/zzr005119/carla-extreme-scenario-generator
 - **源码仓库**：`D:\Xx\竞赛\大创实施ing`
 - **CARLA 0.9.16 当前验证基线**：`F:\Carla\carla-0.9.16`
@@ -18,7 +18,7 @@
 - **最后更新**：2026-09-16
 
 ## 当前阶段
-**大创已完成阶段四“仿真平台与对抗性测试代理”的硬质量门和当前证据收口，现转入阶段五“系统集成与成果产出”。阶段四形成了 OpenSCENARIO 最小交换适配、对抗性代理契约、闭环编排、Gymnasium/SB3 工程链路、非学习基线、冻结代理训练与真实 CARLA 独立评估。18 个独立策略 pair 的 `54/54` 条运行通过版本、RGB、服务健康、`heuristic_v2` 和路线严格验收；LHS/high 的 9 个独立候选完成边界校准。现有证据证明工程链路可复现，但不证明 SAC 或 rule-guided LHS 的普遍优势，不支持把风险代理升级为实测风险或在线训练 reward。阶段四综合结论见 `docs/stage4_quality_gate_and_experiment_closure_v1.md`。**
+**大创已完成阶段四“仿真平台与对抗性测试代理”的硬质量门和当前证据收口，现进入阶段五“系统集成与持续产品化”。阶段四形成了 OpenSCENARIO 最小交换适配、对抗性代理契约、闭环编排、Gymnasium/SB3 工程链路、非学习基线、冻结代理训练与真实 CARLA 独立评估。18 个独立策略 pair 的 `54/54` 条运行通过版本、RGB、服务健康、`heuristic_v2` 和路线严格验收；LHS/high 的 9 个独立候选完成边界校准。现有证据证明工程链路可复现，但不证明 SAC 或 rule-guided LHS 的普遍优势，不支持把风险代理升级为实测风险或在线训练 reward。阶段四综合结论见 `docs/stage4_quality_gate_and_experiment_closure_v1.md`。**
 
 当前完成的是一套 **CARLA 极端场景仿真 Demo**，它是后续生成式 AI 场景生成、物理校验和自动化测试的仿真底座，不是项目终点，也不是最终软件封版。风险指标 V2 已完成离线分析和 CARLA 实机回归。
 
@@ -32,15 +32,15 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 2. ✅ **生成式 AI 模型与物理约束**：场景 Schema、独立校验器、种子数据集、LHS/GMM/CVAE、确定性控制器、严格验收、风险反馈 V1—V5、物理增强代理与配对实机验证均已形成可复现工程基线；潜空间条件 Flow 延后评估，不作为阶段二完成条件。
 3. ✅ **极端场景库与质量评估**：统一条目、来源追踪、哈希去重、真实性/多样性/危险性/可执行性指标、结构化检索索引、质量分析基线、接口回归门槛、软著模块映射、接口规格和 Dashboard 页面级回归均已完成；软著演示截图后置到正式申请准备阶段。
 4. ✅ **仿真平台与对抗性测试代理**：硬运行质量门和当前证据已收口；OpenSCENARIO 最小交换、ScenarioRunner 单场景直执行、同样本 Scene 04 完整多传感器/路线/风险验收、代理契约、闭环编排、Gymnasium/SB3 工程链路、非学习基线、CARLA 在线 SAC 训练及冻结 dev/test 评估、重复测量和 LHS/high 边界校准均已形成可复现基线。冻结 test 未证明 SAC 总体风险提升，RL 泛化与跨地图/批量 ScenarioRunner 语义仍不作为已实现能力。
-5. ▶ **系统集成与成果产出**：当前阶段。整合“生成—管理—测试—评估”冻结入口，统一质量门与证据引用，准备论文、软著和结题材料。
+5. ▶ **系统集成与持续产品化**：当前阶段。持续打磨“生成—校验—管理—测试—评估”完整工作流、任务可靠性、证据追溯和 CARLA 外部执行衔接；成果材料只维护底稿，不以尽快封板或申请软著为当前完成目标。
 
 ## 新总体目标与完成边界
-- **当前总目标**：先完成可访问、可演示、可扩展的 Web 管理系统，再继续补齐计划书中除明显夸张或特别耗时目标外的核心技术目标；Web 系统不是项目终点。
+- **当前总目标**：把现有研究型 Demo 持续打磨为稳定、易用、可追溯、可扩展的 Web 管理与仿真测试系统，再补齐有明确收益和验收口径的核心技术能力；不以尽快形成 V1.0 或提交软著为当前目标。
 - **Web 首期完成要求**：统一入口、Dashboard 首页、场景库列表、场景详情、117 个独立场景和 351 条严格验收来源证据的展示；生成、校验、风险分析已接入可操作表单、任务轮询和结构化结果，CARLA 仍保持显式外部执行。
 - **研究目标完成要求**：保留 LHS/GMM/CVAE 工程基线，补做可验证的物理约束模块、生成模型小规模对照、受控条件检索和自动风险分析/测试编排；每项结论必须区分静态校验、离线结果和 CARLA 实机证据。
 - **规模目标降级规则**：计划书中的 10,000 场景扩库改为可扩展生成与入库流水线，并以当前 117 条质量门快照作为已验证规模；90% 成本降低、11 倍效率、90% 覆盖率在同口径基线和实测完成前不得宣称达成。
 - **明确后置/不作为当前完成条件**：CARLA 在线 RL 泛化、ScenarioRunner 跨地图/批量完整语义、自然语言自由检索、真实 PyBullet 可微物理闭环和跨地图真实性结论；本阶段已完成一条原生直执行及一条关联样本的 Scene 04 完整验收，但不冒充泛化能力。
-- **封板决策**：当前不把既有命令行 Demo 提交冻结为最终 V1.0；待 Web 首期和核心目标清单收口后，再统一做最终冻结、截图和软著申请材料。
+- **版本与软著决策**：正式 V1.0 冻结、最终截图和软著申请整体暂停。现有冻结检查与材料台账只作为可复用工程底稿；只有系统经过持续迭代、完整用户流程验收和实际使用复核，且主要功能范围不再频繁变化后，才重新启动正式版本冻结与申请材料整理。
 
 ## 技术路线与选型
 - **Web 服务**：首期使用 Python 标准库 `http.server`，在现有 `scenario_dashboard.py` 数据契约上增加 `tools/web_app.py` 统一入口；任务状态由 `core/web_task_orchestrator.py` 持久化到独立 JSON 目录。后续有多用户、权限或高并发需求时，再评估迁移 FastAPI。
@@ -54,9 +54,11 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 ## 阶段推进清单
 > 待办区只保留尚未完成的事项。完成一项后，从本清单删除，并在“当前工作”或对应文档中保留一条证据索引；`⏸` 表示明确暂缓，不计入当前完成条件。
 
-1. ▶ **S5-WEB-03 Web 展示取证**：9 张 Web 功能截图已暂定归档到 `artifacts/stage5_web_screenshots_v1/` 并登记到软著台账；等待功能冻结后复核截图与提交版本一致，并补采一键演示、CARLA 实机和 OpenSCENARIO 证据图。
-2. ⏸ **S5-SCALE-01 10,000 场景扩库**：降级为可扩展流水线设计和当前规模质量验证，不作为阶段五阻塞项。
-3. ⏸ **S5-ABL-01 完整消融实验与结题报告**：放在 Web、在线 RL、ScenarioRunner 和可微闭环证据收口后统一设计、执行和写作。
+1. ▶ **S5-PRODUCT-01 完整产品工作流**：把生成、校验、场景库查询/详情、风险分析、证据查看和 CARLA 外部任务交接串成连续用户流程，减少依赖命令行和人工寻找产物的步骤。
+2. ▶ **S5-QUALITY-01 产品可靠性**：补齐输入与路径安全、重复提交、失败重试、任务恢复、结果详情、证据哈希和服务器任务状态边界，并为关键流程建立稳定回归。
+3. ⏸ **S5-WEB-03 最终展示取证与软著冻结**：现有 9 张截图和材料台账仅作历史底稿；系统持续打磨期间不采集所谓最终截图、不指定 V1.0 冻结提交、不启动软著申请。
+4. ⏸ **S5-SCALE-01 10,000 场景扩库**：降级为可扩展流水线设计和当前规模质量验证，不作为阶段五阻塞项。
+5. ⏸ **S5-ABL-01 完整消融实验与结题报告**：待核心产品流程和研究边界稳定后统一设计、执行和写作。
 
 ## 计划书目标映射
 | 计划书目标 | 当前处理 | 验收要求 |
@@ -72,7 +74,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 
 ## 软著材料同步要求
 - Web 每新增一个可见模块，就同步更新 `docs/software_copyright_module_mapping_v1.md`、`docs/software_copyright_interface_spec_v1.md` 和 `docs/software_copyright_material_ledger_v1.md` 的入口、功能、证据和边界。
-- Web 页面截图已先按暂定最终版本归档到 `artifacts/stage5_web_screenshots_v1/`；正式申请仍需基于最终冻结提交复核截图、操作说明、代码鉴别材料和申请主体信息，当前不声称已完成软著申请。
+- 现有 Web 页面截图归档在 `artifacts/stage5_web_screenshots_v1/`，仅作为历史界面底稿；持续产品化期间不把它们维护为最终申请截图。正式申请重新启动后，必须基于届时冻结提交重新复核截图、操作说明、代码鉴别材料和申请主体信息。
 
 ## 当前 Demo 子阶段
 1. ✅ 极端天气、多危险叠加和行人突发场景。
@@ -95,11 +97,11 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - V2 实机回归：运行 `20260812_120439` 完成，`heuristic_v2` 得分 `63.456`、等级 `high`，无碰撞，RGB/Depth/SemSeg 各 `200` 帧，传感器写盘完成，CARLA 服务健康检查通过。
 
 ## 当前工作
-- 软著前置材料整理 V1 已完成：新增 `docs/software_copyright_material_ledger_v1.md`、`docs/stage5_user_operation_guide_v1.md` 和 `docs/stage5_material_index_v1.md`；模块映射、接口规格和阶段五成果索引已统一到 M01–M08 口径。当前不制作最终申请截图、不提交软著，待 V1.0 功能和提交冻结后统一采集、核对与整理。
-- V1.0 冻结前检查已建立：`tools/check_stage5_freeze.cmd` 覆盖材料入口、M01–M08 口径、M08 清单契约、117/351 场景库计数、产物哈希、Carla666-0916 环境和工作区状态；当前内容检查 `30 PASS / 0 FAIL`，另有 3 项正式冻结前 PENDING。`--require-clean` 目前仅因用户保留的未提交 `data/scenarios/seed_v1/example_record.json` 报 `git_clean`，不属于项目实现改动；正式冻结前需由用户决定恢复或单独处理该文件，正式提交、最终截图和申请主体信息仍为 PENDING。
+- 软著前置材料底稿 V1 已建立：`docs/software_copyright_material_ledger_v1.md`、`docs/stage5_user_operation_guide_v1.md` 和 `docs/stage5_material_index_v1.md` 已统一到 M01–M08 口径。软著申请当前暂停，底稿只随模块、接口和证据边界变化维护，不制作最终申请截图，也不限制产品功能迭代。
+- V1.0 冻结前检查已建立：`tools/check_stage5_freeze.cmd` 覆盖材料入口、M01–M08 口径、M08 清单契约、117/351 场景库计数、产物哈希、Carla666-0916 环境和工作区状态；当前内容检查 `30 PASS / 0 FAIL`，另有 3 项正式冻结前 PENDING。该检查器当前仅作为工程健康检查，不驱动近期封板；`--require-clean` 仍会识别用户保留的未提交 `data/scenarios/seed_v1/example_record.json`。
 - 阶段五 M08 一键最小演示链路 V1 已建立：`tools/stage5_demo.cmd` 优先使用 `Carla666-0916` 环境，默认离线串联 M01 场景记录、M02 校验/编译、M03 场景库查询、M04 OpenSCENARIO 静态适配、M05 历史风险证据、M06 复现清单和 M07 Dashboard 数据校验，输出统一 `demo_manifest.json`；默认 `carla_connected=false`，不隐式启动 CARLA。接口清单见 `docs/stage5_minimal_demo_and_interface_catalog_v1.md`。
 - 阶段四综合质量门与实验结论已收口：硬运行门通过，工程接口门按证据等级归档，SAC/rule-guided LHS 的普遍优势、风险代理升级和跨场景泛化仍明确为未证明；ScenarioRunner 已完成一条最小 XOSC 实机直执行，但完整多传感器/风险语义仍后置。报告见 `docs/stage4_quality_gate_and_experiment_closure_v1.md`。
-- 当前进入阶段五，优先整合“生成、校验、场景库、仿真、风险分析、实验编排、Web Dashboard”的冻结入口，并准备软著、论文和结题材料；不继续无目标扩展阶段四 CARLA 实验。
+- 当前进入阶段五持续产品化迭代，优先打磨“生成、校验、场景库、仿真、风险分析、实验编排、Web Dashboard”的连续用户流程和可靠性；冻结、最终截图、软著、论文和结题材料均不作为当前节奏约束，也不继续无目标扩展阶段四 CARLA 实验。
 - 多场景 RL 实验已完成：固定计划为 `train/dev/test=66/27/24`，SAC canary、从 `2,000` 步 checkpoint 恢复到 `10,000/10,000` 步、当前 episode `16/16` 质量门以及冻结 dev/test 均完成。dev 作业 `carla-rl-04-evaluate-dev-v1_20260902_115107` 的四项门为 `27/27`，候选执行 `432/432` 严格通过；test 作业 `carla-rl-05-evaluate-test-v1_20260902_160817` 的四项门为 `24/24`，候选执行 `384/384` 严格通过，均以退出码 `0` 结束。test 上最终候选相对 baseline 的平均风险变化为 `-9.193`，仅 `9/24` 上升，因此结论是工程链路与独立验收完成，但未证明 SAC 的总体对抗性风险提升或普遍泛化。完整口径、分组结果和证据哈希见 `docs/carla_online_rl_multiscene_v1.md`。
 - Web 产品化首期 P0 已完成：统一入口 `tools/web_app.py`/`tools/web_app.cmd` 复用场景库 API，提供 Dashboard、场景列表、详情、受控查询、健康检查，以及生成/校验/风险分析三条可操作表单流程；提交后由 CPU worker 执行，页面轮询任务状态并展示成功产物、结构化失败和取消结果。已修复任务页内联 JavaScript 转义错误，并用 Edge 无界面浏览器确认 `/api/tasks` 结果可实际渲染到任务表；任务结果列已固定宽度并单行省略，完整内容通过悬浮提示查看。校验支持 JSON/JSONL、物理约束和可选 CARLA 配置编译；CARLA 任务显式确认或取消后仍转交外部入口，不由 Web 启动。最新项目环境全量回归为 `177 tests / 5 skipped`（1 项可选 SB3 依赖、4 项 MJX-JAX 测试默认关闭），`compileall` 和冻结内容门均通过；真实 HTTP 冒烟覆盖页面 `200`、三类任务完成、CARLA 取消和 `carla_connected=false`。说明见 `docs/stage5_web_product_flow_v2.md`。
 - RL 独立评估口径与实机收口已完成：天气标签约束投影保留原始违规和变更字段，`test_evaluation_summary.json.acceptance` 固定四项独立门，提交 `569eb6d` 修复候选 `run_dir` 证据透传；最终 dev/test 四项门全部通过。工程验收通过不替代效果结论，冻结 test 的总体风险变化为负，当前不追加同预算重复训练。
@@ -354,12 +356,13 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 1. **笔记本开发与校验**：只在 `D:\Xx\竞赛\大创实施ing` 修改代码、配置和测试；先完成静态检查或轻量测试，再创建 Git 提交。PowerShell 执行策略由 `.cmd` 入口以单进程 `Bypass` 处理，不修改系统全局策略；`.gitattributes` 强制服务器 Bash 脚本使用 LF 行尾。
 2. **内网同步代码**：在工作区干净且位于 `main` 分支时运行 `tools\server_sync.cmd`。脚本把当前提交推送到服务器裸仓库 `lab`，随后对服务器运行工作区执行 `git merge --ff-only`；服务器仓库固定 `core.autocrlf=false`，并在前置脏工作树检查通过后以当前提交重建工作树，确保 `.sh` 保持 LF；不会自动推送 GitHub，也不会覆盖服务器未提交改动。
 3. **管理 CARLA**：运行 `tools\server_carla.cmd -Action Start|Status|Stop`。CARLA 固定使用 GPU 1、RPC 端口 `2000`、`-RenderOffScreen` 和 `-graphicsadapter=1`；启动和停止均已在服务器实测通过。
-4. **提交后台任务**：简单命令运行 `tools\server_run.cmd -Name <job-name> -Command "<Linux command>" [-RequiresCarla] [-Wait]`；包含 Python `-c`、多层引号或多行逻辑时，优先写入本地 UTF-8 命令文件并使用 `-CommandFile <path>`，避免 Windows CMD 引号破坏。脚本默认先同步代码，再在服务器 `tmux` 中执行；非 CARLA GPU 任务持有项目 GPU 锁，CARLA 客户端任务用 `-RequiresCarla` 检查 RPC 服务后运行。任务目录固定为 `/home/zhaozirong/software/output/carla-0.9.16/remote_jobs/<job-id>`，并保存提交哈希、起止时间、日志和退出码。
+4. **提交后台任务**：简单命令运行 `tools\server_run.cmd -Name <job-name> -Command "<Linux command>" [-RequiresCarla] [-Wait]`；包含 Python `-c`、多层引号或多行逻辑时，优先写入本地 UTF-8 命令文件并使用 `-CommandFile <path>`，避免 Windows CMD 引号破坏。脚本默认先同步代码，再在服务器 `tmux` 中执行；非 CARLA GPU 任务持有项目 GPU 锁，CARLA 客户端任务用 `-RequiresCarla` 检查 RPC 服务后运行。任务目录固定为 `/data/zhaozirong/software/output/carla-0.9.16/remote_jobs/<job-id>`，并保存提交哈希、起止时间、日志和退出码。
 5. **查询与回收结果**：使用 `tools\server_job_status.cmd [-JobId <job-id>]` 查看任务；使用 `tools\server_fetch_results.cmd -RemotePath <server-output-directory>` 将轻量汇总回收到 `F:\Carla\project-transfer\server-results`。默认不下载模型权重、NPY 和原始传感器帧；只有明确指定 `-IncludeSampleImages` 时才回收小于阈值的示例图。
 6. **版本与数据边界**：服务器运行结果必须能够追溯到 Git 提交、配置、随机种子和输出目录。服务器工作区不直接编辑；发现问题后回笔记本修改、提交并重新同步。GitHub `origin` 用于阶段备份和对外同步，内网 `lab` 用于高频开发部署；两者均只接收已验证且不含大文件或敏感信息的提交。
 
 ## 下一步
 1. 服务器后续新增模型和运行输出统一写入 `/data/zhaozirong`；CARLA、Conda、源码、Git 和 SSH 继续保留在 ext4 `/home`，不得迁入不支持 Unix 权限位的 NTFS/FUSE 数据盘。
 2. P3.1 已封存，不追加训练、不复用现有 blind split 调参；保持阶段四与 P3.1 的证据边界。
-3. 进入 Web 产品流程的真实演示取证并复核软著材料；`S5-WEB-03` 等待功能冻结后执行。计划书指标 baseline 已补齐，但实车路测、人工计时和行业覆盖分母仍需单独证据，不能用当前代理替代。
-4. 维护 `docs/stage5_material_index_v1.md` 中的一键演示 `demo_manifest.json` 路径、SHA-256、关键计数和重建命令；不把历史风险证据写成新 CARLA 实测。
+3. 优先推进 `S5-PRODUCT-01`：先梳理并实现一个连续的 Web 用户工作流，让离线生成、校验、查询、风险分析和证据查看不再割裂；CARLA 继续保持显式外部执行。
+4. 随后推进 `S5-QUALITY-01`：补齐任务恢复、失败重试、重复提交、输入路径安全、结果证据与服务器状态边界；每项改动都进入自动回归。
+5. 软著材料只在可见模块或接口发生变化时维护底稿，不做最终截图、不指定 V1.0 提交；待系统稳定后再重新评估冻结与申请。
