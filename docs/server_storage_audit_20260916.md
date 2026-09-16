@@ -63,6 +63,7 @@
 - 经旧 `/home` 路径读取迁移后的风险反馈数据集得到 `117` 行。
 - 随机抽取的 SB3 checkpoint ZIP 完整性测试通过，无损坏成员。
 - 经 `/home/zhaozirong/software/output` 软链接写入、读取和删除临时文件通过。
+- 后台任务脚本由 `bash` 显式解释，不再对 NTFS 任务文件调用不受支持的 `chmod`；对应两项回归测试通过。
 - 迁移期间及结束后均无 CARLA、RL、ScenarioRunner 或项目后台任务运行。
 
 ## 保留在 `/home` 的目录

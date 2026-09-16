@@ -147,7 +147,6 @@ fi
 mkdir -p "`$job_directory"
 printf '%s' '$commandBase64' | base64 --decode > "`$job_directory/command.sh"
 printf '%s' '$runnerBase64' | base64 --decode > "`$job_directory/runner.sh"
-chmod 700 "`$job_directory/command.sh" "`$job_directory/runner.sh"
 printf '%s\n' "`$expected_commit" > "`$job_directory/commit.txt"
 printf '%s\n' '$session' > "`$job_directory/tmux_session.txt"
 tmux new-session -d -s '$session' "bash '$jobDirectory/runner.sh'"
