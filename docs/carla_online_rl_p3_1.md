@@ -4,7 +4,7 @@
 
 P3.1 针对冻结 P3 test 上“工程四门通过，但最终候选平均风险变化为负”的问题修复搜索机制。该阶段不覆盖 P3/V1 配置、模型和证据，不把离线测试或 dev 结果写成泛化证明。
 
-当前仓库已完成代码、配置、恢复契约和 CPU 静态回归，并完成 P3.1 的 CARLA canary、`2,000` 步 pilot、dev 评估和独立盲测计划冻结。pilot 的训练质量门、dev 工程门和 dev 晋级门均通过；独立盲测尚未运行，因此不能把 dev 结果写成泛化证明。
+P3.1 已于 2026-09-16 封存：代码、配置、恢复契约、CARLA canary、`2,000` 步 pilot、dev 评估和独立盲测均已完成。工程链路通过，独立盲测在 `best_so_far` 选择下得到小幅正向描述性结果，但不支持总体泛化结论。封存后不继续追加训练，也不使用当前 blind split 调参；关键产物哈希见 `data/scenarios/carla_rl_p3_1_independent_blind_v1/archive_manifest_v1.json`。
 
 ## Canary 运行证据
 
@@ -30,7 +30,7 @@ P3.1 针对冻结 P3 test 上“工程四门通过，但最终候选平均风险
 
 训练日志的最后一条中间记录为 `total_timesteps=1,984`、`ep_rew_mean=-0.196`、`actor_loss=-67.7`、`critic_loss=0.0838`、`ent_coef=0.569`；`ep_rew_mean` 在记录区间内约为 `-0.137` 至 `-0.254`，没有稳定单调上升。对 pilot 的训练轨迹做描述性聚合（不是独立评估）得到 `250` 个完整场景 episode：每个 episode 的 `best_so_far` 候选相对 baseline 平均 `+9.920`、`204/250` 个为正，而最后一个候选平均 `-3.729`、`121/250` 个为正。这说明搜索链路能找到较高风险候选，但不能证明 SAC 策略在未见场景上稳定有效。
 
-该 pilot 只完成训练和运行证据收集；尚未生成 dev 摘要，也尚未作 checkpoint 晋级决定。
+该 pilot 本身只证明训练和运行证据链；后续 checkpoint 选择以独立 dev 评估为准。
 
 ## Dev 评估与 checkpoint 选择
 
@@ -74,7 +74,7 @@ CARLA 盲测实机入口：
 .\tools\server_carla_rl_p3_1_04_evaluate_blind.cmd
 ```
 
-该入口会读取已通过 dev 晋级门的 `dev_checkpoint_selection.json`，不会重新训练；完成后用输出的作业 ID 查询状态。盲测作业完成前，P3.1 只能写成“dev 晋级门通过、独立盲测待执行”。
+该入口读取已通过 dev 晋级门的 `dev_checkpoint_selection.json`，不会重新训练。现有 blind split 已用于最终评估并封存，禁止再用于调参或重复筛选 checkpoint。
 
 ## 独立盲测实机结果
 
@@ -153,18 +153,17 @@ CARLA 盲测实机入口：
 3. pilot 中断时只运行 resume 脚本，不重跑 canary；
 4. 对两个 pilot checkpoint 使用完全相同的 dev split、种子和 P3.1 配置评估（已完成）；
 5. `tools/select_carla_rl_checkpoint.py` 仅接受四门通过的 dev V2 摘要，先按平均风险增量，再按风险上升比例和候选均值选择 checkpoint（已选择 `1,000` 步 checkpoint）。
-6. 使用冻结的独立 blind split 评估已选择 checkpoint；盲测未完成前不作泛化结论。
+6. 使用冻结的独立 blind split 评估已选择 checkpoint（已完成并封存）。
 
 dev 脚本可在中断后重启：已存在摘要只有在模型、配置、计划、评估种子哈希/标识和四项验收全部匹配时才复用，不会无条件重复已完成的 checkpoint 评估。
 
 pilot 晋级门要求所选 checkpoint 在 dev 上同时满足：平均风险增量 `> 0`，且风险上升场景比例 `> 0.5`。这是是否扩大预算的工程决策门，不是统计显著性或泛化证明。未通过时脚本以非零状态结束，不启动新的 `10,000` 步训练。
 
-## 后续判定
+## 封存状态
 
-- canary 失败：先修工程链路，不进入 pilot。
-- pilot 训练门失败：只从最新完整三件套恢复。
-- dev 工程门失败：先修证据或运行质量，不进行效果解释。
-- dev 晋级门失败：停止扩大 SAC 预算，优先比较非学习搜索或调整状态/动作设计。
-- dev 晋级门通过：冻结选中的 `1,000` 步 checkpoint，运行新的独立盲测集；既有 P3 test 已用于诊断，不重复作为 P3.1 最终证明集。
+- 状态：`frozen`。
+- 冻结 checkpoint：`1,000` 步 SAC 模型及其 replay buffer、sampler state。
+- 冻结评估：dev checkpoint selection 和 `24` 条独立 blind runtime summary。
+- 后续策略：不追加 P3.1 训练，不复用当前 blind split 调参；如重启 RL 研究，建立新的 P3.2 阶段和新的独立评估集。
 
-最终“总体对抗性风险提升或普遍泛化”至少需要未参与训练、调参和问题诊断的新盲测场景，并报告逐场景配对结果、均值/中位数、上升比例和不确定性。当前 P3.1 的独立盲测计划已冻结，但在盲测实机作业完成并分析前仍不满足这一证明条件。
+P3.1 的封存结论是“工程链路通过，独立小样本上存在依赖 `best_so_far` 选择的小幅风险提升”。最终“总体对抗性风险提升或普遍泛化”仍未建立，不能在论文、软著或结题材料中扩大表述。

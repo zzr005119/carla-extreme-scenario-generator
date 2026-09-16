@@ -1,0 +1,72 @@
+{
+  "format": "carla_rl_p3_1_archive_manifest_v1",
+  "status": "frozen",
+  "frozen_at": "2026-09-16",
+  "policy": {
+    "additional_training": "closed",
+    "blind_set_reuse_for_tuning": "prohibited",
+    "future_rl_work": "requires_new_stage_and_new_independent_evaluation_set"
+  },
+  "selected_checkpoint": {
+    "algorithm": "SAC",
+    "trained_num_timesteps": 1000,
+    "path": "/home/zhaozirong/software/output/carla-0.9.16/carla_rl_p3_1_v1/pilot_sac_seed_20260903_2000/models/sac_seed_20260903_steps_001000.zip",
+    "size_bytes": 3562878,
+    "sha256": "000fbf78536d26c25e46d65ef40fa78afbed2c2403dfee8f8199b2aab8e131ed"
+  },
+  "continuity_artifacts": [
+    {
+      "kind": "sac_replay_buffer",
+      "path": "/home/zhaozirong/software/output/carla-0.9.16/carla_rl_p3_1_v1/pilot_sac_seed_20260903_2000/models/sac_seed_20260903_steps_001000_replay_buffer.pkl",
+      "size_bytes": 3441963,
+      "sha256": "d4043e9654ff65c6816098bf4424b80f0c55f60b784ccf361974d2d7988a8308"
+    },
+    {
+      "kind": "sampler_state",
+      "path": "/home/zhaozirong/software/output/carla-0.9.16/carla_rl_p3_1_v1/pilot_sac_seed_20260903_2000/models/sac_seed_20260903_steps_001000_sampler_state.json",
+      "size_bytes": 3213,
+      "sha256": "c643667bcc96c361a38a226678b45e380363a4b6ff033143f0bde2bd3f4f5310"
+    },
+    {
+      "kind": "checkpoint_manifest",
+      "path": "/home/zhaozirong/software/output/carla-0.9.16/carla_rl_p3_1_v1/pilot_sac_seed_20260903_2000/checkpoint_manifest.json",
+      "size_bytes": 2607,
+      "sha256": "28089b38eafb1e8e40f422609e0536c9ff4e548d95d3e026c65103e88b1a44cd"
+    }
+  ],
+  "selection_and_evaluation": {
+    "dev_checkpoint_selection": {
+      "path": "/home/zhaozirong/software/output/carla-0.9.16/carla_rl_p3_1_v1/dev_checkpoint_selection.json",
+      "size_bytes": 3661,
+      "sha256": "d9c1f541077817f7dbe90966009f1d74f6aa507e4aad38ba769d8143014175d0"
+    },
+    "blind_evaluation_summary": {
+      "job_id": "carla-rl-p3-1-04-evaluate-blind_20260906_151941",
+      "path": "/home/zhaozirong/software/output/carla-0.9.16/carla_rl_p3_1_v1/blind_sac_seed_20260903_steps_001000/test_evaluation_summary.json",
+      "size_bytes": 429515,
+      "sha256": "b1959f5ffd742341ba69dd60ca7e15599a49ad7df65f6c292aa246fc78b48c1f",
+      "strict_acceptance": "24/24",
+      "risk_delta_mean": 0.360917,
+      "risk_delta_median": 0.3045,
+      "risk_increase_count": 17,
+      "row_count": 24,
+      "evidence_level": "descriptive_independent_blind_runtime"
+    }
+  },
+  "frozen_inputs": {
+    "config": {
+      "path": "configs/adversarial_loop_multistep_p3_1.json",
+      "server_file_sha256": "a866c077fb1b348364b8823f9f70d0d136f20a4e622f0310a36560150acc0228"
+    },
+    "blind_plan": {
+      "path": "data/scenarios/carla_rl_p3_1_independent_blind_v1/carla_rl_multiscene_plan_p3_1_blind_v1.json",
+      "plan_sha256": "28e23ff5c60464ce38e874e04ea09cb22124d52f5d9eb3f54e3239b77c0143c6",
+      "server_file_sha256": "d4d5a535df7d06902d39804e5dc27f7b3947996c020afb12e27f427da38ec570"
+    }
+  },
+  "conclusion": {
+    "engineering_chain": "passed",
+    "effect": "small_positive_descriptive_result_under_best_so_far_selection",
+    "generalization_claim": "not_established"
+  }
+}

@@ -14,7 +14,7 @@
 - **服务器运行仓库**：`/home/zhaozirong/projects/carla-extreme-scenario-generator`
 - **内网 Git 远端**：`lab` → `zhaozirong@192.168.110.170:/home/zhaozirong/git/carla-extreme-scenario-generator.git`
 - **CARLA 0.9.15 历史证据**：`artifacts/carla_0915_runtime_evidence/`（本地忽略目录）
-- **最后更新**：2026-09-06
+- **最后更新**：2026-09-16
 
 ## 当前阶段
 **大创已完成阶段四“仿真平台与对抗性测试代理”的硬质量门和当前证据收口，现转入阶段五“系统集成与成果产出”。阶段四形成了 OpenSCENARIO 最小交换适配、对抗性代理契约、闭环编排、Gymnasium/SB3 工程链路、非学习基线、冻结代理训练与真实 CARLA 独立评估。18 个独立策略 pair 的 `54/54` 条运行通过版本、RGB、服务健康、`heuristic_v2` 和路线严格验收；LHS/high 的 9 个独立候选完成边界校准。现有证据证明工程链路可复现，但不证明 SAC 或 rule-guided LHS 的普遍优势，不支持把风险代理升级为实测风险或在线训练 reward。阶段四综合结论见 `docs/stage4_quality_gate_and_experiment_closure_v1.md`。**
@@ -102,9 +102,8 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - 多场景 RL 实验已完成：固定计划为 `train/dev/test=66/27/24`，SAC canary、从 `2,000` 步 checkpoint 恢复到 `10,000/10,000` 步、当前 episode `16/16` 质量门以及冻结 dev/test 均完成。dev 作业 `carla-rl-04-evaluate-dev-v1_20260902_115107` 的四项门为 `27/27`，候选执行 `432/432` 严格通过；test 作业 `carla-rl-05-evaluate-test-v1_20260902_160817` 的四项门为 `24/24`，候选执行 `384/384` 严格通过，均以退出码 `0` 结束。test 上最终候选相对 baseline 的平均风险变化为 `-9.193`，仅 `9/24` 上升，因此结论是工程链路与独立验收完成，但未证明 SAC 的总体对抗性风险提升或普遍泛化。完整口径、分组结果和证据哈希见 `docs/carla_online_rl_multiscene_v1.md`。
 - Web 产品化首期 P0 已完成：统一入口 `tools/web_app.py`/`tools/web_app.cmd` 复用场景库 API，提供 Dashboard、场景列表、详情、受控查询、健康检查，以及生成/校验/风险分析三条可操作表单流程；提交后由 CPU worker 执行，页面轮询任务状态并展示成功产物、结构化失败和取消结果。已修复任务页内联 JavaScript 转义错误，并用 Edge 无界面浏览器确认 `/api/tasks` 结果可实际渲染到任务表；任务结果列已固定宽度并单行省略，完整内容通过悬浮提示查看。校验支持 JSON/JSONL、物理约束和可选 CARLA 配置编译；CARLA 任务显式确认或取消后仍转交外部入口，不由 Web 启动。最新项目环境全量回归为 `174 tests / 5 skipped`（1 项可选 SB3 依赖、4 项 MJX-JAX 测试默认关闭），`compileall` 和冻结内容门均通过；真实 HTTP 冒烟覆盖页面 `200`、三类任务完成、CARLA 取消和 `carla_connected=false`。说明见 `docs/stage5_web_product_flow_v2.md`。
 - RL 独立评估口径与实机收口已完成：天气标签约束投影保留原始违规和变更字段，`test_evaluation_summary.json.acceptance` 固定四项独立门，提交 `569eb6d` 修复候选 `run_dir` 证据透传；最终 dev/test 四项门全部通过。工程验收通过不替代效果结论，冻结 test 的总体风险变化为负，当前不追加同预算重复训练。
-- `S5-RL-P3.1` 已完成 CPU/离线机制、canary、pilot 和 dev 选择：V1 配置和历史证据保持冻结，新配置将动作步长降为 `0.04`、场景步数限为 `8`，评估使用 `best_so_far` 并支持目标分/停滞早停；碰撞与事件额外奖励归零，增加动作 RMS L2 和参数边界饱和惩罚。canary 作业完成 `256/256` 步，pilot 作业完成 `2,000/2,000` 步，质量门分别为 `17/17`，pilot CARLA 严格执行 `2,251/2,251`，两个 checkpoint 三件套均完整。dev 作业 `carla-rl-p3-1-03-evaluate-dev_20260906_105620` 以退出码 `0` 完成；两个 checkpoint 的四项工程门均为 `27/27`，`1,000` 步 checkpoint 平均风险增量 `+5.717259`、`22/27` 场景上升，晋级门通过并被选中。该门只支持 dev 训练决策，不证明总体泛化；下一步是新的独立盲测集，既有 P3 test 不参与 P3.1 选择或最终证明。运行协议见 `docs/carla_online_rl_p3_1.md`。
-- `S5-RL-P3.1` 已完成 CPU/离线机制、canary、pilot 和 dev 选择：V1 配置和历史证据保持冻结，新配置将动作步长降为 `0.04`、场景步数限为 `8`，评估使用 `best_so_far` 并支持目标分/停滞早停；碰撞与事件额外奖励归零，增加动作 RMS L2 和参数边界饱和惩罚。canary 作业完成 `256/256` 步，pilot 作业完成 `2,000/2,000` 步，质量门分别为 `17/17`，pilot CARLA 严格执行 `2,251/2,251`，两个 checkpoint 三件套均完整。dev 作业 `carla-rl-p3-1-03-evaluate-dev_20260906_105620` 以退出码 `0` 完成；两个 checkpoint 的四项工程门均为 `27/27`，`1,000` 步 checkpoint 平均风险增量 `+5.717259`、`22/27` 场景上升，晋级门通过并被选中。新的独立 blind 计划已冻结到 `data/scenarios/carla_rl_p3_1_independent_blind_v1/`：`24` 条、`3×4×2` 分层、生成种子 `20260906`、计划哈希 `28e23ff5c60464ce38e874e04ea09cb22124d52f5d9eb3f54e3239b77c0143c6`，与旧 117 条场景 ID/hash 重叠均为 `0`。盲测实机尚未运行，既有 P3 test 不参与 P3.1 选择或最终证明。运行协议见 `docs/carla_online_rl_p3_1.md`。
-- 独立 blind CARLA 作业已完成：`carla-rl-p3-1-04-evaluate-blind_20260906_151941`，运行提交 `bd23352`，使用已晋级的 `1,000` 步 SAC checkpoint 和冻结的 `24` 条 blind split；四项工程门均为 `24/24`，平均风险增量 `+0.360917`、中位数 `+0.3045`、`17/24` 场景上升，baseline/candidate 碰撞总数为 `573/313`。该结果仅支持小规模独立集上的描述性小幅提升，不证明跨地图或总体泛化；摘要及哈希见 `docs/carla_online_rl_p3_1.md`。
+- `S5-RL-P3.1` 已于 2026-09-16 封存：canary、`2,000` 步 pilot、dev checkpoint 选择和 `24` 条独立 blind 实机评估均完成；盲测四项工程门为 `24/24`，平均风险增量 `+0.360917`、中位数 `+0.3045`、`17/24` 场景上升。结果仅支持 `best_so_far` 选择下的小样本描述性提升，不证明总体泛化。封存后不追加训练、不复用 blind split 调参；模型、replay buffer、sampler、计划和摘要哈希见 `data/scenarios/carla_rl_p3_1_independent_blind_v1/archive_manifest_v1.json`，完整边界见 `docs/carla_online_rl_p3_1.md`。
+- 服务器项目数据仍位于系统根分区 `/home/zhaozirong`，总占用约 `443 GB`，其中 CARLA 输出约 `373 GB`；2026-09-16 实测 `/data` 剩余约 `1.9 TB`，但账号对 `/data` 无写权限且 `/data/zhaozirong` 不存在。迁移前需管理员创建并授权专属目录，详见 `docs/server_storage_audit_20260916.md`。
 - 后置能力入口已建立并分级：`tools/train_carla_rl.py` 仍是 Gymnasium/SB3 依赖预检与显式在线训练门；`tools/run_scenario_runner.py` 已支持 TM 端口、同步、地图和 ego 等参数，并完成一条真实单场景直执行；`core/differentiable_closed_loop.py` 提供 Torch 可微运动学及可选 PyBullet 离散校验。缺少可选依赖或 CARLA 服务时，入口明确返回阻塞/预检状态。
 - `S5-CORE-01` 参数级物理约束 V1 已完成：`core/physical_constraints.py` 和 `tools/check_physical_constraints.py` 提供有限值、时间窗口、行人横穿完成时间和运动学边界检查，并输出带字段路径/错误代码/指标的 `physical_constraint_report_v1`；本机和服务器 `Carla666-0916` 均完成种子数据集 `256/256` 条硬约束通过、`0` 条非法。该结果是 CPU 静态参数验证，不产生新的 CARLA 风险结果；说明见 `docs/physical_constraints_v1.md`。
 - `S5-PYBULLET-01` P4 边界收口：`build_p4_boundary_manifest` 将可微 Torch 代理、`L_adv + lambda_1 L_physics + lambda_2 L_control` 组合点、PyBullet 离散回放和参数级硬门汇总为可审计 JSON；固定环境本机适配测试为 `9/9`，服务器 PyBullet `3.2.7` contact probe 为 `63` 个负间距步、`41` 个接触点。本机缺少可选 PyBullet 按契约跳过；该成果证明接口和离散边界，不证明真实 PyBullet 可微刚体、CARLA 车辆物理或生成模型/RL 训练接入；说明见 `docs/differentiable_closed_loop_v1.md` 和 `docs/p4_server_validation_v1.md`。
@@ -275,7 +274,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 ## 存储路径与缓存
 - 项目环境、CARLA、模型、运行输出和开发缓存默认使用 `F:\`；项目规则已写入根目录 `AGENTS.md`。
 - 当前 CARLA 运行时位于 `F:\Carla\carla-0.9.16`，项目输出位于 `F:\Carla\output-0.9.16`，Conda 根目录和 `Carla666-0916` 环境位于 `D:\ANACONDA`。
-- Ubuntu 服务器没有 `F:\`，其运行时例外放在 `/home/zhaozirong/software`；`/data` 当前无写权限，项目源码和结构化数据已同步到 `/home/zhaozirong/projects/carla-extreme-scenario-generator`。模型产物位于 `/home/zhaozirong/software/models/carla-extreme-scenario-generator`，批次与模型验证输出位于 `/home/zhaozirong/software/output/carla-0.9.16`。
+- Ubuntu 服务器没有 Windows 盘符。2026-09-16 实时核验确认项目仍位于系统根分区：源码在 `/home/zhaozirong/projects/carla-extreme-scenario-generator`，CARLA、环境和模型位于 `/home/zhaozirong/software`，批次与模型验证输出位于 `/home/zhaozirong/software/output/carla-0.9.16`。`/data` 当前可读但不可写，且没有 `/data/zhaozirong`；管理员授权前不得迁移或改写运行配置，详见 `docs/server_storage_audit_20260916.md`。
 - 笔记本与服务器的临时交换目录为 `F:\Carla\project-transfer`。服务器模型权重、原始 RGB/Depth/SemSeg 和完整运行输出不回传；只将经过筛选的结构化汇总和少量示例图回收到笔记本，再决定是否纳入 Git。
 - 原 `C:\Users\z'z'r\AppData\Local\pip\cache` 仅为可再生成的 pip 下载缓存，已清理约 `15.94 GB`；后续 `PIP_CACHE_DIR` 指向 `F:\Carla\project-cache\pip`。
 - 原 `C:\Users\z'z'r\.cache\torch` 已迁移至 `F:\Carla\project-cache\torch`，原位置保留目录联接；`TORCH_HOME` 指向 F 盘。`HF_HOME` 和 `CONDA_PKGS_DIRS` 也已指向 `F:\Carla\project-cache` 下对应目录。
@@ -359,8 +358,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 6. **版本与数据边界**：服务器运行结果必须能够追溯到 Git 提交、配置、随机种子和输出目录。服务器工作区不直接编辑；发现问题后回笔记本修改、提交并重新同步。GitHub `origin` 用于阶段备份和对外同步，内网 `lab` 用于高频开发部署；两者均只接收已验证且不含大文件或敏感信息的提交。
 
 ## 下一步
-1. P3.1 dev 晋级门和独立 blind 实机工程门均已通过；保留 `+0.360917` 的小规模描述性结果及其边界，不直接追加 `10,000` 步。
-2. 不复用已参与诊断的 P3 test 证明泛化；运行独立盲测前重新检查 GPU 服务和显存，GPU0 的 vLLM 与 GPU1 的外部 TensorRT 均不修改。
-3. P3.1 阶段结束后进入 Web 产品流程的真实演示取证并复核软著材料；`S5-WEB-03` 等待功能冻结后执行。计划书指标 baseline 已补齐，但实车路测、人工计时和行业覆盖分母仍需单独证据，不能用当前代理替代。
-4. 保持阶段四冻结实验的原始口径和负向效果结论，以 `docs/stage4_quality_gate_and_experiment_closure_v1.md` 作为论文、软著与结题材料的证据边界入口。
-5. 维护 `docs/stage5_material_index_v1.md` 中的一键演示 `demo_manifest.json` 路径、SHA-256、关键计数和重建命令；不把历史风险证据写成新 CARLA 实测。
+1. 请管理员创建并授权 `/data/zhaozirong`；授权后先复测读写，再按“复制、哈希校验、切换配置、验证运行、最后清理旧副本”的顺序迁移约 `443 GB` 项目数据。
+2. P3.1 已封存，不追加训练、不复用现有 blind split 调参；保持阶段四与 P3.1 的证据边界。
+3. 进入 Web 产品流程的真实演示取证并复核软著材料；`S5-WEB-03` 等待功能冻结后执行。计划书指标 baseline 已补齐，但实车路测、人工计时和行业覆盖分母仍需单独证据，不能用当前代理替代。
+4. 维护 `docs/stage5_material_index_v1.md` 中的一键演示 `demo_manifest.json` 路径、SHA-256、关键计数和重建命令；不把历史风险证据写成新 CARLA 实测。
