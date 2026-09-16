@@ -13,9 +13,9 @@
   "runtime": {
     "python_environment": "/home/zhaozirong/software/envs/Carla666-0916",
     "carla_root": "/home/zhaozirong/software/carla-0.9.16",
-    "output_root": "/home/zhaozirong/software/output/carla-0.9.16",
-    "model_root": "/home/zhaozirong/software/models/carla-extreme-scenario-generator",
-    "gpu_lock": "/home/zhaozirong/software/output/carla-0.9.16/.workflow_gpu1.lock",
+    "output_root": "/data/zhaozirong/software/output/carla-0.9.16",
+    "model_root": "/data/zhaozirong/software/models/carla-extreme-scenario-generator",
+    "gpu_lock": "/data/zhaozirong/software/output/carla-0.9.16/.workflow_gpu1.lock",
     "gpu": 1,
     "carla_rpc_port": 2000,
     "traffic_manager_port": 8100,

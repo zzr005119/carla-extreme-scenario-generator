@@ -1,58 +1,80 @@
-# 服务器存储与 `/data` 权限核验（2026-09-16）
+# 服务器存储清理与 `/data` 迁移记录（2026-09-16）
 
 ## 结论
 
-服务器使用 Ubuntu，不存在 Windows 的 `C:` 盘。当前项目源码、环境、CARLA 程序和实验输出均位于系统根分区下的 `/home/zhaozirong`，尚未存入 `/data`。
+服务器账号 `zhaozirong` 已加入 `factory22-dev` 组，`/data/zhaozirong` 的实际创建、读取、写入、文件锁和原子替换测试均通过。项目的模型与运行输出已迁移到 `/data/zhaozirong`，并通过逐文件 SHA-256 校验。
 
-账号 `zhaozirong` 当前可以读取和进入 `/data`，但不能在 `/data` 创建文件；`/data/zhaozirong` 不存在，也没有发现其他属于该账号的 `/data` 子目录。因此在管理员授权前不得迁移或把项目配置改指向 `/data`。
+`/data` 是 NTFS/FUSE 挂载，`chmod` 实测返回 `Operation not permitted`。因此只迁移纯数据；CARLA、Conda 环境、ScenarioRunner、Git 工作区、裸仓库和 SSH 配置继续保留在 ext4 `/home`。把这些 Linux 可执行运行时整体迁入 `/data` 会破坏权限位和运行语义，不执行该操作。
 
-## 实时核验
+## 权限与文件系统
 
-- 账号：`uid=1009(zhaozirong)`，所属组为 `zhaozirong`、`users`。
-- 根分区：ext4，约 `1007 GB`，已用 `759 GB`，剩余 `197 GB`，使用率 `80%`。
-- `/data`：NTFS/fuseblk，约 `2.8 TB`，已用 `927 GB`，剩余 `1.9 TB`，使用率 `34%`。
-- `/data` 权限：所有者 `yurusong`，组 `factory22-dev`，模式 `775`。
-- `zhaozirong` 不在 `factory22-dev` 组中。
-- `/data` 访问测试：read=`yes`、execute=`yes`、write=`no`。
-- 零字节临时文件写入测试：`denied`；未留下测试文件。
-- `/data/zhaozirong`：不存在。
-- 在 `/data` 三层目录内未发现名称包含 `zhaozirong` 或所有者为 `zhaozirong` 的目录。
+- 账号：`uid=1009(zhaozirong)`，所属组为 `zhaozirong`、`users`、`factory22-dev`。
+- `/data`：NTFS/FUSE，约 `2.8 TB`，迁移后已用约 `929 GB`，剩余约 `1.9 TB`，使用率 `34%`。
+- `/data/zhaozirong`：实际读写通过。
+- 文件锁：两个文件描述符的排他 `flock` 测试通过。
+- 原子替换：临时 JSON 经 `os.replace()` 切换并读回通过。
+- Unix 权限：`chmod` 失败，因此 `/data` 不承载 Linux 可执行运行时。
 
-## 当前项目位置与占用
+## 清理结果
 
-`/home/zhaozirong` 总占用约 `443 GB`，其中：
+清理前，`/home/zhaozirong/software/output` 中约有 `1,894,517` 个文件。批量 CARLA/RL 输出中的 PNG、NPY 等原始传感器帧不参与当前风险计算，相关实验也已封存，因此按以下规则清理：
 
-| 路径 | 用途 | 占用 |
-|---|---|---:|
-| `/home/zhaozirong/projects/carla-extreme-scenario-generator` | 项目源码和结构化数据 | `758 MB` |
-| `/home/zhaozirong/git/carla-extreme-scenario-generator.git` | 内网裸 Git 仓库 | `19 MB` |
-| `/home/zhaozirong/software/carla-0.9.16` | CARLA 运行时 | `44 GB` |
-| `/home/zhaozirong/software/envs/Carla666-0916` | 项目 Python 环境 | `7.1 GB` |
-| `/home/zhaozirong/software/models/carla-extreme-scenario-generator` | 独立模型目录 | `6.4 MB` |
-| `/home/zhaozirong/software/output/carla-0.9.16` | CARLA/RL 实验输出 | `373 GB` |
-| `/home/zhaozirong/software/packages` | 安装包和同步包 | `7.8 GB` |
+1. 保留 JSON、JSONL、CSV、日志、Shell 记录、模型 checkpoint、replay buffer、sampler 状态和验收摘要。
+2. 按“实验目录、传感器类型、扩展名”保留 `60` 个代表帧到 `/data/zhaozirong/evidence_samples/`。
+3. 删除其余 `1,755,208` 个 PNG/NPY 等原始媒体文件，共 `393,834,055,013` 字节，失败 `0`。
+4. 删除已安装完成的 `CARLA_0.9.16.tar.gz`、旧项目同步包和 pip/Conda/Mamba/NVIDIA GL 下载缓存。
+5. 清理三个错误命令产生的空目录和一个零字节文件，未处理不属于本项目或用途不明确的文件。
 
-输出目录的主要占用为：
+清理清单：
 
-| 路径 | 占用 |
-|---|---:|
-| `carla_rl_multiscene_v1` | `290 GB` |
-| `carla_rl_p3_1_v1` | `66 GB` |
-| `server_batches` | `6.8 GB` |
-| `collision_boundary_multisensor_v1` | `2.7 GB` |
-| `feedback_candidate_validation_v1` | `1.7 GB` |
-| `adversarial_baseline_carla_comparison_v1` | `1.7 GB` |
-
-其中旧 SAC `10,000` 步目录 `carla_rl_multiscene_v1/sac_seed_20260824_10000` 单独占约 `227 GB`；P3.1 pilot 目录约 `49 GB`。本次只核验，没有删除或迁移任何数据。
-
-## 管理员需处理
-
-推荐由管理员创建专属目录并赋予账号权限，而不是直接开放 `/data` 根目录：
-
-```bash
-sudo mkdir -p /data/zhaozirong
-sudo chown zhaozirong:zhaozirong /data/zhaozirong
-sudo chmod 750 /data/zhaozirong
+```text
+/data/zhaozirong/migration_manifests/cleanup_20260916_201046.json
 ```
 
-也可以由管理员采用服务器既有的组或 ACL 方案；完成后应再次执行实际写入测试。权限确认后，再制定迁移清单、校验哈希并更新 `configs/server_workflow.json`，不能直接移动正在使用的环境或输出目录。
+该清单记录删除数量、容量、按实验分组统计，以及每个代表帧的来源、目标和 SHA-256。
+
+## 迁移结果
+
+| 逻辑用途 | 新物理路径 | 兼容路径 | 校验 |
+|---|---|---|---|
+| CARLA/RL 输出 | `/data/zhaozirong/software/output` | `/home/zhaozirong/software/output` 软链接 | `139,309` 个文件逐文件 SHA-256 一致 |
+| 模型 | `/data/zhaozirong/software/models` | `/home/zhaozirong/software/models` 软链接 | `10` 个文件逐文件 SHA-256 一致 |
+| 旧独立输出 | `/data/zhaozirong/outputs` | `/home/zhaozirong/outputs` 软链接 | `151` 个文件逐文件 SHA-256 一致 |
+
+主迁移清单：
+
+```text
+/data/zhaozirong/migration_manifests/migration_20260916_201547.json
+```
+
+旧独立输出迁移清单：
+
+```text
+/data/zhaozirong/migration_manifests/alternate_outputs_20260916_202634.json
+```
+
+复制使用不保留 Unix 权限和时间戳的 NTFS 兼容模式；文件内容通过 SHA-256 校验后才切换软链接并删除 `/home` 数据副本。配置中的 `output_root`、`model_root` 和 `gpu_lock` 已改为 `/data/zhaozirong` 物理路径，旧绝对路径仍可经软链接读取历史证据。
+
+## 迁移后验证
+
+- 根分区由约 `81%` 使用率降至 `41%`，可用空间由约 `189 GB` 增至 `570 GB`。
+- `/home/zhaozirong` 物理占用约 `62 GB`，主要是 CARLA `44 GB`、项目环境约 `7 GB`、两个 MJX 环境、RKNN 环境、VS Code Server 和源码。
+- `Carla666-0916` 环境中的 CARLA Python API、Gymnasium `1.3.0`、Stable-Baselines3 `2.9.0` 和 PyTorch `2.12.1+cu126` 导入通过。
+- 经旧 `/home` 路径读取迁移后的风险反馈数据集得到 `117` 行。
+- 随机抽取的 SB3 checkpoint ZIP 完整性测试通过，无损坏成员。
+- 经 `/home/zhaozirong/software/output` 软链接写入、读取和删除临时文件通过。
+- 迁移期间及结束后均无 CARLA、RL、ScenarioRunner 或项目后台任务运行。
+
+## 保留在 `/home` 的目录
+
+以下目录不是遗漏，而是出于 Linux 运行兼容性保留：
+
+- `/home/zhaozirong/software/carla-0.9.16`
+- `/home/zhaozirong/software/envs`
+- `/home/zhaozirong/software/scenario_runner-0.9.16`
+- `/home/zhaozirong/projects`
+- `/home/zhaozirong/git`
+- `/home/zhaozirong/.ssh`
+- `/home/zhaozirong/.vscode-server`
+
+若管理员以后提供 ext4/XFS 等支持 Unix 权限位的数据卷，可以重新评估 CARLA 和环境迁移；在当前 NTFS/FUSE 挂载上不继续扩大迁移范围。
