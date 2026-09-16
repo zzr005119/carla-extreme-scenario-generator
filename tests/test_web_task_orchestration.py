@@ -1,3 +1,4 @@
+import hashlib
 import json
 import tempfile
 import threading
@@ -112,6 +113,61 @@ class WebTaskOrchestrationTests(unittest.TestCase):
         completed = self.wait_for(task["task_id"], "completed")
         self.assertEqual(completed["result"]["summary"]["accepted_count"], 1)
         self.assertEqual(completed["result"]["execution_mode"], "offline_cpu")
+        self.assertTrue(completed["workflow_id"].startswith("workflow_"))
+        self.assertIsNone(completed["parent_task_id"])
+        self.assertEqual(len(completed["artifacts"]), 2)
+        for artifact in completed["artifacts"]:
+            path = Path(artifact["path"])
+            self.assertTrue(path.is_file())
+            self.assertEqual(
+                artifact["sha256"],
+                hashlib.sha256(path.read_bytes()).hexdigest(),
+            )
+
+    def test_generation_can_continue_to_validation_in_same_workflow(self):
+        _, generation = self.request_json(
+            "POST",
+            "/api/tasks",
+            {"kind": "generation", "payload": {"model": "lhs", "risk": "high", "count": 2, "seed": 20260916}},
+        )
+        generated = self.wait_for(generation["task_id"], "completed")
+        status, validation = self.request_json(
+            "POST",
+            f"/api/tasks/{generation['task_id']}/validate",
+            {},
+        )
+        self.assertEqual(status, 202)
+        validated = self.wait_for(validation["task_id"], "completed")
+        self.assertEqual(validated["workflow_id"], generated["workflow_id"])
+        self.assertEqual(validated["parent_task_id"], generated["task_id"])
+        self.assertEqual(generated["workflow_step"], 1)
+        self.assertEqual(validated["workflow_step"], 2)
+        self.assertEqual(validated["result"]["record_count"], 2)
+        self.assertEqual(len(validated["result"]["items"]), 2)
+        self.assertEqual(validated["artifacts"][0]["type"], "validation_report")
+
+        workflow_status, workflow = self.request_json(
+            "GET", f"/api/workflows/{generated['workflow_id']}"
+        )
+        self.assertEqual(workflow_status, 200)
+        self.assertEqual(workflow["task_ids"], [generated["task_id"], validated["task_id"]])
+        self.assertEqual(workflow["current_stage"], "validation")
+        self.assertEqual(workflow["evidence_level"], "offline")
+
+        with urlopen(self.base_url + f"/tasks/{validated['task_id']}", timeout=5) as response:
+            page = response.read().decode("utf-8")
+        self.assertIn("任务详情", page)
+        self.assertIn("产物与哈希", page)
+        self.assertIn("逐条校验结果", page)
+        self.assertIn(generated["task_id"], page)
+
+        restored = TaskManager(self.temp_dir.name)
+        try:
+            recovered = restored.get_workflow(generated["workflow_id"])
+            self.assertEqual(recovered["task_ids"], workflow["task_ids"])
+            self.assertEqual(len(recovered["artifacts"]), 3)
+        finally:
+            restored.close()
 
     def test_cancelled_worker_cannot_overwrite_terminal_status(self):
         with tempfile.TemporaryDirectory() as directory:

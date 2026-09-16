@@ -253,6 +253,8 @@ flowchart TB
 
 - `core.web_task_orchestrator.TaskManager.submit(kind, payload)`：提交 `generation`、`validation`、`risk_analysis` 或 `carla` 任务并返回任务状态。
 - `TaskManager.get(task_id)`、`list_tasks()`：读取持久化任务状态和结果摘要。
+- `TaskManager.get_workflow(workflow_id)`：按工作流顺序返回关联任务和聚合产物。
+- `TaskManager.submit_validation_from_generation(task_id)`：使用生成产物直接创建同一工作流下的校验任务。
 - `TaskManager.confirm(task_id, confirmed)`：处理 CARLA 任务的显式确认；确认只登记 `manual_external`，不启动 CARLA。
 - `TaskManager.cancel(task_id)`：取消尚未结束的任务。
 
@@ -263,11 +265,13 @@ HTTP 接口：
 | `GET` | `/api/tasks` | 任务列表和数量 |
 | `GET` | `/api/tasks/{task_id}` | 单个任务状态、错误和结果摘要 |
 | `GET` | `/api/tasks/{task_id}/result` | 已完成任务结果；未完成返回 HTTP `409` |
+| `GET` | `/api/workflows/{workflow_id}` | 工作流阶段、关联任务和带 SHA-256 的产物清单 |
 | `POST` | `/api/tasks` | 提交任务；成功返回 HTTP `202` |
+| `POST` | `/api/tasks/{task_id}/validate` | 从已完成生成任务创建校验任务；成功返回 HTTP `202` |
 | `POST` | `/api/tasks/{task_id}/confirm` | `{"confirmed": true/false}`；只适用于 CARLA 任务 |
 | `POST` | `/api/tasks/{task_id}/cancel` | 取消任务 |
 
-任务状态至少包括 `queued`、`running`、`completed`、`failed`、`cancelled`、`awaiting_confirmation` 和 `confirmed_manual`。generation、validation、risk_analysis 使用 `offline_cpu`；CARLA 任务使用 `manual_external`，任务结果必须明确 `carla_connected=false` 和 `execution_started=false`，真实执行仍由 `server_run.cmd` 或专用 CARLA 入口承担。
+任务状态至少包括 `queued`、`running`、`completed`、`failed`、`cancelled`、`awaiting_confirmation` 和 `confirmed_manual`。任务记录同时保存 `workflow_id`、`workflow_step`、父任务、证据等级和标准化产物元数据；产物元数据包含类型、用途、路径、大小、SHA-256 和来源任务。generation、validation、risk_analysis 使用 `offline_cpu`；CARLA 任务使用 `manual_external`，任务结果必须明确 `carla_connected=false` 和 `execution_started=false`，真实执行仍由 `server_run.cmd` 或专用 CARLA 入口承担。
 
 ## 📏 S5-CORE-05 计划书指标基线接口
 
@@ -320,9 +324,10 @@ HTTP 接口：
 | `GET` | `/validation` | JSON/JSONL 校验、物理约束和配置编译表单 | 校验任务目录 |
 | `GET` | `/risk` | 运行目录/遥测风险分析表单和诊断结果 | 风险任务目录 |
 | `GET` | `/tasks` | Web 任务提交与状态页面 | 任务状态文件 |
+| `GET` | `/tasks/{task_id}` | 任务详情、逐条校验、工作流时间线和产物哈希 | 否 |
 | `GET`/`POST` | `/api/tasks...` | 任务提交、状态、结果和显式确认 | 任务目录 JSON |
 
-页面读取场景库只读文件，并通过独立任务目录保存 Web 任务状态；不修改场景库。`/generation`、`/validation` 和 `/risk` 已提供参数表单、任务轮询、终态结果和错误展示；离线任务仅使用本机 CPU worker，CARLA 任务不由 Web 进程启动，必须显式确认并转交外部服务器入口。当前只支持本机访问和单进程服务，尚未提供用户认证、权限管理或多用户部署。
+页面读取场景库只读文件，并通过独立任务目录保存 Web 任务状态；不修改场景库。`/generation`、`/validation` 和 `/risk` 已提供参数表单、任务轮询、终态结果和错误展示；生成完成后可直接创建校验任务，无需复制 JSONL 路径。离线任务仅使用本机 CPU worker，CARLA 任务不由 Web 进程启动，必须显式确认并转交外部服务器入口。当前只支持本机访问和单进程服务，尚未提供候选工作区、用户认证、权限管理或多用户部署。
 
 ## 🧭 M08 阶段五最小演示编排接口
 

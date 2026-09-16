@@ -54,7 +54,7 @@ BASE_STYLE = """
   .app-nav a { color: #dbeafe; border: 1px solid #6d8fc7; border-radius: 7px; padding: 7px 11px; text-decoration: none; font-size: 13px; }
   .app-nav a:hover, .app-nav a:focus { background: #2563eb; color: #fff; }
   main { max-width: 1100px; margin: 0 auto; padding: 26px clamp(16px, 5vw, 56px) 48px; }
-  .panel { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 20px; }
+  .panel { min-width: 0; background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 20px; }
   .panel h2 { margin: 0 0 12px; font-size: 20px; }
   .muted { color: var(--muted); line-height: 1.7; }
   .facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 18px 0; }
@@ -77,10 +77,24 @@ BASE_STYLE = """
   .check input { width: auto; min-height: auto; }
   .result { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 16px; }
   .result pre { margin: 0; padding: 12px; max-height: 420px; overflow: auto; background: #0f172a; color: #e2e8f0; border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .panel > pre { max-width: 100%; margin: 0; padding: 12px; overflow: auto; background: #0f172a; color: #e2e8f0; border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .result details { margin-top: 14px; }
+  .result summary { cursor: pointer; color: var(--primary); }
   .status-line { min-height: 24px; color: var(--muted); }
   .status-line.error { color: #b91c1c; }
   .status-line.success { color: #15803d; }
   .workflow-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  .workflow-actions a, .button-link { display: inline-flex; align-items: center; min-height: 38px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 6px; color: var(--primary); background: #fff; text-decoration: none; font-weight: 700; }
+  .badge { display: inline-block; padding: 3px 7px; border-radius: 6px; background: #eef2ff; color: #3730a3; font-size: 12px; font-weight: 700; }
+  .badge.success { background: #dcfce7; color: #166534; }
+  .badge.error { background: #fee2e2; color: #991b1b; }
+  .detail-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+  .detail-item { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 7px; background: #f8fafc; }
+  .detail-item strong, .detail-item code { display: block; margin-top: 5px; overflow-wrap: anywhere; }
+  .stack { display: grid; min-width: 0; gap: 18px; }
+  .issue-list { margin: 0; padding-left: 18px; }
+  .issue-list li { margin: 3px 0; }
+  .artifact-path, .hash { max-width: 420px; overflow-wrap: anywhere; font-family: Consolas, "Courier New", monospace; font-size: 12px; }
   table { width: 100%; border-collapse: collapse; }
   .table-wrap { overflow-x: auto; width: 100%; max-width: 100%; }
   .task-table { table-layout: fixed; min-width: 780px; }
@@ -95,7 +109,7 @@ BASE_STYLE = """
   th, td { padding: 9px 7px; border-bottom: 1px solid #edf1f7; text-align: left; vertical-align: top; }
   th { color: var(--muted); width: 30%; font-weight: 500; }
   code { overflow-wrap: anywhere; }
-  @media (max-width: 700px) { .facts, .links, .form-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 700px) { .facts, .links, .form-grid, .detail-grid { grid-template-columns: 1fr; } }
 </style>
 """
 
@@ -140,6 +154,181 @@ def _detail_page(record):
         f"<p style=\"margin-top:20px\"><a href=\"/scenarios\">返回场景库</a></p></section>"
     )
     return _page("场景详情", content, subtitle="场景库 V1 · 只读证据视图")
+
+
+def _json_block(payload):
+    return html.escape(json.dumps(payload, ensure_ascii=False, indent=2))
+
+
+def _task_status_badge(status):
+    tone = " success" if status in {"completed", "confirmed_manual", "通过"} else " error" if status in {"failed", "cancelled", "未通过"} else ""
+    return f'<span class="badge{tone}">{html.escape(str(status))}</span>'
+
+
+def _issue_text(issue):
+    if isinstance(issue, dict):
+        return str(issue.get("message") or issue.get("code") or json.dumps(issue, ensure_ascii=False))
+    return str(issue)
+
+
+def _validation_result_table(result):
+    physical_by_line = {
+        item.get("line_number"): item
+        for item in (result.get("physical_constraints") or {}).get("results", [])
+    }
+    rows = []
+    for item in result.get("items", []):
+        line = item.get("line")
+        schema = item.get("result") or {}
+        physical = physical_by_line.get(line, {})
+        errors = list(schema.get("errors") or []) + list(physical.get("errors") or [])
+        warnings = list(schema.get("warnings") or []) + list(physical.get("warnings") or [])
+        valid = bool(schema.get("valid") and physical.get("valid"))
+        issue_items = errors or warnings
+        issues = "<ul class=\"issue-list\">" + "".join(
+            f"<li>{html.escape(_issue_text(issue))}</li>" for issue in issue_items
+        ) + "</ul>" if issue_items else "无"
+        rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(line))}</td>"
+            f"<td><code>{html.escape(str(item.get('sample_id') or '未命名'))}</code></td>"
+            f"<td>{_task_status_badge('通过' if valid else '未通过')}</td>"
+            f"<td>{len(errors)}</td><td>{len(warnings)}</td><td>{issues}</td>"
+            "</tr>"
+        )
+    if not rows:
+        return '<p class="muted">任务尚未产生逐条校验结果。</p>'
+    return (
+        '<h3>逐条校验结果</h3><div class="table-wrap"><table><thead><tr><th>行</th><th>场景 ID</th><th>结果</th>'
+        '<th>错误</th><th>警告</th><th>说明</th></tr></thead><tbody>'
+        + "".join(rows)
+        + "</tbody></table></div>"
+    )
+
+
+def _artifact_table(artifacts):
+    if not artifacts:
+        return '<p class="muted">当前任务没有登记产物。</p>'
+    rows = "".join(
+        "<tr>"
+        f"<td>{html.escape(str(item.get('type', '—')))}</td>"
+        f"<td>{html.escape(str(item.get('role', '—')))}</td>"
+        f"<td>{html.escape(str(item.get('size_bytes', '—')))}</td>"
+        f"<td class=\"artifact-path\">{html.escape(str(item.get('path', '—')))}</td>"
+        f"<td class=\"hash\">{html.escape(str(item.get('sha256', '—')))}</td>"
+        "</tr>"
+        for item in artifacts
+    )
+    return (
+        '<div class="table-wrap"><table><thead><tr><th>类型</th><th>用途</th><th>字节</th>'
+        f'<th>路径</th><th>SHA-256</th></tr></thead><tbody>{rows}</tbody></table></div>'
+    )
+
+
+def _task_detail_page(task, workflow):
+    task_id = str(task["task_id"])
+    result = task.get("result") or {}
+    cards = [
+        ("状态", _task_status_badge(task.get("status"))),
+        ("类型", html.escape(str(task.get("kind")))),
+        ("证据等级", html.escape(str(task.get("evidence_level", "—")))),
+        ("工作流", f'<code>{html.escape(str(task.get("workflow_id", "—")))}</code>'),
+    ]
+    overview = "".join(
+        f'<div class="detail-item"><span class="fact-label">{label}</span><strong>{value}</strong></div>'
+        for label, value in cards
+    )
+    actions = [f'<a class="button-link" href="/tasks">返回任务列表</a>']
+    if task.get("kind") == "generation" and task.get("status") == "completed":
+        actions.insert(0, f'<button id="validate-generated" data-task="{html.escape(task_id)}">校验本批次</button>')
+    if task.get("parent_task_id"):
+        parent = html.escape(str(task["parent_task_id"]))
+        actions.append(f'<a class="button-link" href="/tasks/{parent}">查看上一步</a>')
+
+    result_section = '<p class="muted">任务尚未产生结果。</p>'
+    if task.get("error"):
+        error = task["error"]
+        result_section = (
+            f'<p class="status-line error"><strong>{html.escape(str(error.get("type", "Error")))}</strong>：'
+            f'{html.escape(str(error.get("message", "任务失败")))}</p>'
+        )
+    elif result:
+        if task.get("kind") == "validation":
+            result_section = _validation_result_table(result)
+        elif task.get("kind") == "generation":
+            summary = result.get("summary") or {}
+            result_section = (
+                '<div class="facts">'
+                f'<div class="fact"><div class="fact-label">接受数量</div><div class="fact-value">{html.escape(str(summary.get("accepted_count", "—")))}</div></div>'
+                f'<div class="fact"><div class="fact-label">请求数量</div><div class="fact-value">{html.escape(str(task.get("payload", {}).get("count", "—")))}</div></div>'
+                f'<div class="fact"><div class="fact-label">执行模式</div><div class="fact-value" style="font-size:16px">offline CPU</div></div>'
+                '</div>'
+            )
+        elif task.get("kind") == "risk_analysis":
+            risk = result.get("observed_risk") or {}
+            result_section = (
+                '<div class="facts">'
+                f'<div class="fact"><div class="fact-label">风险等级</div><div class="fact-value">{html.escape(str(risk.get("level", "—")))}</div></div>'
+                f'<div class="fact"><div class="fact-label">风险分数</div><div class="fact-value">{html.escape(str(risk.get("score", "—")))}</div></div>'
+                f'<div class="fact"><div class="fact-label">遥测行数</div><div class="fact-value">{html.escape(str(result.get("source_row_count", "—")))}</div></div>'
+                '</div>'
+            )
+        else:
+            result_section = f'<pre>{_json_block(result)}</pre>'
+        result_section += f'<details><summary>查看完整结构化结果</summary><pre>{_json_block(result)}</pre></details>'
+
+    workflow_rows = "".join(
+        "<tr>"
+        f'<td><a href="/tasks/{html.escape(str(item["task_id"]))}"><code>{html.escape(str(item["task_id"]))}</code></a></td>'
+        f'<td>{html.escape(str(item.get("kind")))}</td><td>{_task_status_badge(item.get("status"))}</td>'
+        f'<td>{html.escape(str(item.get("created_at")))}</td>'
+        "</tr>"
+        for item in (workflow or {}).get("tasks", [])
+    )
+    workflow_section = (
+        '<div class="table-wrap"><table><thead><tr><th>任务</th><th>阶段</th><th>状态</th><th>创建时间</th></tr></thead>'
+        f'<tbody>{workflow_rows}</tbody></table></div>'
+    )
+    poll_script = ""
+    if task.get("status") not in {"completed", "failed", "cancelled", "confirmed_manual"}:
+        poll_script = f"""
+        <script>
+          setTimeout(async () => {{
+            const response = await fetch("/api/tasks/{html.escape(task_id)}");
+            if (response.ok) {{
+              const latest = await response.json();
+              if (latest.status !== {json.dumps(task.get('status'))}) location.reload();
+              else location.reload();
+            }}
+          }}, 900);
+        </script>
+        """
+    action_script = f"""
+    <script>
+      const validateButton = document.getElementById("validate-generated");
+      if (validateButton) validateButton.addEventListener("click", async () => {{
+        validateButton.disabled = true;
+        validateButton.textContent = "正在创建校验任务...";
+        const response = await fetch(`/api/tasks/${{encodeURIComponent(validateButton.dataset.task)}}/validate`, {{
+          method: "POST", headers: {{"Content-Type": "application/json"}}, body: "{{}}"
+        }});
+        const payload = await response.json();
+        if (!response.ok) {{ validateButton.disabled = false; validateButton.textContent = payload.error || "创建失败"; return; }}
+        location.href = `/tasks/${{encodeURIComponent(payload.task_id)}}`;
+      }});
+    </script>
+    """
+    content = f"""
+    <div class="stack">
+      <section class="panel"><h2>任务概览</h2><div class="detail-grid">{overview}</div><div class="workflow-actions">{''.join(actions)}</div></section>
+      <section class="panel"><h2>结果</h2><div class="result">{result_section}</div></section>
+      <section class="panel"><h2>产物与哈希</h2>{_artifact_table(task.get('artifacts', []))}</section>
+      <section class="panel"><h2>工作流</h2>{workflow_section}</section>
+      <section class="panel"><h2>输入快照</h2><pre>{_json_block(task.get('payload', {}))}</pre></section>
+    </div>
+    {action_script}{poll_script}
+    """
+    return _page("任务详情", content, subtitle=f"{task_id} · 可追溯任务与证据")
 
 
 def _workflow_page(kind):
@@ -209,11 +398,40 @@ def _workflow_page(kind):
         const risk = task.result.observed_risk || {{}};
         return `实测风险：${{risk.level || "—"}} / ${{risk.score ?? "—"}}，方法：${{risk.method || "—"}}`;
       }}
+      function issueText(issue) {{
+        if (issue && typeof issue === "object") return issue.message || issue.code || JSON.stringify(issue);
+        return String(issue);
+      }}
+      function validationTable(result) {{
+        const physical = new Map((result.physical_constraints?.results || []).map(item => [item.line_number, item]));
+        const rows = (result.items || []).map(item => {{
+          const schema = item.result || {{}};
+          const physics = physical.get(item.line) || {{}};
+          const errors = [...(schema.errors || []), ...(physics.errors || [])];
+          const warnings = [...(schema.warnings || []), ...(physics.warnings || [])];
+          const valid = Boolean(schema.valid && physics.valid);
+          const issues = [...errors, ...warnings].map(issue => `<li>${{esc(issueText(issue))}}</li>`).join("") || "<li>无</li>";
+          return `<tr><td>${{esc(item.line)}}</td><td><code>${{esc(item.sample_id || "未命名")}}</code></td><td><span class="badge ${{valid ? "success" : "error"}}">${{valid ? "通过" : "未通过"}}</span></td><td>${{errors.length}}</td><td>${{warnings.length}}</td><td><ul class="issue-list">${{issues}}</ul></td></tr>`;
+        }}).join("");
+        return `<div class="table-wrap"><table><thead><tr><th>行</th><th>场景 ID</th><th>结果</th><th>错误</th><th>警告</th><th>说明</th></tr></thead><tbody>${{rows}}</tbody></table></div>`;
+      }}
+      async function validateGenerated(taskId) {{
+        message("正在创建校验任务...");
+        const response = await fetch(`/api/tasks/${{encodeURIComponent(taskId)}}/validate`, {{method:"POST", headers:{{"Content-Type":"application/json"}}, body:"{{}}"}});
+        const task = await response.json();
+        if (!response.ok) throw new Error(task.error || "校验任务创建失败");
+        location.href = `/tasks/${{encodeURIComponent(task.task_id)}}`;
+      }}
       function renderResult(task) {{
         const box = document.getElementById("result");
         if (!task.result && !task.error) {{ box.innerHTML = ""; return; }}
         const payload = task.result || {{error: task.error}};
-        box.innerHTML = `<div class="result"><h3>任务结果</h3><p class="muted">${{esc(resultHeadline(task))}}</p><pre>${{esc(JSON.stringify(payload, null, 2))}}</pre></div>`;
+        const validation = kind === "validation" && task.result ? validationTable(task.result) : "";
+        const continueAction = kind === "generation" && task.status === "completed"
+          ? `<button type="button" id="validate-batch">校验本批次</button>` : "";
+        box.innerHTML = `<div class="result"><h3>任务结果</h3><p class="muted">${{esc(resultHeadline(task))}}</p>${{validation}}<div class="workflow-actions">${{continueAction}}<a href="/tasks/${{encodeURIComponent(task.task_id)}}">查看任务详情与证据</a></div><details><summary>查看完整结构化结果</summary><pre>${{esc(JSON.stringify(payload, null, 2))}}</pre></details></div>`;
+        const validateButton = document.getElementById("validate-batch");
+        if (validateButton) validateButton.addEventListener("click", () => validateGenerated(task.task_id).catch(error => message(error.message, "error")));
       }}
       async function getTask(taskId) {{
         const response = await fetch(`/api/tasks/${{encodeURIComponent(taskId)}}`);
@@ -221,7 +439,7 @@ def _workflow_page(kind):
         if (!response.ok) throw new Error(task.error || "任务状态读取失败");
         message(`任务 ${{task.task_id}}：${{task.status}}`);
         renderResult(task);
-        if (["completed","failed","cancelled"].includes(task.status)) {{ clearInterval(pollTimer); pollTimer = null; message(`任务 ${{task.task_id}}：${{task.status}}`, task.status === "completed" ? "success" : "error"); }}
+        if (["completed","failed","cancelled","confirmed_manual"].includes(task.status)) {{ clearInterval(pollTimer); pollTimer = null; message(`任务 ${{task.task_id}}：${{task.status}}`, ["completed","confirmed_manual"].includes(task.status) ? "success" : "error"); }}
       }}
       document.getElementById("workflow-form").addEventListener("submit", async event => {{
         event.preventDefault();
@@ -276,12 +494,21 @@ def _tasks_page():
     <script>
       const esc = value => String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
       const message = text => document.getElementById("task-message").textContent = text;
+      function resultSummary(task) {
+        if (task.error) return `${task.error.type || "Error"}: ${task.error.message || "任务失败"}`;
+        if (!task.result) return "等待结果";
+        if (task.kind === "generation") return `生成 ${task.result.summary?.accepted_count ?? "—"} 条候选`;
+        if (task.kind === "validation") return `校验 ${task.result.valid ? "通过" : "未通过"}，共 ${task.result.record_count ?? "—"} 条`;
+        if (task.kind === "risk_analysis") return `风险 ${task.result.observed_risk?.level || "—"} / ${task.result.observed_risk?.score ?? "—"}`;
+        return task.result.message || task.status;
+      }
       function renderTasks(items) {
         document.getElementById("task-rows").innerHTML = items.map(task => {
-          const result = task.result ? JSON.stringify(task.result) : (task.error ? task.error.message : "—");
+          const result = resultSummary(task);
           const action = task.status === "awaiting_confirmation"
             ? `<button data-confirm="${esc(task.task_id)}">确认外部任务</button><button class="secondary" data-cancel="${esc(task.task_id)}">取消</button>` : "";
-          return `<tr><td><code class="task-id" title="${esc(task.task_id)}">${esc(task.task_id)}</code></td><td>${esc(task.kind)}</td><td>${esc(task.status)}</td><td><span class="task-created" title="${esc(task.created_at)}">${esc(task.created_at)}</span></td><td><code class="task-result" title="${esc(result)}">${esc(result)}</code></td><td>${action}</td></tr>`;
+          const detail = `<a href="/tasks/${encodeURIComponent(task.task_id)}">详情</a>`;
+          return `<tr><td><a href="/tasks/${encodeURIComponent(task.task_id)}"><code class="task-id" title="${esc(task.task_id)}">${esc(task.task_id)}</code></a></td><td>${esc(task.kind)}</td><td>${esc(task.status)}</td><td><span class="task-created" title="${esc(task.created_at)}">${esc(task.created_at)}</span></td><td><code class="task-result" title="${esc(result)}">${esc(result)}</code></td><td><div class="workflow-actions">${action}${detail}</div></td></tr>`;
         }).join("");
         document.querySelectorAll("[data-confirm]").forEach(button => button.addEventListener("click", () => transition(button.dataset.confirm, "confirm", true)));
         document.querySelectorAll("[data-cancel]").forEach(button => button.addEventListener("click", () => transition(button.dataset.cancel, "cancel")));
@@ -357,6 +584,14 @@ class WebAppHandler(DashboardHandler):
             else:
                 self._send_json(200, task)
             return
+        if request_path.startswith("/api/workflows/"):
+            workflow_id = unquote(request_path[len("/api/workflows/"):])
+            workflow = manager.get_workflow(workflow_id)
+            if workflow is None:
+                self._send_json(404, {"error": "未找到工作流"})
+            else:
+                self._send_json(200, workflow)
+            return
         if request_path.startswith("/api/"):
             return super().do_GET()
         if request_path == "/healthz":
@@ -391,6 +626,14 @@ class WebAppHandler(DashboardHandler):
         }
         if request_path == "/tasks":
             self._send_page(_tasks_page())
+            return
+        if request_path.startswith("/tasks/"):
+            task_id = unquote(request_path[len("/tasks/"):])
+            task = manager.get(task_id)
+            if task is None:
+                self._send_json(404, {"error": "未找到任务"})
+                return
+            self._send_page(_task_detail_page(task, manager.get_workflow(task["workflow_id"])))
             return
         if request_path in pages:
             self._send_page(_workflow_page(pages[request_path]))
@@ -431,14 +674,18 @@ class WebAppHandler(DashboardHandler):
             if request_path.startswith("/api/tasks/"):
                 task_id, action = request_path[len("/api/tasks/"):].rsplit("/", 1)
                 task_id = unquote(task_id)
+                response_status = 200
                 if action == "confirm":
                     task = manager.confirm(task_id, confirmed=bool(payload.get("confirmed", False)))
                 elif action == "cancel":
                     task = manager.cancel(task_id)
+                elif action == "validate":
+                    task = manager.submit_validation_from_generation(task_id, payload)
+                    response_status = 202
                 else:
                     self._send_json(404, {"error": "未找到任务操作"})
                     return
-                self._send_json(200, task)
+                self._send_json(response_status, task)
                 return
             self._send_json(404, {"error": "未找到接口"})
         except KeyError:

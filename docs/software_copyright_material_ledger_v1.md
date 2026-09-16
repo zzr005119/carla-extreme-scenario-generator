@@ -31,7 +31,7 @@ _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1
 | M04 仿真采集 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py`、`tools/check_scenario_runner_acceptance.py` | CARLA 0.9.16 运行证据、`metadata.json`、`telemetry.csv`、`acceptance_result.json`；四类传感器/路线/风险单样本通过 | 已验证实现 / 原型 | 冻结版本复核提交哈希和证据路径，重新采集最终截图 |
 | M05 风险评估 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2` 分解、风险报告、批次统计 | 已验证实现 | 说明书中标注这是仿真遥测启发式指标，不是事故概率 |
 | M06 实验复现 | `batch_runner.py`、`tools/server_*.cmd`、`configs/` | 计划、种子、配置哈希、服务器任务和轻量汇总 | 已验证实现 / 原型 | 整理一条最小复现路径，隐藏服务器内部细节 |
-| M07 Web 管理入口 | `tools/web_app.py`、`tools/web_app.cmd`、`tools/scenario_dashboard.py`、`core/web_task_orchestrator.py` | 页面级回归、HTTP 接口、场景库列表/详情、生成/校验/风险表单和任务结果 | 首期 Web 工作流 | 冻结版本采集页面截图；不宣称多用户、权限和场景库写入能力 |
+| M07 Web 管理入口 | `tools/web_app.py`、`tools/web_app.cmd`、`tools/scenario_dashboard.py`、`core/web_task_orchestrator.py` | 页面级回归、HTTP 接口、场景库列表/详情、生成到校验连续流程、任务详情、逐条结果和产物哈希 | 连续流程第一批 | 冻结版本采集页面截图；不宣称候选工作区、多用户、权限和场景库写入能力 |
 | M08 最小演示编排 | `tools/stage5_minimal_demo.py`、`tools/stage5_demo.cmd`、`docs/scenario_runner_full_acceptance_v1.md` | `demo_manifest.json`、配置、`.xosc`、适配清单、完整验收轻量证据、2 项单元测试 | 阶段五已建立 / 离线原型 + 独立实机证据 | 冻结版本重新运行，作为说明书总入口；实机验收仍需单独复核 |
 
 ## 本轮整理验收

@@ -60,7 +60,7 @@ tools\web_app.cmd
 D:\ANACONDA\envs\Carla666-0916\python.exe tools\web_app.py --validate-only
 ```
 
-页面支持 Dashboard、场景库筛选、独立详情和历史风险/证据查看；生成页可提交 LHS/GMM/CVAE/Diffusion CPU 任务，校验页支持 JSON/JSONL、物理约束和配置编译，风险页读取运行目录或遥测并展示 `observed_risk`；任务页可登记需要显式确认的 CARLA 外部任务。页面不直接启动 CARLA，不提供场景库删除、权限管理或多用户部署。
+页面支持 Dashboard、场景库筛选、独立详情和历史风险/证据查看；生成页可提交 LHS/GMM/CVAE/Diffusion CPU 任务，生成完成后点击“校验本批次”即可直接进入逐条校验结果，不需要复制 JSONL 路径。任务详情页展示输入快照、工作流时间线、产物路径与 SHA-256；风险页读取运行目录或遥测并展示 `observed_risk`；任务页可登记需要显式确认的 CARLA 外部任务。页面不直接启动 CARLA，当前也不提供候选工作区、场景库写入、权限管理或多用户部署。
 
 任务接口示例：
 

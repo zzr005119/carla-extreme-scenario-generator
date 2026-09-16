@@ -2,7 +2,7 @@
 
 ## 定位
 
-本版本把原型占位页升级为三个可操作的本地工作流：场景生成、场景校验、风险分析。页面只负责提交参数和展示任务状态；实际处理统一由 `TaskManager` 的 CPU worker 执行，任务状态和结果持久化到 `F:\Carla\output-0.9.16\web_tasks`（可用 `CARLA_WEB_TASK_DIR` 覆盖）。
+本版本把原型占位页升级为三个可操作的本地工作流：场景生成、场景校验、风险分析。页面只负责提交参数和展示任务状态；实际处理统一由 `TaskManager` 的 CPU worker 执行，任务状态和结果持久化到 `F:\Carla\output-0.9.16\web_tasks`（可用 `CARLA_WEB_TASK_DIR` 覆盖）。连续流程第一批已将生成和校验串联，不再要求用户复制 JSONL 路径。
 
 ## 三条用户流程
 
@@ -13,6 +13,22 @@
 | `/risk` | 运行目录，或 telemetry/metadata/config 路径 | `risk_analysis` | `observed_risk`、风险分解、诊断、碰撞计数和证据来源 |
 
 页面统一行为：提交后立即显示任务 ID，轮询 `GET /api/tasks/{task_id}`，终态显示结构化 JSON；失败显示错误信息；任务历史可在 `/tasks` 查看。页面没有隐式 CARLA 启动、在线训练或 GPU 调度。
+
+## 连续流程第一批
+
+当前可直接完成：
+
+```text
+选择生成参数
+→ 查看生成摘要
+→ 点击“校验本批次”
+→ 查看逐条 Schema/语义/物理约束结果
+→ 查看任务时间线、输入快照、产物路径和 SHA-256
+```
+
+每个新任务包含 `workflow_id`、`workflow_step`、`parent_task_id`、`evidence_level` 和 `artifacts`。从生成结果创建的校验任务继承原 `workflow_id`，并把生成任务登记为父任务。产物条目统一记录类型、用途、绝对路径、字节数、SHA-256 和来源任务；旧任务文件可兼容加载，但不会补造历史产物哈希。
+
+`/tasks/{task_id}` 是正式任务详情页，按任务类型展示结果摘要或逐条校验表，同时保留完整 JSON 折叠视图。`/tasks` 列表只显示可读摘要，不再用压缩后的整块 JSON 作为主要结果展示。
 
 ## P0 验收结果
 
@@ -30,6 +46,8 @@
 - `GET /api/tasks/{task_id}`：读取状态、输入和结果摘要。
 - `GET /api/tasks/{task_id}/result`：仅在 `completed` 时返回结果，否则 `409`。
 - `GET /api/tasks`：按创建时间倒序列出任务。
+- `GET /api/workflows/{workflow_id}`：返回工作流阶段、任务时间线和聚合产物。
+- `POST /api/tasks/{task_id}/validate`：从已完成的生成任务创建同一工作流下的校验任务。
 - `POST /api/tasks/{task_id}/cancel`：取消尚未结束的任务。
 - `POST /api/tasks/{task_id}/confirm`：仅 CARLA 外部任务使用；确认只登记 `confirmed_manual`，不启动 CARLA。
 
@@ -55,4 +73,4 @@
 D:\ANACONDA\envs\Carla666-0916\python.exe -m unittest tests.test_web_app tests.test_web_task_orchestration tests.test_runtime_adapters -v
 ```
 
-当前覆盖 Web 页面表单、任务轮询契约、JSONL 校验、可微梯度、PyBullet 可选边界和 ScenarioRunner dry-run。9 张暂定 Web 功能截图已归档到 `artifacts/stage5_web_screenshots_v1/`；正式软著截图仍需在最终冻结提交上复核。
+当前覆盖 Web 页面表单、任务轮询契约、JSONL 校验、生成到校验的工作流继承、任务恢复、产物哈希、可微梯度、PyBullet 可选边界和 ScenarioRunner dry-run。浏览器已实测一键校验、任务详情和窄屏布局；历史截图仍只作为界面底稿，正式软著截图需在最终冻结提交上重新采集。

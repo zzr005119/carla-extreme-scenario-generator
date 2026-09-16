@@ -122,7 +122,7 @@ flowchart LR
 - **职责：** 管理批次计划、配置快照、随机种子、服务器任务、结果回收和质量门检查。
 - **输入：** 场景配置集合、实验计划、Git 提交、服务器运行参数和 GPU/CARLA 资源状态。
 - **处理：** 分批调度、逐次日志、运行状态记录、配置哈希追踪、服务器同步、结果回收、离线 Web worker 和质量门验证。
-- **输出：** `batch_summary.csv`、运行明细、配置快照、服务器任务日志、轻量汇总、`task_<id>.json` 状态文件和可追溯的提交哈希。
+- **输出：** `batch_summary.csv`、运行明细、配置快照、服务器任务日志、轻量汇总、带工作流/父任务/产物哈希的 `task_<id>.json` 状态文件和可追溯的提交哈希。
 - **实现映射：** `batch_runner.py`、`core/web_task_orchestrator.py`、`tools/server_sync.cmd`、`tools/server_run.cmd`、`tools/server_job_status.cmd`、`tools/server_fetch_results.cmd`、`configs/scenario_library_quality_gate_v1.json`。
 - **Web 任务边界：** generation、validation、risk_analysis 在本机 CPU worker 执行；carla 任务只保存配置路径和确认结果，确认后仍需 `server_run.cmd` 或专用入口执行，不在 HTTP 线程内启动 CARLA。
 - **证据边界：** 笔记本—服务器工作流已实测；服务器模型权重、原始传感器帧和大体积输出不进入 Git，软著材料应引用轻量汇总和代码入口。
@@ -131,8 +131,8 @@ flowchart LR
 
 - **职责：** 提供场景筛选、场景详情、运行证据、风险结果、质量指标和任务状态/结果的本地管理界面。
 - **输入：** M03 输出的场景库索引、M05 输出的风险分析、M06 输出的批次汇总。
-- **输出：** 场景列表、详情页、风险分布图、运行证据状态、任务状态和任务结果 JSON。
-- **当前状态：** 已完成首期本地 Web 管理入口和三个可操作工作流，可访问 Dashboard、场景库列表、独立场景详情、受控查询、健康检查、生成/校验/风险分析表单、任务轮询和结果 JSON；尚未形成多用户服务、权限或生产部署能力。
+- **输出：** 场景列表、详情页、风险分布图、运行证据状态、任务详情、逐条校验结果、工作流时间线和带哈希的产物清单。
+- **当前状态：** 已完成首期本地 Web 管理入口和三个可操作工作流；生成结果可一键进入校验，任务详情页可展示输入、结构化结果、工作流和证据产物。候选工作区、CARLA Job 衔接、多用户服务、权限和生产部署仍未实现。
 - **实现映射：** `tools/web_app.py`、`tools/web_app.cmd` 复用 `scenario_dashboard.py` 的数据加载器和 API，`core/web_task_orchestrator.py` 提供任务状态/结果契约，回归见 `tests/test_web_app.py`、`tests/test_web_task_orchestration.py`。
 
 ### M08 阶段五最小演示编排

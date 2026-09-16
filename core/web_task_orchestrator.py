@@ -9,6 +9,7 @@ CARLA process from the HTTP handler.
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import os
 import subprocess
@@ -75,6 +76,30 @@ def _write_json(path, payload):
     temporary.replace(path)
 
 
+def _file_sha256(path):
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as file:
+        for chunk in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _artifact(path, *, artifact_type, role, source_task_id):
+    path = Path(path).resolve()
+    if not path.is_file():
+        raise TaskError(f"任务产物不存在: {path}")
+    sha256 = _file_sha256(path)
+    return {
+        "artifact_id": f"artifact_{sha256[:16]}",
+        "type": artifact_type,
+        "role": role,
+        "path": str(path),
+        "sha256": sha256,
+        "size_bytes": path.stat().st_size,
+        "source_task_id": source_task_id,
+    }
+
+
 def _as_path(value, field):
     if not isinstance(value, str) or not value.strip():
         raise TaskError(f"{field} 必须是非空路径")
@@ -112,6 +137,14 @@ class TaskManager:
                 continue
             task_id = task.get("task_id")
             if task_id:
+                task.setdefault("workflow_id", f"workflow_legacy_{task_id.removeprefix('task_')}")
+                task.setdefault("workflow_step", 1)
+                task.setdefault("parent_task_id", None)
+                task.setdefault("artifacts", [])
+                task.setdefault(
+                    "evidence_level",
+                    "external_unverified" if task.get("requires_carla") else "offline",
+                )
                 self._tasks[task_id] = task
 
     def _persist(self, task):
@@ -137,7 +170,54 @@ class TaskManager:
             task = self._tasks.get(str(task_id))
             return self._snapshot(task) if task is not None else None
 
-    def submit(self, kind, payload=None, *, confirm_carla=False):
+    def get_workflow(self, workflow_id):
+        with self._lock:
+            tasks = [
+                self._snapshot(task)
+                for task in self._tasks.values()
+                if task.get("workflow_id") == str(workflow_id)
+            ]
+        if not tasks:
+            return None
+        tasks.sort(
+            key=lambda item: (
+                item.get("workflow_step", 1),
+                item.get("created_at", ""),
+                item.get("task_id", ""),
+            )
+        )
+        latest = tasks[-1]
+        artifacts = [artifact for task in tasks for artifact in task.get("artifacts", [])]
+        timestamps = [
+            task.get("finished_at") or task.get("started_at") or task.get("created_at")
+            for task in tasks
+        ]
+        return {
+            "workflow_id": str(workflow_id),
+            "task_ids": [task["task_id"] for task in tasks],
+            "current_stage": latest["kind"],
+            "status": latest["status"],
+            "scenario_ids": [],
+            "artifacts": artifacts,
+            "evidence_level": (
+                "external_unverified"
+                if any(task.get("requires_carla") for task in tasks)
+                else "offline"
+            ),
+            "created_at": tasks[0].get("created_at"),
+            "updated_at": max(value for value in timestamps if value),
+            "tasks": tasks,
+        }
+
+    def submit(
+        self,
+        kind,
+        payload=None,
+        *,
+        confirm_carla=False,
+        workflow_id=None,
+        parent_task_id=None,
+    ):
         kind = str(kind or "").strip()
         if kind not in TASK_KINDS:
             raise TaskError(f"不支持的任务类型: {kind or '空'}")
@@ -146,9 +226,26 @@ class TaskManager:
             raise TaskError("payload 必须是 JSON 对象")
         normalized = self._validate_payload(kind, payload)
         task_id = f"task_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:10]}"
+        if parent_task_id is not None:
+            parent = self.get(parent_task_id)
+            if parent is None:
+                raise TaskError(f"父任务不存在: {parent_task_id}")
+            if workflow_id is not None and workflow_id != parent.get("workflow_id"):
+                raise TaskError("workflow_id 与父任务不一致")
+            workflow_id = parent.get("workflow_id")
+        if workflow_id is None:
+            workflow_id = f"workflow_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{uuid.uuid4().hex[:10]}"
+        workflow_tasks = self.get_workflow(workflow_id)
+        workflow_step = max(
+            (item.get("workflow_step", 1) for item in (workflow_tasks or {}).get("tasks", [])),
+            default=0,
+        ) + 1
         requires_carla = kind == "carla"
         task = {
             "task_id": task_id,
+            "workflow_id": workflow_id,
+            "workflow_step": workflow_step,
+            "parent_task_id": parent_task_id,
             "kind": kind,
             "status": "awaiting_confirmation" if requires_carla else "queued",
             "created_at": _now(),
@@ -156,9 +253,11 @@ class TaskManager:
             "finished_at": None,
             "requires_carla": requires_carla,
             "execution_mode": "manual_external" if requires_carla else "offline_cpu",
+            "evidence_level": "external_unverified" if requires_carla else "offline",
             "payload": normalized,
             "result": None,
             "error": None,
+            "artifacts": [],
         }
         with self._lock:
             self._tasks[task_id] = task
@@ -169,6 +268,29 @@ class TaskManager:
             return self._snapshot(task)
         self._executor.submit(self._run, task_id)
         return self._snapshot(task)
+
+    def submit_validation_from_generation(self, source_task_id, payload=None):
+        source = self.get(source_task_id)
+        if source is None:
+            raise KeyError(source_task_id)
+        if source["kind"] != "generation":
+            raise TaskError("只有生成任务可以直接创建校验任务")
+        if source["status"] != "completed":
+            raise TaskError(f"生成任务尚未完成: {source['status']}")
+        output_path = (source.get("result") or {}).get("output_path")
+        if not output_path:
+            raise TaskError("生成任务缺少 JSONL 产物")
+        validation_payload = deepcopy(payload or {})
+        if not isinstance(validation_payload, dict):
+            raise TaskError("payload 必须是 JSON 对象")
+        validation_payload["record_path"] = output_path
+        validation_payload.setdefault("compile", False)
+        return self.submit(
+            "validation",
+            validation_payload,
+            workflow_id=source["workflow_id"],
+            parent_task_id=source["task_id"],
+        )
 
     def confirm(self, task_id, *, confirmed):
         with self._lock:
@@ -320,7 +442,13 @@ class TaskManager:
         with self._lock:
             if self._tasks[task_id]["status"] == "cancelled":
                 return
-            self._tasks[task_id].update(status="completed", finished_at=_now(), result=result)
+            artifacts = result.pop("_artifacts", [])
+            self._tasks[task_id].update(
+                status="completed",
+                finished_at=_now(),
+                result=result,
+                artifacts=artifacts,
+            )
             self._persist(self._tasks[task_id])
 
     def _task_output_dir(self, task):
@@ -361,12 +489,30 @@ class TaskManager:
             raise TaskError(detail[-1] if detail else f"生成命令退出码 {completed.returncode}")
         summary_path = output.with_name("generated_scenarios_summary.json")
         summary = _load_json(summary_path) if summary_path.is_file() else {}
+        artifacts = [
+            _artifact(
+                output,
+                artifact_type="scenario_records",
+                role="generated_candidates",
+                source_task_id=task["task_id"],
+            )
+        ]
+        if summary_path.is_file():
+            artifacts.append(
+                _artifact(
+                    summary_path,
+                    artifact_type="generation_summary",
+                    role="task_summary",
+                    source_task_id=task["task_id"],
+                )
+            )
         return {
             "kind": "generation",
             "execution_mode": "offline_cpu",
             "output_path": str(output),
             "summary_path": str(summary_path),
             "summary": summary,
+            "_artifacts": artifacts,
         }
 
     def _record_from_payload(self, payload):
@@ -389,6 +535,7 @@ class TaskManager:
             validations.append(
                 {
                     "line": line_number,
+                    "sample_id": record.get("sample_id"),
                     "result": validate_scenario_record(record),
                 }
             )
@@ -423,6 +570,27 @@ class TaskManager:
             output = self._task_output_dir(task) / "compiled_carla_config.json"
             _write_json(output, compiled)
             result["compiled_config_path"] = str(output)
+        report_path = self._task_output_dir(task) / "validation_result.json"
+        _write_json(report_path, result)
+        artifacts = [
+            _artifact(
+                report_path,
+                artifact_type="validation_report",
+                role="quality_evidence",
+                source_task_id=task["task_id"],
+            )
+        ]
+        if result.get("compiled_config_path"):
+            artifacts.append(
+                _artifact(
+                    result["compiled_config_path"],
+                    artifact_type="carla_config",
+                    role="compiled_execution_input",
+                    source_task_id=task["task_id"],
+                )
+            )
+        result["result_path"] = str(report_path)
+        result["_artifacts"] = artifacts
         return result
 
     def _run_risk_analysis(self, task):
@@ -473,4 +641,12 @@ class TaskManager:
             "source_row_count": len(rows),
             "collision_count": int(collision_count),
             "output_path": str(output),
+            "_artifacts": [
+                _artifact(
+                    output,
+                    artifact_type="risk_report",
+                    role="risk_evidence",
+                    source_task_id=task["task_id"],
+                )
+            ],
         }
