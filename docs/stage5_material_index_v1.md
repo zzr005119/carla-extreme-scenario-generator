@@ -1,10 +1,10 @@
 # 阶段五成果材料索引 V1
 
-_更新日期：2026-08-31；用途：阶段五系统集成、论文/软著前置整理和证据追溯；不等同于最终申请材料_
+_更新日期：2026-09-23；用途：阶段五申请版本材料索引和证据追溯；目标 2026-10-15 完成材料准备并提交_
 
 ## 索引定位
 
-本索引把 M01–M08 的代码入口、当前可引用证据、阶段五一键演示清单和正式冻结前动作集中到一个入口。它只登记已经存在或可以由仓库命令重建的材料，不把规划能力写成已完成能力。
+本索引把 M01–M08 的代码入口、申请版本可引用证据、一键演示清单和冻结前动作集中到一个入口。申请版本冻结范围是当前已经存在、可复核的单机 Web 与仿真测试能力；不把候选工作区、在线 RL 泛化、多用户和真实性结论写成已完成能力。
 
 阶段五默认演示是离线链路：它读取一个场景记录，完成校验、配置编译、场景库查询、静态 OpenSCENARIO 适配和 Dashboard 数据核对，然后写出 `demo_manifest.json`。默认不连接 CARLA，不产生新的 `observed_risk`，也不启动 GPU 任务。
 
@@ -72,7 +72,7 @@ Get-FileHash artifacts\stage5_minimal_demo_v1\demo_manifest.json -Algorithm SHA2
 | [`stage5_metrics_baseline_v1.md`](stage5_metrics_baseline_v1.md) | 计划书成本、效率和覆盖率测量口径、同 CPU baseline 与证据边界；可由 `tools\\run_stage5_metrics_baseline.cmd` 重建 |
 | [`stage5_external_cost_and_coverage_estimate_v1.md`](stage5_external_cost_and_coverage_estimate_v1.md) | 公开资料锚点、实车成本三档区间、行业覆盖率分母边界、`0.960341x` 解释和优化实验顺序；不替代项目实测 |
 
-## 正式冻结前动作
+## 申请版本冻结前动作
 
 1. 冻结 V1.0 功能范围、软件名称、模块术语和最终提交。
 2. 在冻结提交上重新运行 M08、全量测试和 `compileall`。
@@ -80,4 +80,4 @@ Get-FileHash artifacts\stage5_minimal_demo_v1\demo_manifest.json -Algorithm SHA2
 4. 复核 `artifacts/stage5_web_screenshots_v1/` 中的 S01–S09 Web 截图，并另行采集一键演示、CARLA 实机结果和 OpenSCENARIO 适配产物截图；截图不得使用未冻结版本作为最终申请证据。
 5. 依据当期官方要求整理软件说明书、源代码鉴别材料和申请主体信息。
 
-在正式冻结前，本索引和 M08 清单属于工程底稿，不代表软著已经申请或登记。
+目标 2026-10-13 冻结申请版本，2026-10-15 完成材料包和提交准备。本索引和 M08 清单在冻结前属于工程底稿；提交后继续迭代的功能不回写为本版本能力。
