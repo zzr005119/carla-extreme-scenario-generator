@@ -292,6 +292,74 @@ class TaskManager:
             parent_task_id=source["task_id"],
         )
 
+    def submit_carla_from_validation(self, source_task_id, payload=None):
+        source = self.get(source_task_id)
+        if source is None:
+            raise KeyError(source_task_id)
+        if source["kind"] != "validation" or source["status"] != "completed":
+            raise TaskError("只有已完成的校验任务可以登记 CARLA 执行")
+        result = source.get("result") or {}
+        config_path = result.get("compiled_config_path")
+        if not config_path:
+            raise TaskError("校验任务没有编译配置；请先以 compile=true 重新校验")
+        carla_payload = dict(payload or {})
+        carla_payload["config_path"] = config_path
+        carla_payload.setdefault("requested_by", "web")
+        return self.submit(
+            "carla",
+            carla_payload,
+            workflow_id=source["workflow_id"],
+            parent_task_id=source["task_id"],
+        )
+
+    def attach_carla_result(self, task_id, payload=None):
+        payload = dict(payload or {})
+        task = self.get(task_id)
+        if task is None:
+            raise KeyError(task_id)
+        if task["kind"] != "carla":
+            raise TaskError("只有 CARLA 外部任务可以导入结果")
+        if task["status"] not in {"awaiting_confirmation", "confirmed_manual"}:
+            raise TaskError(f"CARLA 任务当前状态不能导入结果: {task["status"]}")
+        run_dir = Path(str(payload.get("run_dir", ""))).expanduser().resolve()
+        if not run_dir.is_dir():
+            raise TaskError(f"远端结果目录不存在: {run_dir}")
+        metadata_path = run_dir / "metadata.json"
+        telemetry_path = run_dir / "telemetry.csv"
+        if not metadata_path.is_file() or not telemetry_path.is_file():
+            raise TaskError("结果目录必须同时包含 metadata.json 和 telemetry.csv")
+        metadata = _load_json(metadata_path)
+        carla_connected = bool((metadata.get("server_health") or {}).get("status") == "healthy")
+        result = {
+            "execution_started": True,
+            "carla_connected": carla_connected,
+            "execution_mode": "remote_result_import",
+            "remote_job_id": payload.get("remote_job_id"),
+            "remote_path": payload.get("remote_path"),
+            "run_dir": str(run_dir),
+            "metadata_path": str(metadata_path),
+            "telemetry_path": str(telemetry_path),
+            "acceptance_status": (metadata.get("result") or {}).get("status"),
+            "sensor_status": (metadata.get("sensor_pipeline") or {}).get("status"),
+            "server_health": metadata.get("server_health"),
+        }
+        with self._lock:
+            current = self._tasks[task_id]
+            current.update(
+                status="completed",
+                finished_at=_now(),
+                evidence_level="external_verified" if carla_connected else "external_unverified",
+                result=result,
+            )
+            self._persist(current)
+        risk_task = self.submit(
+            "risk_analysis",
+            {"run_dir": str(run_dir), "metadata_path": str(metadata_path), "telemetry_path": str(telemetry_path)},
+            workflow_id=task["workflow_id"],
+            parent_task_id=task_id,
+        )
+        return {"carla_task": self.get(task_id), "risk_task": risk_task}
+
     def confirm(self, task_id, *, confirmed):
         with self._lock:
             task = self._tasks.get(str(task_id))
@@ -632,8 +700,39 @@ class TaskManager:
             scenario_config=config.get("scenario"),
             events=metadata.get("events", []),
         )
-        output = self._task_output_dir(task) / "risk_result.json"
+        output_dir = self._task_output_dir(task)
+        output = output_dir / "risk_result.json"
         _write_json(output, {"observed_risk": risk, "source_row_count": len(rows)})
+        from core.web_visualization import build_run_visualization
+
+        visualization = build_run_visualization(output_dir, run_dir, rows, risk)
+        artifacts = [
+            _artifact(
+                output,
+                artifact_type="risk_report",
+                role="risk_evidence",
+                source_task_id=task["task_id"],
+            )
+        ]
+        chart_path = output_dir / visualization["chart_name"]
+        artifacts.append(
+            _artifact(
+                chart_path,
+                artifact_type="svg_visualization",
+                role="trajectory_and_risk_chart",
+                source_task_id=task["task_id"],
+            )
+        )
+        preview_name = visualization.get("sensor_preview_name")
+        if preview_name:
+            artifacts.append(
+                _artifact(
+                    output_dir / preview_name,
+                    artifact_type="sensor_preview",
+                    role="first_sensor_frame_preview",
+                    source_task_id=task["task_id"],
+                )
+            )
         return {
             "kind": "risk_analysis",
             "execution_mode": "offline_cpu",
@@ -641,12 +740,6 @@ class TaskManager:
             "source_row_count": len(rows),
             "collision_count": int(collision_count),
             "output_path": str(output),
-            "_artifacts": [
-                _artifact(
-                    output,
-                    artifact_type="risk_report",
-                    role="risk_evidence",
-                    source_task_id=task["task_id"],
-                )
-            ],
+            "visualization": visualization,
+            "_artifacts": artifacts,
         }

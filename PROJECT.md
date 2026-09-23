@@ -97,7 +97,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - V2 实机回归：运行 `20260812_120439` 完成，`heuristic_v2` 得分 `63.456`、等级 `high`，无碰撞，RGB/Depth/SemSeg 各 `200` 帧，传感器写盘完成，CARLA 服务健康检查通过。
 
 ## 当前工作
-- Web 连续流程第一批已落地：新任务保存 `workflow_id`、顺序、父任务、证据等级和带 SHA-256 的标准化产物；生成结果可一键创建同一工作流下的校验任务；`/tasks/{task_id}` 展示逐条校验、输入快照、工作流时间线和产物证据。相关 HTTP/持久化回归及桌面/窄屏浏览器实测已通过。当前仍未实现候选工作区、CARLA 执行包和服务器 Job 回链。
+- Web 连续流程已扩展为可视化回链：生成→校验通过后可登记显式远端 CARLA 任务；导入包含 `metadata.json`/`telemetry.csv` 的回收目录后，自动创建风险分析任务，生成 `run_visualization.svg`、可选传感器首帧 PNG、风险报告和 SHA-256 产物记录；任务详情页展示风险卡片、速度/TTC/间距/行人距离时间线及传感器预览。Web 仍不启动 CARLA，远端提交和结果回收由现有服务器命令完成。相关 HTTP/持久化/可视化回归已通过。候选工作区和服务器 Job 自动状态轮询仍未实现。
 - 软著申请版本准备已启动：目标日期 2026-10-15，申请收口计划见 `docs/software_copyright_application_plan_20261015.md`。台账、模块映射、接口规格和用户操作说明统一按申请版本维护；最终截图、代码鉴别材料和 `demo_manifest.json` 必须从同一冻结提交重新生成。
 - V1.0 冻结前检查已建立：`tools/check_stage5_freeze.cmd` 覆盖材料入口、M01–M08 口径、M08 清单契约、117/351 场景库计数、产物哈希、Carla666-0916 环境和工作区状态；当前内容检查 `30 PASS / 0 FAIL`，另有 3 项正式冻结前 PENDING。该检查器当前仅作为工程健康检查，不驱动近期封板；`--require-clean` 仍会识别用户保留的未提交 `data/scenarios/seed_v1/example_record.json`。
 - 阶段五 M08 一键最小演示链路 V1 已建立：`tools/stage5_demo.cmd` 优先使用 `Carla666-0916` 环境，默认离线串联 M01 场景记录、M02 校验/编译、M03 场景库查询、M04 OpenSCENARIO 静态适配、M05 历史风险证据、M06 复现清单和 M07 Dashboard 数据校验，输出统一 `demo_manifest.json`；默认 `carla_connected=false`，不隐式启动 CARLA。接口清单见 `docs/stage5_minimal_demo_and_interface_catalog_v1.md`。

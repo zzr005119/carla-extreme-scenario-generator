@@ -74,3 +74,21 @@ D:\ANACONDA\envs\Carla666-0916\python.exe -m unittest tests.test_web_app tests.t
 ```
 
 当前覆盖 Web 页面表单、任务轮询契约、JSONL 校验、生成到校验的工作流继承、任务恢复、产物哈希、可微梯度、PyBullet 可选边界和 ScenarioRunner dry-run。浏览器已实测一键校验、任务详情和窄屏布局；历史截图仍只作为界面底稿，正式软著截图需在最终冻结提交上重新采集。
+
+## 运行结果可视化与远端回链
+
+Web 现在支持一条可审计的“设计→校验→远端执行→结果展示”路径：
+
+1. 在生成页提交场景参数，生成任务在本机 CPU worker 执行；
+2. 在任务详情页创建校验任务，校验通过且生成 CARLA 配置后，可点击“登记远端 CARLA 执行”；
+3. CARLA 任务仍处于显式外部执行边界，Web 不启动 CARLA。使用现有 `tools\server_run.cmd` 或专用服务器入口提交任务，完成后用 `tools\server_fetch_results.cmd` 回收轻量结果目录；
+4. 在 CARLA 任务详情页导入本机回收目录。目录必须包含 `metadata.json` 和 `telemetry.csv`，导入后自动创建风险分析任务；
+5. 风险任务会生成 `risk_result.json`、`run_visualization.svg` 和可选的 `sensor_preview.png`，并为每个产物记录 SHA-256。任务详情页展示风险卡片、速度/TTC/间距/行人距离时间线、传感器首帧和结构化证据。
+
+新增接口：
+
+- `POST /api/tasks/{validation_task_id}/carla`：从已完成且有编译配置的校验任务登记 CARLA 外部任务；
+- `POST /api/tasks/{carla_task_id}/attach-result`：导入本机结果目录，自动串联风险分析；
+- `GET /api/tasks/{task_id}/artifact/{file_name}`：只允许访问任务已登记的产物，支持 SVG/PNG 预览。
+
+可视化口径：轨迹图目前使用遥测的 `elapsed_seconds` 作为横轴，绘制主车/前车速度、TTC、前车净间距和行人距离；它是运行证据的直观摘要，不替代 `metadata.json`、严格验收或 `heuristic_v2` 原始结果。远端结果导入后，证据等级从 `external_unverified` 提升为 `external_verified` 的条件是 metadata 中 CARLA 服务健康状态为 `healthy`；Web 不根据页面图片自行推断仿真成功。

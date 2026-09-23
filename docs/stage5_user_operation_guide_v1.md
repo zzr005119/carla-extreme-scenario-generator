@@ -120,6 +120,18 @@ D:\ANACONDA\envs\Carla666-0916\python.exe scenes\scene_04_parameterized.py --con
 
 命令退出码为 0 不能单独证明以上条件全部满足。
 
+## 5.1 远端 CARLA 结果回链和图表展示
+
+校验任务完成且勾选编译后，在任务详情页点击“登记远端 CARLA 执行”。该按钮只生成外部任务登记，不启动本地 CARLA。服务器端按既有 `.cmd` 入口执行，例如：
+
+```powershell
+.\tools\server_run.cmd -Name web-demo-scene -CommandFile .\tools\server_jobs\<job>.sh -RequiresCarla
+.\tools\server_job_status.cmd -JobId <JOB_ID>
+.\tools\server_fetch_results.cmd -RemotePath /data/zhaozirong/software/output/carla-0.9.16/remote_jobs/<JOB_ID> -IncludeSampleImages
+```
+
+结果回收到 `F:\Carla\project-transfer\server-results\...` 后，在 CARLA 任务详情页填写本机结果目录并点击“导入并分析”。目录至少包含 `metadata.json` 和 `telemetry.csv`。Web 会自动创建风险分析任务，生成速度/TTC/前车间距/行人距离 SVG 时间线，并在有 RGB/Depth/Semantic 图片时展示首帧预览；完整原始证据仍以 metadata、telemetry、严格验收结果和产物哈希为准。
+
 ## 6. 常见问题
 
 | 现象 | 判断 | 处理 |

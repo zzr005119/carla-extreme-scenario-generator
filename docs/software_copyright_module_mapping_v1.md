@@ -12,7 +12,7 @@ _项目：基于生成式 AI 的自动驾驶极端场景库构建与仿真测试
 
 拟登记软件名称为 **基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1.0**。当前映射覆盖从参数级场景生成到场景库管理、CARLA 仿真执行、风险评估和实验结果查询的最小闭环。
 
-系统当前以 Python 命令行、文件接口和本地只读 Dashboard 为主要形态，CARLA 0.9.16 是仿真运行时；代码、配置、Schema、CSV、JSON 和 Markdown 报告共同构成可追溯的软件工程证据。阶段四硬质量门和当前证据已经收口；阶段五 M08 一键离线演示已建立，另有一条 ScenarioRunner 关联样本通过完整多传感器、路线和风险质量门。RL 泛化、CARLA 在线训练、跨地图 ScenarioRunner 兼容和场景真实性评估仍不属于当前已完成边界。
+系统当前以 Python 命令行、文件接口和本地单进程 Web 为主要形态，CARLA 0.9.16 是仿真运行时；代码、配置、Schema、CSV、JSON 和 Markdown 报告共同构成可追溯的软件工程证据。阶段五 Web 已支持生成→校验→显式远端 CARLA 登记→结果导入→风险图表/传感器预览回链；RL 泛化、CARLA 在线训练、跨地图 ScenarioRunner 兼容和场景真实性评估仍不属于当前已完成边界。
 
 ### 状态定义
 
@@ -64,7 +64,7 @@ flowchart LR
 | M04 | 仿真执行与多传感器采集 | 已验证实现 / 原型 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py`、`tools/check_scenario_runner_acceptance.py`、`batch_runner.py` | CARLA 0.9.16 实机回归；`seed_v1_high_0165` 通过 RGB、Depth、SemSeg、Collision、waypoint 路线、服务健康和清理统一验收 |
 | M05 | 风险评估与结果分析 | 已验证实现 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2`、TTC、车距、碰撞和遥测分析；风险反馈 V5 与 27 维代理冻结 |
 | M06 | 实验编排与复现管理 | 已验证实现 / 原型 | `batch_runner.py`、`core/web_task_orchestrator.py`、`tools/measure_stage5_metrics.py`、`tools/server_*.cmd`、`configs/` | 批次调度、种子、配置哈希、服务器工作流、质量门和阶段五指标基线；Web 离线任务状态/结果持久化；CARLA 任务仅显式确认后登记外部执行 |
-| M07 | 可视化管理界面 | 已实现首期 Web 工作流 | `tools/web_app.py`、`tools/web_app.cmd`、`tools/scenario_dashboard.py`、`tools/scenario_dashboard.cmd` | 统一 Web 入口支持 Dashboard、场景库、独立详情、健康检查、受控查询，以及生成/校验/风险分析表单、任务轮询和结构化结果；不含多用户、权限或 Web 内隐式启动 CARLA |
+| M07 | 可视化管理界面 | 已实现申请版本 Web 工作流 | `tools/web_app.py`、`tools/web_app.cmd`、`tools/scenario_dashboard.py`、`tools/scenario_dashboard.cmd`、`core/web_task_orchestrator.py`、`core/web_visualization.py` | 统一 Web 入口支持 Dashboard、场景库、生成/校验/风险分析、任务详情、显式 CARLA 登记、结果目录导入、SVG 运行图和传感器首帧预览；不含多用户、权限、自动启动 CARLA 或自动轮询服务器 Job |
 | M08 | 阶段五最小演示编排 | 已验证实现 / 离线原型 | `tools/stage5_minimal_demo.py`、`tools/stage5_demo.cmd`、`docs/scenario_runner_full_acceptance_v1.md` | M01–M08 离线组合、静态适配、历史证据读取和 `demo_manifest.json` 已通过；ScenarioRunner 关联完整验收作为独立实机证据登记，默认演示仍不连接 CARLA |
 
 ## 🔗 详细模块映射
@@ -132,7 +132,7 @@ flowchart LR
 - **职责：** 提供场景筛选、场景详情、运行证据、风险结果、质量指标和任务状态/结果的本地管理界面。
 - **输入：** M03 输出的场景库索引、M05 输出的风险分析、M06 输出的批次汇总。
 - **输出：** 场景列表、详情页、风险分布图、运行证据状态、任务详情、逐条校验结果、工作流时间线和带哈希的产物清单。
-- **当前状态：** 已完成首期本地 Web 管理入口和三个可操作工作流；生成结果可一键进入校验，任务详情页可展示输入、结构化结果、工作流和证据产物。候选工作区、CARLA Job 衔接、多用户服务、权限和生产部署仍未实现。
+- **当前状态：** 已完成本地 Web 管理入口和生成/校验/风险三条工作流；校验通过后可登记显式远端 CARLA 任务，导入回收目录后自动生成风险图表、传感器预览和哈希产物。候选工作区、服务器 Job 自动状态轮询、多用户服务、权限和生产部署仍未实现。
 - **实现映射：** `tools/web_app.py`、`tools/web_app.cmd` 复用 `scenario_dashboard.py` 的数据加载器和 API，`core/web_task_orchestrator.py` 提供任务状态/结果契约，回归见 `tests/test_web_app.py`、`tests/test_web_task_orchestration.py`。
 
 ### M08 阶段五最小演示编排

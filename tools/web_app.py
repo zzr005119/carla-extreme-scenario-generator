@@ -75,6 +75,9 @@ BASE_STYLE = """
   .field { display: grid; gap: 5px; min-width: 0; }
   .check { display: flex; align-items: center; gap: 8px; color: var(--ink); font-size: 13px; }
   .check input { width: auto; min-height: auto; }
+  .visualization { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .run-chart { display: block; width: 100%; max-width: 1020px; height: auto; border: 1px solid var(--line); background: #f8fafc; }
+  .sensor-preview { display: block; width: min(100%, 480px); max-height: 360px; object-fit: contain; border: 1px solid var(--line); background: #0f172a; }
   .result { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 16px; }
   .result pre { margin: 0; padding: 12px; max-height: 420px; overflow: auto; background: #0f172a; color: #e2e8f0; border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
   .panel > pre { max-width: 100%; margin: 0; padding: 12px; overflow: auto; background: #0f172a; color: #e2e8f0; border-radius: 6px; white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -241,10 +244,38 @@ def _task_detail_page(task, workflow):
     actions = [f'<a class="button-link" href="/tasks">返回任务列表</a>']
     if task.get("kind") == "generation" and task.get("status") == "completed":
         actions.insert(0, f'<button id="validate-generated" data-task="{html.escape(task_id)}">校验本批次</button>')
+    if task.get("kind") == "validation" and task.get("status") == "completed" and result.get("compiled_config_path"):
+        actions.insert(0, f'<button id="register-carla" data-task="{html.escape(task_id)}">登记远端 CARLA 执行</button>')
     if task.get("parent_task_id"):
         parent = html.escape(str(task["parent_task_id"]))
         actions.append(f'<a class="button-link" href="/tasks/{parent}">查看上一步</a>')
 
+    external_section = ""
+    if task.get("kind") == "carla" and task.get("status") in {"awaiting_confirmation", "confirmed_manual"}:
+        external_section = f"""
+        <section class="panel"><h2>导入远端 CARLA 结果</h2>
+          <p class="muted">服务器任务完成后，将回收目录复制到本机项目输出盘，再在此登记。目录必须包含 <code>metadata.json</code> 和 <code>telemetry.csv</code>；导入后会自动创建风险分析任务和可视化产物。</p>
+          <form id="attach-result-form">
+            <div class="field"><label for="run-dir">本机结果目录</label><input id="run-dir" required placeholder="F:\\Carla\\project-transfer\\server-results\\job_xxx"></div>
+            <div class="form-grid"><div class="field"><label for="remote-job-id">远端 Job ID</label><input id="remote-job-id" placeholder="可选"></div><div class="field"><label for="remote-path">远端路径</label><input id="remote-path" placeholder="可选"></div></div>
+            <div class="workflow-actions"><button type="submit">导入并分析</button><span id="attach-message" class="status-line" role="status"></span></div>
+          </form>
+        </section>
+        <script>
+          document.getElementById("attach-result-form").addEventListener("submit", async event => {{{{
+            event.preventDefault();
+            const message = document.getElementById("attach-message");
+            message.textContent = "正在导入...";
+            const response = await fetch("/api/tasks/{html.escape(task_id)}/attach-result", {{{{
+              method: "POST", headers: {{{{"Content-Type": "application/json"}}}},
+              body: JSON.stringify({{{{run_dir: document.getElementById("run-dir").value, remote_job_id: document.getElementById("remote-job-id").value, remote_path: document.getElementById("remote-path").value}}}})
+            }}}});
+            const payload = await response.json();
+            if (!response.ok) {{{{ message.textContent = payload.error || "导入失败"; message.className = "status-line error"; return; }}}}
+            location.href = `/tasks/${{{{encodeURIComponent(payload.risk_task.task_id)}}}}`;
+          }}}});
+        </script>
+        """
     result_section = '<p class="muted">任务尚未产生结果。</p>'
     if task.get("error"):
         error = task["error"]
@@ -273,6 +304,17 @@ def _task_detail_page(task, workflow):
                 f'<div class="fact"><div class="fact-label">遥测行数</div><div class="fact-value">{html.escape(str(result.get("source_row_count", "—")))}</div></div>'
                 '</div>'
             )
+            visualization = result.get("visualization") or {}
+            chart_name = visualization.get("chart_name")
+            preview_name = visualization.get("sensor_preview_name")
+            if chart_name:
+                result_section += (
+                    f'<div class="visualization"><h3>运行轨迹与风险时间线</h3><img class="run-chart" src="/api/tasks/{html.escape(task_id)}/artifact/{html.escape(chart_name)}" alt="CARLA 运行轨迹与风险时间线"></div>'
+                )
+            if preview_name:
+                result_section += (
+                    f'<div class="visualization"><h3>传感器首帧预览</h3><img class="sensor-preview" src="/api/tasks/{html.escape(task_id)}/artifact/{html.escape(preview_name)}" alt="传感器首帧"></div>'
+                )
         else:
             result_section = f'<pre>{_json_block(result)}</pre>'
         result_section += f'<details><summary>查看完整结构化结果</summary><pre>{_json_block(result)}</pre></details>'
@@ -305,22 +347,34 @@ def _task_detail_page(task, workflow):
         """
     action_script = f"""
     <script>
+      const registerCarlaButton = document.getElementById("register-carla");
+      if (registerCarlaButton) registerCarlaButton.addEventListener("click", async () => {{{{
+        registerCarlaButton.disabled = true;
+        registerCarlaButton.textContent = "正在登记...";
+        const response = await fetch(`/api/tasks/${{{{encodeURIComponent(registerCarlaButton.dataset.task)}}}}/carla`, {{{{
+          method: "POST", headers: {{{{"Content-Type": "application/json"}}}}, body: JSON.stringify({{{{requested_by: "web"}}}})
+        }}}});
+        const payload = await response.json();
+        if (!response.ok) {{{{ registerCarlaButton.disabled = false; registerCarlaButton.textContent = payload.error || "登记失败"; return; }}}}
+        location.href = `/tasks/${{{{encodeURIComponent(payload.task_id)}}}}`;
+      }}}});
       const validateButton = document.getElementById("validate-generated");
-      if (validateButton) validateButton.addEventListener("click", async () => {{
+      if (validateButton) validateButton.addEventListener("click", async () => {{{{
         validateButton.disabled = true;
         validateButton.textContent = "正在创建校验任务...";
-        const response = await fetch(`/api/tasks/${{encodeURIComponent(validateButton.dataset.task)}}/validate`, {{
-          method: "POST", headers: {{"Content-Type": "application/json"}}, body: "{{}}"
-        }});
+        const response = await fetch(`/api/tasks/${{{{encodeURIComponent(validateButton.dataset.task)}}}}/validate`, {{{{
+          method: "POST", headers: {{{{"Content-Type": "application/json"}}}}, body: "{{{{}}}}"
+        }}}});
         const payload = await response.json();
-        if (!response.ok) {{ validateButton.disabled = false; validateButton.textContent = payload.error || "创建失败"; return; }}
-        location.href = `/tasks/${{encodeURIComponent(payload.task_id)}}`;
-      }});
+        if (!response.ok) {{{{ validateButton.disabled = false; validateButton.textContent = payload.error || "创建失败"; return; }}}}
+        location.href = `/tasks/${{{{encodeURIComponent(payload.task_id)}}}}`;
+      }}}});
     </script>
     """
     content = f"""
     <div class="stack">
       <section class="panel"><h2>任务概览</h2><div class="detail-grid">{overview}</div><div class="workflow-actions">{''.join(actions)}</div></section>
+      {external_section}
       <section class="panel"><h2>结果</h2><div class="result">{result_section}</div></section>
       <section class="panel"><h2>产物与哈希</h2>{_artifact_table(task.get('artifacts', []))}</section>
       <section class="panel"><h2>工作流</h2>{workflow_section}</section>
@@ -566,6 +620,29 @@ class WebAppHandler(DashboardHandler):
             items = manager.list_tasks()
             self._send_json(200, {"count": len(items), "items": items})
             return
+        if request_path.startswith("/api/tasks/") and "/artifact/" in request_path:
+            prefix, artifact_name = request_path.split("/artifact/", 1)
+            task_id = unquote(prefix[len("/api/tasks/"):])
+            task = manager.get(task_id)
+            if task is None:
+                self._send_json(404, {"error": "未找到任务"})
+                return
+            artifact_name = unquote(artifact_name).replace("\\", "/")
+            if "/" in artifact_name or artifact_name in {"", ".", ".."}:
+                self._send_json(400, {"error": "产物名称无效"})
+                return
+            allowed = {Path(item.get("path", "")).name: item for item in task.get("artifacts", [])}
+            artifact = allowed.get(artifact_name)
+            if artifact is None:
+                self._send_json(404, {"error": "未登记该产物"})
+                return
+            path = Path(artifact["path"]).resolve()
+            if not path.is_file():
+                self._send_json(404, {"error": "产物文件不存在"})
+                return
+            content_type = "image/svg+xml" if path.suffix.lower() == ".svg" else "image/png" if path.suffix.lower() == ".png" else "application/octet-stream"
+            self._send(200, content_type, path.read_bytes())
+            return
         if request_path.startswith("/api/tasks/"):
             task_path = unquote(request_path[len("/api/tasks/"):])
             if task_path.endswith("/result"):
@@ -677,6 +754,13 @@ class WebAppHandler(DashboardHandler):
                 response_status = 200
                 if action == "confirm":
                     task = manager.confirm(task_id, confirmed=bool(payload.get("confirmed", False)))
+                elif action == "carla":
+                    task = manager.submit_carla_from_validation(task_id, payload)
+                    response_status = 202
+                elif action == "attach-result":
+                    result = manager.attach_carla_result(task_id, payload)
+                    self._send_json(202, result)
+                    return
                 elif action == "cancel":
                     task = manager.cancel(task_id)
                 elif action == "validate":

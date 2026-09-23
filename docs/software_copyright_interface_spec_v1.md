@@ -26,7 +26,7 @@ _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1
 | M04 | `scene_04_parameterized.py`、`batch_runner.py` | JSON 配置、CARLA 服务、运行参数 | `metadata.json`、`telemetry.csv`、传感器帧 | 已验证实现 / 原型 |
 | M05 | `risk_metrics.py`、`analysis/` | 遥测、事件、运行元数据 | 风险分数、等级、分析报告 | 已验证实现 |
 | M06 | `batch_runner.py`、`core/web_task_orchestrator.py`、`tools/server_*.cmd` | 实验计划、Git 提交、服务器资源或 Web 任务请求 | 批次汇总、日志、轻量结果、任务状态/结果 JSON | 已验证实现 / 原型 |
-| M07 | `web_app.py`、`web_app.cmd`、`scenario_dashboard.py`、`scenario_dashboard.cmd` | 场景库索引、条目、汇总和任务状态 | Web 页面、筛选结果、详情页、生成/校验/风险分析表单、任务状态/结果、健康检查 | 首期 Web 工作流 |
+| M07 | `web_app.py`、`web_app.cmd`、`scenario_dashboard.py`、`scenario_dashboard.cmd`、`core/web_task_orchestrator.py`、`core/web_visualization.py` | 场景库索引、条目、汇总、任务状态和运行证据 | Web 页面、筛选结果、详情页、生成/校验/风险分析、显式 CARLA 登记、结果导入、SVG 运行图、传感器预览和 SHA-256 产物 | 申请版本 Web 工作流 |
 | M08 | `stage5_minimal_demo.py`、`stage5_demo.cmd` | M01 记录、M03 库、M02 基础配置 | 静态配置、`.xosc`、适配清单、`demo_manifest.json` | 已验证实现 / 离线原型 |
 
 ## ⚙️ 数据契约
@@ -255,6 +255,8 @@ flowchart TB
 - `TaskManager.get(task_id)`、`list_tasks()`：读取持久化任务状态和结果摘要。
 - `TaskManager.get_workflow(workflow_id)`：按工作流顺序返回关联任务和聚合产物。
 - `TaskManager.submit_validation_from_generation(task_id)`：使用生成产物直接创建同一工作流下的校验任务。
+- `TaskManager.submit_carla_from_validation(task_id)`：从已完成且有编译配置的校验任务登记显式 CARLA 外部执行。
+- `TaskManager.attach_carla_result(task_id, payload)`：导入本机回收目录，登记远端结果并自动创建风险分析任务。
 - `TaskManager.confirm(task_id, confirmed)`：处理 CARLA 任务的显式确认；确认只登记 `manual_external`，不启动 CARLA。
 - `TaskManager.cancel(task_id)`：取消尚未结束的任务。
 
@@ -268,6 +270,9 @@ HTTP 接口：
 | `GET` | `/api/workflows/{workflow_id}` | 工作流阶段、关联任务和带 SHA-256 的产物清单 |
 | `POST` | `/api/tasks` | 提交任务；成功返回 HTTP `202` |
 | `POST` | `/api/tasks/{task_id}/validate` | 从已完成生成任务创建校验任务；成功返回 HTTP `202` |
+| `POST` | `/api/tasks/{task_id}/carla` | 从已完成且有编译配置的校验任务登记 CARLA 外部任务；成功返回 HTTP `202` |
+| `POST` | `/api/tasks/{task_id}/attach-result` | 导入 `metadata.json`/`telemetry.csv` 所在目录，自动创建风险分析任务；成功返回 HTTP `202` |
+| `GET` | `/api/tasks/{task_id}/artifact/{file_name}` | 访问任务已登记的 SVG/PNG 产物；未登记或路径越界返回 HTTP `404/400` |
 | `POST` | `/api/tasks/{task_id}/confirm` | `{"confirmed": true/false}`；只适用于 CARLA 任务 |
 | `POST` | `/api/tasks/{task_id}/cancel` | 取消任务 |
 
