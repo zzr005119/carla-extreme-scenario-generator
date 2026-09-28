@@ -31,6 +31,15 @@ from core.web_task_orchestrator import (  # noqa: E402
 )
 from core.web_visualization import build_replay_manifest, resolve_replay_frame  # noqa: E402
 
+PREVIEW_ASSETS = {
+    "/static/design-preview.js": ("design_preview.js", "application/javascript"),
+    "/static/design-preview.css": ("design_preview.css", "text/css"),
+    "/static/preview/town10hd.json": ("town10hd.json", "application/json"),
+    "/static/preview/three.module.js": ("vendor/three.module.js", "application/javascript"),
+    "/static/preview/OrbitControls.js": ("vendor/OrbitControls.js", "application/javascript"),
+    "/static/preview/rotate-ccw.svg": ("vendor/rotate-ccw.svg", "image/svg+xml"),
+}
+
 
 NAVIGATION = """
 <nav class="app-nav" aria-label="主导航">
@@ -551,8 +560,8 @@ def _workflow_page(kind):
             "fields": """
               <div class="form-grid">
                 <div class="field"><label for="model">生成器</label><select id="model"><option value="lhs">LHS</option><option value="gmm">GMM</option><option value="cvae">CVAE</option><option value="diffusion">Diffusion</option></select></div>
-                <div class="field"><label for="risk">目标风险档</label><select id="risk"><option>low</option><option selected>medium</option><option>high</option><option>critical</option></select></div>
-                <div class="field"><label for="weather_tags">天气标签</label><input id="weather_tags" placeholder="night,heavy_rain"></div>
+                <div class="field"><label for="risk">目标风险档</label><select id="risk"><option value="low">低风险</option><option value="medium" selected>中风险</option><option value="high">高风险</option><option value="critical">极高风险</option></select></div>
+                <div class="field"><label for="weather_tags">天气标签</label><input id="weather_tags" placeholder="未指定"></div>
                 <div class="field"><label for="count">生成数量</label><input id="count" type="number" min="1" max="64" value="1"></div>
                 <div class="field"><label for="seed">随机种子</label><input id="seed" type="number" value="20260823"></div>
                 <div class="field"><label for="artifact">模型产物路径（GMM/CVAE/Diffusion）</label><input id="artifact" placeholder="F:\\Carla\\models\\checkpoint.pt"></div>
@@ -690,6 +699,10 @@ def _workflow_page(kind):
       }});
     </script>
     """
+    preview = (
+        (PROJECT_ROOT / "tools" / "web_assets" / "design_preview.html").read_text(encoding="utf-8")
+        if kind == "generation" else ""
+    )
     content = f"""
     <section class="panel">
       <h2>{html.escape(config['title'])}</h2>
@@ -697,6 +710,7 @@ def _workflow_page(kind):
       <p id="status" class="status-line" role="status">等待提交</p>
       <div id="result"></div>
     </section>
+    {preview}
     {script}
     """
     return _page(config["title"], content, subtitle=config["subtitle"])
@@ -1161,12 +1175,19 @@ class WebAppHandler(DashboardHandler):
 
     def do_GET(self):
         request_path = urlsplit(self.path).path
+        if request_path in PREVIEW_ASSETS:
+            filename, content_type = PREVIEW_ASSETS[request_path]
+            asset = PROJECT_ROOT / "tools" / "web_assets" / filename
+            if not asset.is_file():
+                self._send_json(404, {"error": "预览资源不存在"})
+                return
+            self._send(200, content_type + "; charset=utf-8", asset.read_bytes())
+            return
         if request_path == "/static/replay.js":
             self._send(200, "application/javascript; charset=utf-8", (PROJECT_ROOT / "tools" / "web_replay.js").read_bytes())
             return
-        if request_path == "/hybridaction/zybTrackerStatisticsAction":
-            # A browser-side tracker may probe this path on localhost. It is
-            # unrelated to the application and should not look like a fault.
+        if request_path in {"/hybridaction/zybTrackerStatisticsAction", "/favicon.ico"}:
+            # Optional browser probes should not appear as application faults.
             self._send_no_content()
             return
         manager = self._get_task_manager()

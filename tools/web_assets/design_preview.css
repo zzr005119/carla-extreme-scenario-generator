@@ -1,0 +1,44 @@
+.design-preview { margin-top: 28px; border-top: 2px solid #a6b9ad; background: #fff; letter-spacing: 0; }
+.preview-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 18px 12px; }
+.preview-heading h2 { margin: 0 0 3px; font-size: 19px; line-height: 1.35; }
+.preview-map-name { font-size: 12px; color: #637168; }
+.preview-toolbar, .preview-views { display: flex; align-items: center; }
+.preview-toolbar { gap: 8px; flex-shrink: 0; }
+.preview-views { border: 1px solid #b7c7c1; border-radius: 4px; overflow: hidden; }
+.preview-views button { width: 54px; min-height: 34px; padding: 6px 8px; border: 0; border-radius: 0; font-size: 12px; color: #49655e; background: #fff; }
+.preview-views button[aria-pressed="true"] { background: #17665b; color: #fff; }
+.preview-views button:hover { background: #e2efea; color: #184c43; }
+.preview-icon { display: grid; place-items: center; width: 36px; height: 36px; min-height: 36px; padding: 0; background: #fff; border: 1px solid #b7c7c1; border-radius: 4px; }
+.preview-icon:hover { background: #e2efea; }
+.preview-readout { display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 0 18px 12px; font-size: 12px; color: #64716c; }
+.preview-readout strong { margin-left: 5px; color: #293e36; font-weight: 600; }
+.preview-readout [data-risk="high"], .preview-readout [data-risk="critical"] { color: #a54423; }
+.preview-stage { position: relative; isolation: isolate; height: 410px; overflow: hidden; background: #d3e0d4; }
+#preview-canvas { display: block; width: 100%; height: 100%; outline-offset: -3px; touch-action: none; }
+.preview-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; visibility: hidden; }
+.design-preview[data-state="ready"] .preview-labels { visibility: visible; }
+.preview-actor-label { position: absolute; left: 0; top: 0; padding: 3px 8px; white-space: nowrap; font-size: 12px; font-weight: 700; color: #124b47; background: #ffffffef; border-left: 3px solid #138f89; box-shadow: 0 2px 6px #0002; }
+.preview-actor-label.lead-label { border-color: #e7a240; color: #805012; }
+.preview-actor-label.ped-label { border-color: #a64b79; color: #7c3158; }
+.preview-load { position: absolute; top: 42%; left: 20px; right: 20px; text-align: center; font-size: 14px; color: #23382e; }
+.preview-design-label { position: absolute; bottom: 12px; left: 14px; padding: 4px 8px; background: #fffdf0eb; color: #59624a; font-size: 11px; }
+#preview-retry { position: absolute; top: 58%; left: 50%; transform: translateX(-50%); font-size: 12px; }
+.preview-footer { padding: 12px 18px 14px; }
+.preview-legend { display: flex; flex-wrap: wrap; gap: 18px; font-size: 12px; color: #33493e; }
+.preview-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.preview-legend i { width: 9px; height: 9px; border-radius: 50%; }
+.ego-color { background: #138f89; }.lead-color { background: #e7a240; }.ped-color { background: #a64b79; }
+.preview-footer p { margin: 7px 0 0; font-size: 11px; color: #687970; overflow-wrap: anywhere; }
+#preview-warning { color: #a44d1b; }
+.preview-weather-options { display: flex; flex-wrap: wrap; gap: 5px 12px; margin: 3px 0 0; }
+#workflow-form .field { align-content: start; }
+.preview-weather-options label { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; color: #4c665f; cursor: pointer; }
+.preview-weather-options input { width: 13px; height: 13px; min-height: 0; margin: 0; accent-color: #17665b; }
+@media (max-width: 620px) {
+  .preview-heading { padding: 14px 12px 10px; gap: 8px; flex-wrap: wrap; }
+  .preview-heading h2 { font-size: 17px; }
+  .preview-readout { padding: 0 12px 10px; gap: 6px 14px; }
+  .preview-stage { height: 340px; }
+  .preview-footer { padding: 10px 12px; }
+  .preview-actor-label { font-size: 10px; padding: 2px 5px; }
+}

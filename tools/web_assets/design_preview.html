@@ -1,0 +1,37 @@
+<link rel="stylesheet" href="/static/design-preview.css">
+<section id="design-preview" class="design-preview" aria-labelledby="preview-title" data-state="loading">
+  <header class="preview-heading">
+    <div><h2 id="preview-title">场景设计预览</h2><span class="preview-map-name">Town10HD_Opt · 参考道路</span></div>
+    <div class="preview-toolbar">
+      <div class="preview-views" role="group" aria-label="预览视角">
+        <button type="button" data-view="perspective" aria-pressed="true">立体</button>
+        <button type="button" data-view="top" aria-pressed="false">俯视</button>
+      </div>
+      <button type="button" id="preview-reset" class="preview-icon" title="复位视角" aria-label="复位视角"><img src="/static/preview/rotate-ccw.svg" width="18" height="18" alt=""></button>
+    </div>
+  </header>
+  <div class="preview-readout" aria-live="polite">
+    <span>设计目标 <strong id="preview-risk">中风险</strong></span>
+    <span>环境 <strong id="preview-weather">晴天示意</strong></span>
+    <span id="preview-request">LHS · 1 条候选</span>
+  </div>
+  <div class="preview-stage" id="preview-stage">
+    <canvas id="preview-canvas" aria-label="CARLA 道路设计预览，包含主车、前车与行人" tabindex="0"></canvas>
+    <div class="preview-labels" aria-hidden="true">
+      <span id="preview-ego-label" class="preview-actor-label ego-label">主车</span>
+      <span id="preview-lead-label" class="preview-actor-label lead-label">前车制动</span>
+      <span id="preview-ped-label" class="preview-actor-label ped-label">行人横穿</span>
+    </div>
+    <div class="preview-load" id="preview-load" role="status">正在载入道路预览…</div>
+    <button type="button" id="preview-retry" hidden>重新加载预览</button>
+    <span class="preview-design-label">设计示意 · 未运行</span>
+  </div>
+  <footer class="preview-footer">
+    <div class="preview-legend"><span><i class="ego-color"></i>主车</span><span><i class="lead-color"></i>制动车辆</span><span><i class="ped-color"></i>横穿行人</span></div>
+    <p>道路来自 CARLA；车辆位置与天气为条件示意，具体参数以生成结果为准。</p>
+    <p id="preview-warning" role="status" hidden></p>
+  </footer>
+  <noscript>开启 JavaScript 后可查看设计预览。</noscript>
+</section>
+<script type="importmap">{"imports":{"three":"/static/preview/three.module.js"}}</script>
+<script type="module" src="/static/design-preview.js"></script>

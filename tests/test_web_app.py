@@ -16,6 +16,34 @@ LIBRARY_DIR = PROJECT_ROOT / "data" / "scenarios" / "scenario_library_v1"
 
 
 class WebAppHttpTests(unittest.TestCase):
+    def test_design_preview_is_local_and_scoped_to_generation(self):
+        _, _, page = self.get_bytes("/generation")
+        self.assertIn(b'id="design-preview"', page)
+        for path, content_type in (
+            ("/static/design-preview.js", "application/javascript"),
+            ("/static/design-preview.css", "text/css"),
+            ("/static/preview/town10hd.json", "application/json"),
+            ("/static/preview/three.module.js", "application/javascript"),
+            ("/static/preview/OrbitControls.js", "application/javascript"),
+        ):
+            with self.subTest(path=path):
+                status, headers, body = self.get_bytes(path)
+                self.assertEqual(status, 200)
+                self.assertEqual(headers.get_content_type(), content_type)
+                self.assertTrue(body)
+        _, _, raw_map = self.get_bytes("/static/preview/town10hd.json")
+        geometry = json.loads(raw_map)
+        self.assertEqual(geometry["source"]["carla_version"], "0.9.16")
+        self.assertGreater(len(geometry["lanes"]), 10)
+        self.assertGreater(len(geometry["example_route"]), 20)
+        for path in ("/risk", "/validation"):
+            _, _, other_page = self.get_bytes(path)
+            self.assertNotIn(b'id="design-preview"', other_page)
+        for path in ("/static/preview/../web_app.py", "/static/preview/not-found.json"):
+            with self.subTest(path=path), self.assertRaises(HTTPError) as error:
+                urlopen(self.base_url + path, timeout=5)
+            self.assertEqual(error.exception.code, 404)
+
     def test_risk_detail_offers_replay_and_relative_view(self):
         task = {
             "task_id": "task_replay",
