@@ -26,7 +26,7 @@ _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1
 | M04 | `scene_04_parameterized.py`、`batch_runner.py` | JSON 配置、CARLA 服务、运行参数 | `metadata.json`、`telemetry.csv`、传感器帧 | 已验证实现 / 原型 |
 | M05 | `risk_metrics.py`、`analysis/` | 遥测、事件、运行元数据 | 风险分数、等级、分析报告 | 已验证实现 |
 | M06 | `batch_runner.py`、`core/web_task_orchestrator.py`、`tools/server_*.cmd` | 实验计划、Git 提交、服务器资源或 Web 任务请求 | 批次汇总、日志、轻量结果、任务状态/结果 JSON | 已验证实现 / 原型 |
-| M07 | `web_app.py`、`web_app.cmd`、`scenario_dashboard.py`、`scenario_dashboard.cmd`、`core/web_task_orchestrator.py`、`core/web_visualization.py` | 场景库索引、条目、汇总、任务状态和运行证据 | Web 页面、筛选结果、详情页、生成/校验/风险分析、显式 CARLA 登记、结果导入、SVG 运行图、传感器预览和 SHA-256 产物 | 申请版本 Web 工作流 |
+| M07 | `web_app.py`、`web_app.cmd`、`scenario_dashboard.py`、`scenario_dashboard.cmd`、`core/web_task_orchestrator.py`、`core/web_visualization.py` | 场景库索引、条目、汇总、任务状态和运行证据 | Web 页面、筛选结果、详情页、生成/校验/风险分析、本机 CARLA 运行、远端结果导入、SVG 运行图、传感器预览、完整 ZIP 导出和 SHA-256 产物 | 申请版本 Web 工作流 |
 | M08 | `stage5_minimal_demo.py`、`stage5_demo.cmd` | M01 记录、M03 库、M02 基础配置 | 静态配置、`.xosc`、适配清单、`demo_manifest.json` | 已验证实现 / 离线原型 |
 
 ## ⚙️ 数据契约
@@ -255,8 +255,11 @@ flowchart TB
 - `TaskManager.get(task_id)`、`list_tasks()`：读取持久化任务状态和结果摘要。
 - `TaskManager.get_workflow(workflow_id)`：按工作流顺序返回关联任务和聚合产物。
 - `TaskManager.submit_validation_from_generation(task_id)`：使用生成产物直接创建同一工作流下的校验任务。
-- `TaskManager.submit_carla_from_validation(task_id)`：从已完成且有编译配置的校验任务登记显式 CARLA 外部执行。
+- `TaskManager.recompile_validation(task_id)`：对已通过且只有一条记录的历史校验任务补编译 CARLA 配置。
+- `TaskManager.submit_carla_from_validation(task_id)`：从已完成且有编译配置的校验任务创建 CARLA 任务，Web 默认 `execution_target=local`。
 - `TaskManager.attach_carla_result(task_id, payload)`：导入本机回收目录，登记远端结果并自动创建风险分析任务。
+- `TaskManager.run_local_carla(task_id)`：将等待确认的 CARLA 任务切换为本机执行；只调用本机客户端，不启动 CARLA 服务。
+- `TaskManager.export_task(task_id)`：生成包含任务快照、原始证据、日志和可视化的完整 ZIP，并登记 SHA-256。
 - `TaskManager.confirm(task_id, confirmed)`：处理 CARLA 任务的显式确认；确认只登记 `manual_external`，不启动 CARLA。
 - `TaskManager.cancel(task_id)`：取消尚未结束的任务。
 
@@ -270,13 +273,16 @@ HTTP 接口：
 | `GET` | `/api/workflows/{workflow_id}` | 工作流阶段、关联任务和带 SHA-256 的产物清单 |
 | `POST` | `/api/tasks` | 提交任务；成功返回 HTTP `202` |
 | `POST` | `/api/tasks/{task_id}/validate` | 从已完成生成任务创建校验任务；成功返回 HTTP `202` |
+| `POST` | `/api/tasks/{task_id}/compile` | 对已通过的单条校验任务补编译 CARLA 配置；成功返回 HTTP `202` |
 | `POST` | `/api/tasks/{task_id}/carla` | 从已完成且有编译配置的校验任务登记 CARLA 外部任务；成功返回 HTTP `202` |
 | `POST` | `/api/tasks/{task_id}/attach-result` | 导入 `metadata.json`/`telemetry.csv` 所在目录，自动创建风险分析任务；成功返回 HTTP `202` |
+| `POST` | `/api/tasks/{task_id}/run-local` | 本机运行 CARLA 客户端并自动创建风险分析任务；成功返回 HTTP `202` |
 | `GET` | `/api/tasks/{task_id}/artifact/{file_name}` | 访问任务已登记的 SVG/PNG 产物；未登记或路径越界返回 HTTP `404/400` |
+| `GET` | `/api/tasks/{task_id}/export` | 下载完整 ZIP 数据包；运行中返回 HTTP `409` |
 | `POST` | `/api/tasks/{task_id}/confirm` | `{"confirmed": true/false}`；只适用于 CARLA 任务 |
 | `POST` | `/api/tasks/{task_id}/cancel` | 取消任务 |
 
-任务状态至少包括 `queued`、`running`、`completed`、`failed`、`cancelled`、`awaiting_confirmation` 和 `confirmed_manual`。任务记录同时保存 `workflow_id`、`workflow_step`、父任务、证据等级和标准化产物元数据；产物元数据包含类型、用途、路径、大小、SHA-256 和来源任务。generation、validation、risk_analysis 使用 `offline_cpu`；CARLA 任务使用 `manual_external`，任务结果必须明确 `carla_connected=false` 和 `execution_started=false`，真实执行仍由 `server_run.cmd` 或专用 CARLA 入口承担。
+任务状态至少包括 `queued`、`running`、`completed`、`failed`、`cancelled`、`awaiting_confirmation` 和 `confirmed_manual`。任务记录同时保存 `workflow_id`、`workflow_step`、父任务、证据等级和标准化产物元数据；产物元数据包含类型、用途、路径、大小、SHA-256 和来源任务。generation、validation、risk_analysis 使用 `offline_cpu`；CARLA 本机模式使用 `local_carla` 并在完成后自动创建 risk_analysis 子任务；远端模式使用 `manual_external`，真实执行仍由 `server_run.cmd` 或专用 CARLA 入口承担。
 
 ## 📏 S5-CORE-05 计划书指标基线接口
 
@@ -330,9 +336,12 @@ HTTP 接口：
 | `GET` | `/risk` | 运行目录/遥测风险分析表单和诊断结果 | 风险任务目录 |
 | `GET` | `/tasks` | Web 任务提交与状态页面 | 任务状态文件 |
 | `GET` | `/tasks/{task_id}` | 任务详情、逐条校验、工作流时间线和产物哈希 | 否 |
+| `GET` | `/api/tasks/{task_id}/replay` | 已完成风险任务的传感器帧清单、近似遥测索引和事件 | 否 |
+| `GET` | `/api/tasks/{task_id}/replay/frame/{channel}/{filename}` | 仅返回运行目录中 RGB、Depth 或 SemSeg 的合法帧文件 | 否 |
+| `GET` | `/static/replay.js` | 结果页回放与相对车距示意脚本 | 否 |
 | `GET`/`POST` | `/api/tasks...` | 任务提交、状态、结果和显式确认 | 任务目录 JSON |
 
-页面读取场景库只读文件，并通过独立任务目录保存 Web 任务状态；不修改场景库。`/generation`、`/validation` 和 `/risk` 已提供参数表单、任务轮询、终态结果和错误展示；生成完成后可直接创建校验任务，无需复制 JSONL 路径。离线任务仅使用本机 CPU worker，CARLA 任务不由 Web 进程启动，必须显式确认并转交外部服务器入口。当前只支持本机访问和单进程服务，尚未提供候选工作区、用户认证、权限管理或多用户部署。
+页面读取场景库只读文件，并通过独立任务目录保存 Web 任务状态；不修改场景库。`/generation`、`/validation` 和 `/risk` 已提供参数表单、任务轮询、终态结果和错误展示；生成完成后可直接创建校验任务，无需复制 JSONL 路径。离线任务仅使用本机 CPU worker，CARLA 默认调用本机客户端，用户需先启动 CARLA 服务；远端模式仍需显式确认并转交外部服务器入口。任务详情页提供运行摘要、按需传感器帧回放、相对车距示意和完整 ZIP 导出。回放使用已有帧和遥测，不产生新的 CARLA 实测；历史帧按序近似对齐，车距示意不代表真实地图坐标。当前只支持本机访问和单进程服务，尚未提供候选工作区、用户认证、权限管理或多用户部署。
 
 ## 🧭 M08 阶段五最小演示编排接口
 

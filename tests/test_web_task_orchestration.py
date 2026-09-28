@@ -4,6 +4,7 @@ import tempfile
 import threading
 import time
 import unittest
+import zipfile
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError
@@ -122,7 +123,32 @@ class WebTaskOrchestrationTests(unittest.TestCase):
             self.assertEqual(
                 artifact["sha256"],
                 hashlib.sha256(path.read_bytes()).hexdigest(),
-            )
+                )
+
+    def test_completed_task_can_export_full_bundle(self):
+        _, task = self.request_json(
+            "POST",
+            "/api/tasks",
+            {"kind": "generation", "payload": {"model": "lhs", "risk": "low", "count": 1, "seed": 20260923}},
+        )
+        completed = self.wait_for(task["task_id"], "completed")
+        response = Request(self.base_url + f"/api/tasks/{task['task_id']}/export", method="GET")
+        with urlopen(response, timeout=5) as result:
+            self.assertEqual(result.status, 200)
+            self.assertEqual(result.headers.get_content_type(), "application/zip")
+            archive = result.read()
+        self.assertTrue(archive.startswith(b"PK"))
+        with tempfile.TemporaryDirectory() as directory:
+            archive_file = Path(directory) / "export.zip"
+            archive_file.write_bytes(archive)
+            with zipfile.ZipFile(archive_file) as bundle:
+                names = set(bundle.namelist())
+                self.assertIn("task.json", names)
+                self.assertIn("payload.json", names)
+                self.assertIn("result.json", names)
+                self.assertTrue(any(name.startswith("task_outputs/") for name in names))
+        exported = self.handler_class.task_manager.get(task["task_id"])
+        self.assertTrue(Path(exported["result"]["export_path"]).is_file())
 
     def test_generation_can_continue_to_validation_in_same_workflow(self):
         _, generation = self.request_json(
@@ -168,6 +194,78 @@ class WebTaskOrchestrationTests(unittest.TestCase):
             self.assertEqual(len(recovered["artifacts"]), 3)
         finally:
             restored.close()
+
+    def test_single_generation_prepares_carla_config_for_next_step(self):
+        _, generation = self.request_json(
+            "POST",
+            "/api/tasks",
+            {"kind": "generation", "payload": {"model": "lhs", "risk": "high", "count": 1, "seed": 20260925}},
+        )
+        generated = self.wait_for(generation["task_id"], "completed")
+        status, validation = self.request_json(
+            "POST",
+            f"/api/tasks/{generated['task_id']}/validate",
+            {},
+        )
+        self.assertEqual(status, 202)
+        validated = self.wait_for(validation["task_id"], "completed")
+        compiled = validated["result"].get("compiled_config_path")
+        self.assertTrue(compiled)
+        self.assertTrue(Path(compiled).is_file())
+        with urlopen(self.base_url + f"/tasks/{validated['task_id']}", timeout=5) as response:
+            page = response.read().decode("utf-8")
+        self.assertIn("启动本机 CARLA 实测", page)
+        self.assertIn("/carla", page)
+
+    def test_completed_single_validation_can_be_recompiled(self):
+        record = RECORD_PATH.read_text(encoding="utf-8")
+        status, validation = self.request_json(
+            "POST",
+            "/api/tasks",
+            {"kind": "validation", "payload": {"record": json.loads(record), "compile": False}},
+        )
+        self.assertEqual(status, 202)
+        completed = self.wait_for(validation["task_id"], "completed")
+        self.assertIsNone(completed["result"].get("compiled_config_path"))
+        status, queued = self.request_json(
+            "POST",
+            f"/api/tasks/{validation['task_id']}/compile",
+            {},
+        )
+        self.assertEqual(status, 202)
+        rebuilt = self.wait_for(validation["task_id"], "completed")
+        self.assertTrue(Path(rebuilt["result"]["compiled_config_path"]).is_file())
+
+    def test_failed_local_carla_retry_preserves_original_attempt(self):
+        with tempfile.TemporaryDirectory(prefix="web-retry-test-") as directory:
+            manager = TaskManager(directory, max_workers=1)
+            manager._run = lambda _task_id: None
+            try:
+                original = manager.submit(
+                    "carla",
+                    {"config_path": str(CONFIG_PATH), "execution_target": "remote"},
+                )
+                with manager._lock:
+                    failed = manager._tasks[original["task_id"]]
+                    failed.update(
+                        status="failed",
+                        execution_mode="local_carla",
+                        payload={
+                            "config_path": str(CONFIG_PATH),
+                            "execution_target": "local",
+                            "timeout_seconds": 900,
+                        },
+                        error={"type": "TaskError", "message": "CARLA RPC timeout"},
+                    )
+                    manager._persist(failed)
+                retry = manager.retry_local_carla(original["task_id"])
+                self.assertNotEqual(retry["task_id"], original["task_id"])
+                self.assertEqual(retry["parent_task_id"], original["task_id"])
+                self.assertEqual(retry["workflow_id"], original["workflow_id"])
+                self.assertEqual(retry["status"], "queued")
+                self.assertEqual(manager.get(original["task_id"])["status"], "failed")
+            finally:
+                manager.close()
 
     def test_cancelled_worker_cannot_overwrite_terminal_status(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -226,7 +324,7 @@ class WebTaskOrchestrationTests(unittest.TestCase):
         status, task = self.request_json(
             "POST",
             "/api/tasks",
-            {"kind": "carla", "payload": {"config_path": str(CONFIG_PATH)}},
+            {"kind": "carla", "payload": {"config_path": str(CONFIG_PATH), "execution_target": "remote"}},
         )
         self.assertEqual(status, 202)
         self.assertEqual(task["status"], "awaiting_confirmation")
@@ -243,11 +341,42 @@ class WebTaskOrchestrationTests(unittest.TestCase):
         self.assertFalse(confirmed["result"]["carla_connected"])
         self.assertFalse(confirmed["result"]["execution_started"])
 
+    def test_carla_task_defaults_to_local_worker(self):
+        with tempfile.TemporaryDirectory() as directory:
+            manager = TaskManager(directory, max_workers=1)
+
+            def local_stub(_task):
+                return {
+                    "kind": "carla",
+                    "execution_started": True,
+                    "execution_mode": "local_carla",
+                    "execution_target": "local",
+                    "carla_connected": True,
+                    "acceptance_status": "completed",
+                    "_artifacts": [],
+                }
+
+            manager._run_carla = local_stub
+            try:
+                task = manager.submit("carla", {"config_path": str(CONFIG_PATH)})
+                self.assertIn(task["status"], {"queued", "running"})
+                deadline = time.time() + 3
+                completed = manager.get(task["task_id"])
+                while time.time() < deadline and completed["status"] not in {"completed", "failed"}:
+                    time.sleep(0.01)
+                    completed = manager.get(task["task_id"])
+                self.assertEqual(completed["status"], "completed")
+                self.assertEqual(completed["execution_mode"], "local_carla")
+                self.assertEqual(completed["payload"]["execution_target"], "local")
+                self.assertTrue(completed["result"]["execution_started"])
+            finally:
+                manager.close()
+
     def test_carla_task_can_be_cancelled_without_execution(self):
         status, task = self.request_json(
             "POST",
             "/api/tasks",
-            {"kind": "carla", "payload": {"config_path": str(CONFIG_PATH)}},
+            {"kind": "carla", "payload": {"config_path": str(CONFIG_PATH), "execution_target": "remote"}},
         )
         self.assertEqual(status, 202)
         cancel_status, cancelled = self.request_json(

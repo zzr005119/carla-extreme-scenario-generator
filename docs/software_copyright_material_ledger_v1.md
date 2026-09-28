@@ -17,7 +17,7 @@ _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1
 | 拟登记软件名称 | 基于CARLA的自动驾驶极端场景生成与仿真测试系统 V1.0 | 与最终软件界面、说明书和申请表统一核对 |
 | 当前工程基线 | 申请准备基线为 Git `HEAD`；目标冻结窗口为 2026-10-13，目标提交准备日期为 2026-10-15 | 在冻结提交上重新运行全量检查、M08 和截图取证 |
 | 当前运行基线 | CARLA 0.9.16、`Carla666-0916` | 冻结版本后重新做一次环境和版本核对 |
-| 当前软件形态 | Python 命令行、JSON/CSV 文件接口、本地单进程 Web 管理入口；已含生成/校验/风险三条任务流程、显式 CARLA 结果导入和轨迹/传感器可视化 | 申请说明书按实际交付形态描述；不写多用户、权限、Web 自动启动 CARLA 或服务器 Job 自动轮询 |
+| 当前软件形态 | Python 命令行、JSON/CSV 文件接口、本地单进程 Web 管理入口；已含生成/校验/风险三条任务流程、本机 CARLA 客户端运行、远端结果导入、运行状态图/传感器回放/相对车距示意和完整 ZIP 数据导出 | 申请说明书按实际交付形态描述；不写真实地图轨迹、多用户、权限、Web 自动启动 CARLA 服务或服务器 Job 自动轮询 |
 | 当前主演示 | `tools/stage5_demo.cmd`，默认离线、`carla_connected=false`；实机展示证据另见 ScenarioRunner 关联完整验收 | 2026-10-10 前在申请冻结提交上重新运行并归档 `demo_manifest.json`，复核实机轻量证据 |
 | 当前场景库 | 117 个独立场景、351 次来源批次严格验收证据 | 复核库快照、证据等级和路径是否仍与冻结版本一致 |
 
@@ -31,9 +31,9 @@ _项目：基于 CARLA 的自动驾驶极端场景生成与仿真测试系统 V1
 | M04 仿真采集 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py`、`tools/check_scenario_runner_acceptance.py` | CARLA 0.9.16 运行证据、`metadata.json`、`telemetry.csv`、`acceptance_result.json`；四类传感器/路线/风险单样本通过 | 已验证实现 / 原型 | 冻结版本复核提交哈希和证据路径，重新采集最终截图 |
 | M05 风险评估 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2` 分解、风险报告、批次统计 | 已验证实现 | 说明书中标注这是仿真遥测启发式指标，不是事故概率 |
 | M06 实验复现 | `batch_runner.py`、`tools/server_*.cmd`、`configs/` | 计划、种子、配置哈希、服务器任务和轻量汇总 | 已验证实现 / 原型 | 整理一条最小复现路径，隐藏服务器内部细节 |
-| M07 Web 管理入口 | `tools/web_app.py`、`tools/web_app.cmd`、`tools/scenario_dashboard.py`、`core/web_task_orchestrator.py`、`core/web_visualization.py` | 页面级回归、生成到校验连续流程、显式 CARLA 登记/结果导入、任务详情、风险 SVG、传感器预览和产物哈希 | 申请版本工作流已验证 | 冻结版本采集页面截图；不宣称候选工作区、多用户、权限、服务器 Job 自动轮询或场景库写入能力 |
+| M07 Web 管理入口 | `tools/web_app.py`、`tools/web_replay.js`、`tools/web_app.cmd`、`tools/scenario_dashboard.py`、`core/web_task_orchestrator.py`、`core/web_visualization.py` | 页面级回归、生成到校验连续流程、本机 CARLA 运行、远端结果导入、任务详情、风险 SVG、传感器按需回放、相对车距示意、完整 ZIP 导出和产物哈希 | 申请版本工作流已验证；回放用历史帧近似对齐 | 冻结版本采集页面截图；不宣称真实地图轨迹、候选工作区、多用户、权限、Web 自动启动 CARLA 服务、服务器 Job 自动轮询或场景库写入能力 |
 | M08 最小演示编排 | `tools/stage5_minimal_demo.py`、`tools/stage5_demo.cmd`、`docs/scenario_runner_full_acceptance_v1.md` | `demo_manifest.json`、配置、`.xosc`、适配清单、完整验收轻量证据、2 项单元测试 | 阶段五已建立 / 离线原型 + 独立实机证据 | 冻结版本重新运行，作为说明书总入口；实机验收仍需单独复核 |
-| M07/M06 可视化回链 | `core/web_visualization.py`、`core/web_task_orchestrator.py`、`tools/web_app.py` | 风险分析生成 `risk_result.json`、`run_visualization.svg`、可选 `sensor_preview.png`；任务产物带 SHA-256 | 已验证实现 / 显式外部执行后回链 | 冻结版本采集轨迹图、传感器预览和任务详情截图；不写 Web 自动启动 CARLA 或服务器 Job 自动轮询 |
+| M07/M06 可视化回链 | `core/web_visualization.py`、`core/web_task_orchestrator.py`、`tools/web_app.py`、`tools/web_replay.js` | 风险分析生成 `risk_result.json`、`run_visualization.svg`、可选 `sensor_preview.png`；任务产物带 SHA-256；回放从原始运行目录按需读取帧，不另造实测证据 | 已验证实现 / 显式外部执行后回链 | 冻结版本采集运行状态图、传感器回放和任务详情截图；标明按帧序近似对齐、相对位置非地图轨迹 |
 
 ## 本轮整理验收
 
@@ -41,11 +41,11 @@ _验收日期：2026-08-24；以下结果属于当前工程底稿，正式申请
 
 | 检查 | 当前结果 | 证据边界 |
 |---|---|---|
-| 全量单元测试 | `145` 项通过，`1` 项按预期跳过 | 跳过项依赖可选 Stable-Baselines3；Gymnasium 缺失断言按设计执行，不影响 M01–M08 基础链路，不能据此证明训练能力 |
+| 全量单元测试 | 当前基线以实际冻结提交重新运行记录；Web 导出回归已加入 | 可选 Stable-Baselines3/Gymnasium 缺失时按设计跳过，不影响 M01–M08 基础链路，不能据此证明训练能力 |
 | Python 编译检查 | `core/`、`tools/`、`scenes/`、`analysis/`、`models/`、`training/`、`tests/` 通过 `compileall` | 只证明模块可编译，不替代 CARLA 实机验收 |
 | M08 一键演示 | M01–M08 离线最小链路通过；117 个独立场景、351 条严格验收来源证据 | `carla_connected=false`，未启动 CARLA、未产生新风险结果、未占用 GPU |
 | 文档差异检查 | `git diff --check` 通过 | 只检查空白和补丁格式，不代表内容已经成为最终申请材料 |
-| Web P0 真实冒烟 | 页面 `200`；生成/校验/风险 `completed`；CARLA 取消 `cancelled` | 只证明本机 Web 任务和显式外部执行边界，不证明在线 CARLA 训练 |
+| Web P0 真实冒烟 | 页面 `200`；生成/校验/风险 `completed`；CARLA 取消 `cancelled`；完整 ZIP 导出回归通过 | 只证明本机 Web 任务、本机客户端入口和远端兼容边界，不证明在线 CARLA 训练 |
 | ScenarioRunner 关联完整验收 | `seed_v1_high_0165`：RGB/Depth/Semantic 各 `200` 帧；Collision 独立状态门通过；路线双车在途率 `1.0`；风险 `40.843/medium`；`13/13` 检查通过 | 同一输入的 XOSC 直执行与 Scene 04 完整验收分层记录；不证明跨地图或批量泛化 |
 
 ## 材料分层

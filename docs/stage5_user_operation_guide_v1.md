@@ -4,7 +4,7 @@ _用途：软著说明书和项目演示的申请版本底稿；正式提交前�
 
 ## 1. 使用范围
 
-本系统当前是以 Python 命令行、JSON/CSV 文件和本地单进程 Web 管理入口为主的研究软件首期。Web 已提供生成、校验、风险分析三条可操作流程；推荐先用页面确认参数和离线结果，再单独运行 CARLA 实机任务。任何真实仿真都必须明确启动，不会由 Web 页面或离线演示隐式触发。
+本系统当前是以 Python 命令行、JSON/CSV 文件和本地单进程 Web 管理入口为主的研究软件首期。Web 已提供生成、校验、风险分析和本机 CARLA 运行流程；CARLA 服务需用户提前启动，页面只调用本机客户端并在结束后自动生成风险分析。远端任务仍可作为兼容路径。任何真实仿真都必须明确点击启动，不会由离线演示隐式触发。
 
 ## 2. 环境准备
 
@@ -12,7 +12,7 @@ _用途：软著说明书和项目演示的申请版本底稿；正式提交前�
 |---|---|
 | 工作目录 | `D:\Xx\竞赛\大创实施ing` |
 | Python | `D:\ANACONDA\envs\Carla666-0916\python.exe` |
-| CARLA | 0.9.16；实机任务服务器优先 |
+| CARLA | 0.9.16；默认本机 `localhost:2000`，远端任务可选 |
 | 依赖 | 基础校验依赖；SB3/Gymnasium 只在训练接口任务中需要 |
 | 数据 | `data/scenarios/seed_v1/` 和 `data/scenarios/scenario_library_v1/` |
 
@@ -60,7 +60,7 @@ tools\web_app.cmd
 D:\ANACONDA\envs\Carla666-0916\python.exe tools\web_app.py --validate-only
 ```
 
-页面支持 Dashboard、场景库筛选、独立详情和历史风险/证据查看；生成页可提交 LHS/GMM/CVAE/Diffusion CPU 任务，生成完成后点击“校验本批次”即可直接进入逐条校验结果，不需要复制 JSONL 路径。任务详情页展示输入快照、工作流时间线、产物路径与 SHA-256；风险页读取运行目录或遥测并展示 `observed_risk`；任务页可登记需要显式确认的 CARLA 外部任务。页面不直接启动 CARLA，当前也不提供候选工作区、场景库写入、权限管理或多用户部署。
+页面支持 Dashboard、场景库筛选、独立详情和历史风险/证据查看；生成页可提交 LHS/GMM/CVAE/Diffusion CPU 任务，生成完成后点击“校验本批次”即可直接进入逐条校验结果，不需要复制 JSONL 路径。任务详情页展示输入快照、工作流时间线、产物路径与 SHA-256；风险页读取运行目录或遥测并展示 `observed_risk`；校验通过后点击“在本机运行 CARLA”，运行结束自动创建风险分析和运行状态图。若原始传感器帧仍在，风险任务详情支持拖动 RGB/Depth/SemSeg 回放和相对车距示意；历史帧与遥测按帧序近似对齐，车距示意不是地图轨迹。任务详情页可下载完整 ZIP 数据包，包含 JSON、CSV、日志、配置和可视化。当前仍不提供候选工作区、场景库写入、权限管理或多用户部署。
 
 任务接口示例：
 
@@ -74,7 +74,7 @@ Invoke-RestMethod -Method Post -Uri http://127.0.0.1:8765/api/tasks `
 Invoke-RestMethod http://127.0.0.1:8765/api/tasks
 ```
 
-CARLA 任务提交后先处于 `awaiting_confirmation`；确认只登记外部执行，不会从 Web 进程启动 CARLA，正式运行仍使用服务器任务入口。
+CARLA 任务默认使用 `execution_target=local`，先进入 `queued/running`；本机 CARLA 未启动时任务会明确失败并保存日志。需要服务器时才显式提交 `execution_target=remote`，此时任务先处于 `awaiting_confirmation`，确认只登记外部执行。
 
 参数级物理约束检查：
 
@@ -102,9 +102,9 @@ D:\ANACONDA\envs\Carla666-0916\python.exe scenes\scene_04_parameterized.py --con
 
 输出 `validate-only 完成，未连接 CARLA` 只表示配置结构和字段合法，不表示仿真服务、传感器、路线或风险结果已经通过。
 
-## 5. 单独启动真实 CARLA 运行
+## 5. 本机启动真实 CARLA 运行
 
-只有需要新增实测证据时才执行真实入口。服务器任务必须先确认 CARLA 0.9.16、项目环境、RPC 健康和 GPU1 资源，再运行：
+先启动本机 CARLA 0.9.16 服务并确认 RPC 端口 `2000` 可用，然后在 Web 校验任务详情页点击“在本机运行 CARLA”。等价的命令行入口为：
 
 ```powershell
 D:\ANACONDA\envs\Carla666-0916\python.exe scenes\scene_04_parameterized.py --config <config.json>
@@ -120,9 +120,16 @@ D:\ANACONDA\envs\Carla666-0916\python.exe scenes\scene_04_parameterized.py --con
 
 命令退出码为 0 不能单独证明以上条件全部满足。
 
+任务完成后，在任务详情页点击“下载完整数据包”。ZIP 中包含：
+
+- `task.json`、`payload.json`、`result.json`、`workflow.json`；
+- 本机 CARLA 的 `metadata.json`、`telemetry.csv`、`config_snapshot.json`；
+- 客户端命令、标准输出/错误日志、风险报告、轨迹 SVG 和传感器首帧（若存在）；
+- 每个登记产物的 SHA-256，可供专业人员离线排查。
+
 ## 5.1 远端 CARLA 结果回链和图表展示
 
-校验任务完成且勾选编译后，在任务详情页点击“登记远端 CARLA 执行”。该按钮只生成外部任务登记，不启动本地 CARLA。服务器端按既有 `.cmd` 入口执行，例如：
+若本机没有 CARLA，可在校验任务详情页选择远端兼容模式，或将 CARLA 任务的 `execution_target` 设为 `remote`。此时点击“确认外部任务”只生成外部任务登记，不启动本机 CARLA。服务器端按既有 `.cmd` 入口执行，例如：
 
 ```powershell
 .\tools\server_run.cmd -Name web-demo-scene -CommandFile .\tools\server_jobs\<job>.sh -RequiresCarla
@@ -136,7 +143,7 @@ D:\ANACONDA\envs\Carla666-0916\python.exe scenes\scene_04_parameterized.py --con
 
 | 现象 | 判断 | 处理 |
 |---|---|---|
-| M08 输出 `carla_connected=false` | 正常，默认是离线演示 | 查看静态产物；需要实机时另建任务 |
+| M08 输出 `carla_connected=false` | 正常，默认是离线演示 | 查看静态产物；需要实机时启动本机 CARLA 并创建任务 |
 | `validate-only` 成功但没有风险分 | 正常，静态检查不运行 CARLA | 使用已有场景库风险或单独执行实机 |
 | 场景库有 `unknown` CARLA 版本 | 历史条目缺少场景级版本字段 | 保留为证据边界，不补写未知值 |
 | SB3 测试跳过 | 本机未安装可选训练依赖 | 不影响基础链路；训练任务使用服务器环境 |

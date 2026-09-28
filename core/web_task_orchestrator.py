@@ -1,9 +1,9 @@
 """Small, auditable task orchestration contract for the local Web app.
 
 The manager deliberately keeps the execution surface narrow: offline generation,
-static validation, and post-run risk analysis can run in worker threads.  CARLA
-tasks are persisted as explicitly confirmed external work and never launch a
-CARLA process from the HTTP handler.
+static validation, post-run risk analysis, and an explicitly requested local
+CARLA client run can execute in worker threads. The Web process never launches
+the CARLA server itself; remote execution remains an explicit compatibility path.
 """
 
 from __future__ import annotations
@@ -15,7 +15,9 @@ import os
 import subprocess
 import sys
 import threading
+import time
 import uuid
+import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -26,6 +28,12 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_TASK_DIR = Path(
     os.environ.get(
         "CARLA_WEB_TASK_DIR",
+        r"F:\Carla\output-0.9.16\web_tasks",
+    )
+)
+DEFAULT_CARLA_OUTPUT_DIR = Path(
+    os.environ.get(
+        "CARLA_WEB_CARLA_OUTPUT_DIR",
         r"F:\Carla\output-0.9.16\web_tasks",
     )
 )
@@ -241,18 +249,19 @@ class TaskManager:
             default=0,
         ) + 1
         requires_carla = kind == "carla"
+        local_carla = requires_carla and normalized.get("execution_target") == "local"
         task = {
             "task_id": task_id,
             "workflow_id": workflow_id,
             "workflow_step": workflow_step,
             "parent_task_id": parent_task_id,
             "kind": kind,
-            "status": "awaiting_confirmation" if requires_carla else "queued",
+            "status": "queued" if local_carla else "awaiting_confirmation" if requires_carla else "queued",
             "created_at": _now(),
             "started_at": None,
             "finished_at": None,
             "requires_carla": requires_carla,
-            "execution_mode": "manual_external" if requires_carla else "offline_cpu",
+            "execution_mode": "local_carla" if local_carla else "manual_external" if requires_carla else "offline_cpu",
             "evidence_level": "external_unverified" if requires_carla else "offline",
             "payload": normalized,
             "result": None,
@@ -262,7 +271,7 @@ class TaskManager:
         with self._lock:
             self._tasks[task_id] = task
             self._persist(task)
-        if requires_carla:
+        if requires_carla and not local_carla:
             if confirm_carla:
                 return self.confirm(task_id, confirmed=True)
             return self._snapshot(task)
@@ -284,7 +293,12 @@ class TaskManager:
         if not isinstance(validation_payload, dict):
             raise TaskError("payload 必须是 JSON 对象")
         validation_payload["record_path"] = output_path
-        validation_payload.setdefault("compile", False)
+        # A one-scenario generation is the primary product path: compile the
+        # CARLA input immediately so the next task can expose the run action.
+        # Batch generation remains validation-only because the CARLA adapter
+        # accepts one concrete scenario at a time.
+        accepted_count = ((source.get("result") or {}).get("summary") or {}).get("accepted_count")
+        validation_payload.setdefault("compile", accepted_count == 1)
         return self.submit(
             "validation",
             validation_payload,
@@ -305,6 +319,7 @@ class TaskManager:
         carla_payload = dict(payload or {})
         carla_payload["config_path"] = config_path
         carla_payload.setdefault("requested_by", "web")
+        carla_payload.setdefault("execution_target", "local")
         return self.submit(
             "carla",
             carla_payload,
@@ -320,7 +335,7 @@ class TaskManager:
         if task["kind"] != "carla":
             raise TaskError("只有 CARLA 外部任务可以导入结果")
         if task["status"] not in {"awaiting_confirmation", "confirmed_manual"}:
-            raise TaskError(f"CARLA 任务当前状态不能导入结果: {task["status"]}")
+            raise TaskError(f"CARLA 任务当前状态不能导入结果: {task['status']}")
         run_dir = Path(str(payload.get("run_dir", ""))).expanduser().resolve()
         if not run_dir.is_dir():
             raise TaskError(f"远端结果目录不存在: {run_dir}")
@@ -360,6 +375,163 @@ class TaskManager:
         )
         return {"carla_task": self.get(task_id), "risk_task": risk_task}
 
+    def run_local_carla(self, task_id):
+        """Queue a CARLA task on the current machine.
+
+        This is intentionally explicit: the Web process never starts the CARLA
+        server itself, but it can run the local Scene 04 client when CARLA is
+        already listening on localhost:2000.
+        """
+        with self._lock:
+            task = self._tasks.get(str(task_id))
+            if task is None:
+                raise KeyError(task_id)
+            if task["kind"] != "carla":
+                raise TaskError("只有 CARLA 任务可以切换为本机运行")
+            if task["status"] not in {"awaiting_confirmation", "confirmed_manual"}:
+                raise TaskError(f"任务当前状态不能切换为本机运行: {task['status']}")
+            task["payload"]["execution_target"] = "local"
+            task["status"] = "queued"
+            task["execution_mode"] = "local_carla"
+            task["result"] = None
+            task["error"] = None
+            task["started_at"] = None
+            task["finished_at"] = None
+            self._persist(task)
+            snapshot = self._snapshot(task)
+        self._executor.submit(self._run, task_id)
+        return snapshot
+
+    def retry_local_carla(self, task_id):
+        """Create a new local CARLA attempt while preserving the failed task."""
+        task = self.get(task_id)
+        if task is None:
+            raise KeyError(task_id)
+        if task["kind"] != "carla" or task.get("execution_mode") != "local_carla":
+            raise TaskError("只有失败的本机 CARLA 任务可以重试")
+        if task.get("status") != "failed":
+            raise TaskError(f"任务当前状态不能重试: {task.get('status')}")
+        payload = deepcopy(task.get("payload") or {})
+        payload["execution_target"] = "local"
+        payload.setdefault("requested_by", "web-retry")
+        return self.submit(
+            "carla",
+            payload,
+            workflow_id=task.get("workflow_id"),
+            parent_task_id=task["task_id"],
+        )
+
+    def recompile_validation(self, task_id):
+        """Re-run a completed single-record validation with CARLA compilation."""
+        with self._lock:
+            task = self._tasks.get(str(task_id))
+            if task is None:
+                raise KeyError(task_id)
+            if task["kind"] != "validation":
+                raise TaskError("只有校验任务可以重新编译 CARLA 配置")
+            if task["status"] != "completed":
+                raise TaskError(f"校验任务当前状态不能重新编译: {task['status']}")
+            result = task.get("result") or {}
+            if not result.get("valid"):
+                raise TaskError("校验未通过，不能编译 CARLA 配置")
+            if int(result.get("record_count", 0)) != 1:
+                raise TaskError("只有单条场景记录可以编译 CARLA 配置")
+            if result.get("compiled_config_path"):
+                return self._snapshot(task)
+            task["payload"]["compile"] = True
+            task["status"] = "queued"
+            task["result"] = None
+            task["error"] = None
+            task["started_at"] = None
+            task["finished_at"] = None
+            self._persist(task)
+            snapshot = self._snapshot(task)
+        self._executor.submit(self._run, task_id)
+        return snapshot
+
+    def export_task(self, task_id):
+        """Create a self-contained ZIP with both readable and raw evidence."""
+        task = self.get(task_id)
+        if task is None:
+            raise KeyError(task_id)
+        if task["status"] in {"queued", "running"}:
+            raise TaskError("任务仍在运行，完成后才能导出完整数据包")
+
+        task_dir = self.storage_dir / task["task_id"]
+        task_dir.mkdir(parents=True, exist_ok=True)
+        archive_path = task_dir / f"{task['task_id']}_export.zip"
+        temporary = archive_path.with_suffix(".zip.tmp")
+        workflow = self.get_workflow(task["workflow_id"]) or {}
+        seen = set()
+
+        def add_file(archive, path, arcname):
+            path = Path(path)
+            if not path.is_file():
+                return
+            resolved = path.resolve()
+            if resolved in seen or resolved == archive_path.resolve() or resolved == temporary.resolve():
+                return
+            seen.add(resolved)
+            archive.write(resolved, arcname=arcname)
+
+        def add_tree(archive, root, prefix):
+            root = Path(root)
+            if not root.is_dir():
+                return
+            for path in sorted(root.rglob("*")):
+                if path.is_file():
+                    relative = path.relative_to(root).as_posix()
+                    add_file(archive, path, f"{prefix}/{relative}")
+
+        with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            archive.writestr("task.json", json.dumps(task, ensure_ascii=False, indent=2) + "\n")
+            archive.writestr("payload.json", json.dumps(task.get("payload", {}), ensure_ascii=False, indent=2) + "\n")
+            archive.writestr("result.json", json.dumps(task.get("result"), ensure_ascii=False, indent=2) + "\n")
+            archive.writestr("workflow.json", json.dumps(workflow, ensure_ascii=False, indent=2) + "\n")
+            add_tree(archive, task_dir, "task_outputs")
+            workflow_tasks = workflow.get("tasks", []) or [task]
+            artifact_index = 1
+            for workflow_task in workflow_tasks:
+                workflow_task_id = workflow_task.get("task_id", task["task_id"])
+                if workflow_task_id != task["task_id"]:
+                    add_tree(
+                        archive,
+                        self.storage_dir / workflow_task_id,
+                        f"task_outputs/{workflow_task_id}",
+                    )
+                result = workflow_task.get("result") or {}
+                run_dir = result.get("run_dir")
+                if run_dir:
+                    add_tree(archive, run_dir, f"carla_run/{workflow_task_id}")
+                for artifact in workflow_task.get("artifacts", []):
+                    artifact_path = artifact.get("path")
+                    if artifact_path:
+                        add_file(
+                            archive,
+                            artifact_path,
+                            f"artifacts/{artifact_index:03d}_{Path(artifact_path).name}",
+                        )
+                        artifact_index += 1
+        temporary.replace(archive_path)
+        export_artifact = _artifact(
+            archive_path,
+            artifact_type="export_bundle",
+            role="complete_diagnostic_package",
+            source_task_id=task["task_id"],
+        )
+        with self._lock:
+            current = self._tasks[task_id]
+            current.setdefault("artifacts", [])
+            current["artifacts"] = [
+                item for item in current["artifacts"]
+                if item.get("type") != "export_bundle"
+            ] + [export_artifact]
+            current.setdefault("result", {})
+            current["result"]["export_path"] = str(archive_path)
+            current["result"]["export_sha256"] = export_artifact["sha256"]
+            self._persist(current)
+            return str(archive_path)
+
     def confirm(self, task_id, *, confirmed):
         with self._lock:
             task = self._tasks.get(str(task_id))
@@ -367,6 +539,8 @@ class TaskManager:
                 raise KeyError(task_id)
             if task["kind"] != "carla":
                 raise TaskError("只有 CARLA 任务需要显式确认")
+            if task.get("payload", {}).get("execution_target") == "local":
+                raise TaskError("本机 CARLA 任务无需远端确认，请直接等待运行结果")
             if task["status"] != "awaiting_confirmation":
                 raise TaskError(f"任务当前状态不能确认: {task['status']}")
             if not confirmed:
@@ -473,11 +647,35 @@ class TaskManager:
                 normalized["collision_count"] = int(payload["collision_count"])
             return normalized
         config_path = _as_path(payload.get("config_path"), "carla.config_path")
-        return {
+        execution_target = str(payload.get("execution_target", "local")).strip().lower()
+        if execution_target not in {"local", "remote"}:
+            raise TaskError("carla.execution_target 必须是 local 或 remote")
+        try:
+            timeout_seconds = int(payload.get("timeout_seconds", 900))
+        except (TypeError, ValueError) as error:
+            raise TaskError("carla.timeout_seconds 必须是整数") from error
+        if not 30 <= timeout_seconds <= 7200:
+            raise TaskError("carla.timeout_seconds 必须在 30..7200 内")
+        normalized = {
             "config_path": str(config_path),
+            "execution_target": execution_target,
             "traffic_manager_seed": payload.get("traffic_manager_seed"),
             "requested_by": str(payload.get("requested_by", "web")),
+            "timeout_seconds": timeout_seconds,
         }
+        if payload.get("output_root"):
+            normalized["output_root"] = str(Path(payload["output_root"]).expanduser().resolve())
+        if payload.get("python_executable"):
+            normalized["python_executable"] = str(payload["python_executable"])
+        if payload.get("traffic_manager_port") is not None:
+            try:
+                port = int(payload["traffic_manager_port"])
+            except (TypeError, ValueError) as error:
+                raise TaskError("carla.traffic_manager_port 必须是整数") from error
+            if not 1 <= port <= 65535:
+                raise TaskError("carla.traffic_manager_port 必须在 1..65535 内")
+            normalized["traffic_manager_port"] = port
+        return normalized
 
     def _run(self, task_id):
         with self._lock:
@@ -494,6 +692,8 @@ class TaskManager:
                 result = self._run_validation(task)
             elif task["kind"] == "risk_analysis":
                 result = self._run_risk_analysis(task)
+            elif task["kind"] == "carla":
+                result = self._run_carla(task)
             else:
                 raise TaskError("CARLA 任务必须经过显式确认，不会进入离线 worker")
         except Exception as error:  # Persist a concise, user-visible failure.
@@ -507,6 +707,7 @@ class TaskManager:
                 )
                 self._persist(self._tasks[task_id])
             return
+        risk_payload = None
         with self._lock:
             if self._tasks[task_id]["status"] == "cancelled":
                 return
@@ -518,6 +719,24 @@ class TaskManager:
                 artifacts=artifacts,
             )
             self._persist(self._tasks[task_id])
+            if task["kind"] == "carla" and result.get("metadata_path") and result.get("telemetry_path"):
+                risk_payload = {
+                    "run_dir": result.get("run_dir"),
+                    "metadata_path": result["metadata_path"],
+                    "telemetry_path": result["telemetry_path"],
+                    "config_path": result.get("config_path"),
+                }
+        if risk_payload:
+            risk_task = self.submit(
+                "risk_analysis",
+                risk_payload,
+                workflow_id=task["workflow_id"],
+                parent_task_id=task_id,
+            )
+            with self._lock:
+                current = self._tasks[task_id]
+                current["result"]["risk_task_id"] = risk_task["task_id"]
+                self._persist(current)
 
     def _task_output_dir(self, task):
         path = self.storage_dir / task["task_id"]
@@ -580,6 +799,129 @@ class TaskManager:
             "output_path": str(output),
             "summary_path": str(summary_path),
             "summary": summary,
+            "_artifacts": artifacts,
+        }
+
+    def _find_run_directory(self, output_root, started_at):
+        candidates = []
+        for metadata_path in Path(output_root).rglob("metadata.json"):
+            telemetry_path = metadata_path.parent / "telemetry.csv"
+            if not telemetry_path.is_file():
+                continue
+            try:
+                modified = metadata_path.stat().st_mtime
+            except OSError:
+                continue
+            if modified >= started_at - 5:
+                candidates.append((modified, metadata_path.parent))
+        if not candidates:
+            raise TaskError(f"CARLA 已结束但未找到完整运行目录: {output_root}")
+        return max(candidates, key=lambda item: item[0])[1]
+
+    def _run_carla(self, task):
+        payload = task["payload"]
+        output_root = Path(payload.get("output_root") or DEFAULT_CARLA_OUTPUT_DIR).expanduser().resolve()
+        output_root.mkdir(parents=True, exist_ok=True)
+        python_executable = str(
+            payload.get("python_executable")
+            or os.environ.get("CARLA_WEB_PYTHON")
+            or sys.executable
+        )
+        command = [
+            python_executable,
+            str(PROJECT_ROOT / "scenes" / "scene_04_parameterized.py"),
+            "--config",
+            payload["config_path"],
+            "--output-root",
+            str(output_root),
+        ]
+        if payload.get("traffic_manager_port") is not None:
+            command.extend(["--traffic-manager-port", str(payload["traffic_manager_port"])])
+        output_dir = self._task_output_dir(task)
+        stdout_path = output_dir / "carla_stdout.log"
+        stderr_path = output_dir / "carla_stderr.log"
+        command_path = output_dir / "carla_command.json"
+        _write_json(command_path, {"command": command, "output_root": str(output_root)})
+        started_at = time.time()
+        environment = os.environ.copy()
+        environment["PYTHONUTF8"] = "1"
+        timeout_seconds = int(payload.get("timeout_seconds", 900))
+        try:
+            completed = subprocess.run(
+                command,
+                cwd=PROJECT_ROOT,
+                env=environment,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=timeout_seconds,
+                check=False,
+            )
+        except subprocess.TimeoutExpired as error:
+            stdout_path.write_text(str(error.stdout or ""), encoding="utf-8")
+            stderr_path.write_text(
+                f"本机 CARLA 任务超过 {timeout_seconds} 秒，已停止。\n{error.stderr or ''}",
+                encoding="utf-8",
+            )
+            raise TaskError(f"本机 CARLA 运行超时（{timeout_seconds} 秒）") from error
+        stdout_path.write_text(completed.stdout or "", encoding="utf-8")
+        stderr_path.write_text(completed.stderr or "", encoding="utf-8")
+        if completed.returncode:
+            detail = (completed.stderr or completed.stdout or "").strip().splitlines()
+            tail = " | ".join(detail[-5:])
+            combined = "\n".join(detail)
+            if "No module named 'carla'" in combined or "No module named \"carla\"" in combined:
+                raise TaskError(
+                    "本机 Python 环境未安装 CARLA Python API；请使用 Carla666-0916 环境，或设置 CARLA_WEB_PYTHON"
+                )
+            if (
+                "ConnectionRefusedError" in combined
+                or "Failed to connect" in combined
+                or "连接被拒绝" in combined
+                or "waiting for the simulator" in combined
+                or "localhost:2000" in combined
+            ):
+                raise TaskError(
+                    "无法连接本机 CARLA；请先启动 CARLA 0.9.16 服务并确认 RPC 端口 2000"
+                )
+            raise TaskError(f"本机 CARLA 运行失败（退出码 {completed.returncode}）: {tail or '无日志'}")
+        run_dir = self._find_run_directory(output_root, started_at)
+        metadata_path = run_dir / "metadata.json"
+        telemetry_path = run_dir / "telemetry.csv"
+        metadata = _load_json(metadata_path)
+        server_health = metadata.get("server_health") or {}
+        result_meta = metadata.get("result") or {}
+        artifacts = []
+        for path, artifact_type, role in (
+            (command_path, "execution_command", "local_carla_command"),
+            (stdout_path, "execution_log", "local_carla_stdout"),
+            (stderr_path, "execution_log", "local_carla_stderr"),
+            (metadata_path, "carla_metadata", "runtime_metadata"),
+            (telemetry_path, "telemetry", "runtime_telemetry"),
+        ):
+            artifacts.append(_artifact(path, artifact_type=artifact_type, role=role, source_task_id=task["task_id"]))
+        for name in ("config_snapshot.json",):
+            path = run_dir / name
+            if path.is_file():
+                artifacts.append(_artifact(path, artifact_type="config_snapshot", role="runtime_config", source_task_id=task["task_id"]))
+        return {
+            "kind": "carla",
+            "execution_started": True,
+            "execution_mode": "local_carla",
+            "execution_target": "local",
+            "carla_connected": server_health.get("status") == "healthy",
+            "acceptance_status": result_meta.get("status"),
+            "sensor_status": (metadata.get("sensor_pipeline") or {}).get("status"),
+            "route_status": (metadata.get("route_control") or {}).get("status"),
+            "server_health": server_health,
+            "config_path": payload["config_path"],
+            "run_dir": str(run_dir),
+            "metadata_path": str(metadata_path),
+            "telemetry_path": str(telemetry_path),
+            "stdout_path": str(stdout_path),
+            "stderr_path": str(stderr_path),
+            "command_path": str(command_path),
             "_artifacts": artifacts,
         }
 
