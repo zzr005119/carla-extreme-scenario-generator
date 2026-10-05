@@ -278,6 +278,103 @@ def _artifact_table(artifacts):
     )
 
 
+RISK_LEVEL_LABELS = {
+    "low": "低风险",
+    "medium": "中风险",
+    "high": "高风险",
+    "critical": "极高风险",
+}
+
+
+def _risk_level_label(level):
+    return RISK_LEVEL_LABELS.get(str(level), str(level or "—"))
+
+
+def _evidence_state(task):
+    level = str(task.get("evidence_level") or "")
+    if level == "external_verified":
+        return "证据已核验", "success"
+    if level == "external_unverified":
+        return "等待仿真核验", "warn"
+    if level == "offline":
+        return "离线可复核", ""
+    return "证据状态未记录", "warn"
+
+
+def _evidence_strip(task, result):
+    evidence_text, evidence_tone = _evidence_state(task)
+    status = _status_label(task.get("status"))
+    carla_connected = result.get("carla_connected")
+    if carla_connected is True:
+        carla_text, carla_tone = "CARLA 已连接", "success"
+    elif task.get("kind") == "risk_analysis" and task.get("payload", {}).get("run_dir"):
+        carla_text, carla_tone = "已有运行目录", "success"
+    elif task.get("kind") == "carla":
+        carla_text, carla_tone = "CARLA 未确认", "warn"
+    else:
+        carla_text, carla_tone = "不适用", ""
+    items = (
+        ("任务状态", status, "success" if task.get("status") == "completed" else "warn"),
+        ("证据状态", evidence_text, evidence_tone),
+        ("运行连接", carla_text, carla_tone),
+    )
+    return '<div class="evidence-strip" aria-label="证据状态">' + "".join(
+        f'<div class="evidence-item"><span>{html.escape(label)}</span>'
+        f'<strong class="{html.escape(tone)}">{html.escape(value)}</strong></div>'
+        for label, value, tone in items
+    ) + "</div>"
+
+
+def _workflow_timeline(workflow, current_task):
+    tasks = list((workflow or {}).get("tasks", []))
+    task_by_kind = {}
+    for item in sorted(tasks, key=lambda value: (value.get("workflow_step", 0), value.get("created_at", ""))):
+        task_by_kind[item.get("kind")] = item
+    stages = (
+        ("generation", "场景生成", "生成候选参数"),
+        ("validation", "配置校验", "检查 Schema 与物理约束"),
+        ("carla", "CARLA 实测", "运行真实仿真"),
+        ("risk_analysis", "风险分析", "计算 observed_risk"),
+    )
+    items = []
+    for index, (kind, label, description) in enumerate(stages, start=1):
+        item = task_by_kind.get(kind)
+        status = item.get("status") if item else "pending"
+        if status == "completed":
+            state, state_label = "completed", "已完成"
+        elif status in {"failed", "cancelled"}:
+            state, state_label = "error", _status_label(status)
+        elif item:
+            state, state_label = "active", _status_label(status)
+        else:
+            state, state_label = "pending", "待开始"
+        current = item and item.get("task_id") == current_task.get("task_id")
+        if current and state == "completed":
+            state = "current"
+        href = (
+            f'<a href="/tasks/{html.escape(str(item.get("task_id")))}">查看</a>'
+            if item else ""
+        )
+        items.append(
+            f'<li class="workflow-stage {state}">'
+            f'<span class="workflow-stage-number">{index:02d}</span>'
+            f'<span class="workflow-stage-copy"><strong>{html.escape(label)}</strong>'
+            f'<small>{html.escape(description)}</small></span>'
+            f'<span class="workflow-stage-state">{html.escape(state_label)} {href}</span></li>'
+        )
+    export_ready = any(item.get("type") == "export_bundle" for item in current_task.get("artifacts", []))
+    export_state = "completed" if export_ready else "pending"
+    export_label = "已导出" if export_ready else "可导出"
+    items.append(
+        f'<li class="workflow-stage {export_state}">'
+        '<span class="workflow-stage-number">05</span>'
+        '<span class="workflow-stage-copy"><strong>证据导出</strong>'
+        '<small>下载 JSON、CSV、日志与可视化</small></span>'
+        f'<span class="workflow-stage-state">{export_label}</span></li>'
+    )
+    return '<ol class="workflow-timeline" aria-label="工作流阶段">' + "".join(items) + "</ol>"
+
+
 def _replay_panel(task_id):
     return f'''
     <div class="visualization replay-section" id="replay-player" data-task-id="{html.escape(task_id)}">
@@ -414,14 +511,22 @@ def _task_detail_page(task, workflow):
             )
         elif task.get("kind") == "risk_analysis":
             risk = result.get("observed_risk") or {}
-            risk_level = {"low": "低风险", "medium": "中风险", "high": "高风险", "critical": "极高风险"}.get(str(risk.get("level")), risk.get("level", "—"))
+            risk_level = _risk_level_label(risk.get("level"))
+            collision_count = result.get("collision_count")
             result_section = (
-                f'<p class="plain-summary">这次运行的风险等级是 <strong>{html.escape(str(risk_level))}</strong>，分数越高表示越需要优先检查。下面的运行状态图可以帮助普通用户快速定位风险时刻；完整 CSV 和 JSON 请下载数据包交给专业人员。</p>'
-                '<div class="facts">'
+                '<div class="result-hero">'
+                '<div class="result-hero-copy"><span class="section-kicker">OBSERVED RISK</span>'
+                f'<h3>实测风险 <strong>{html.escape(str(risk_level))}</strong></h3>'
+                '<p>该结论来自遥测数据与风险分析方法；设计目标不等同于实测结果。</p></div>'
+                f'<div class="result-hero-score"><span>风险分数</span><strong>{html.escape(str(risk.get("score", "—")))}</strong></div>'
+                '</div>'
+                '<div class="facts result-facts">'
                 f'<div class="fact"><div class="fact-label">风险等级</div><div class="fact-value">{html.escape(str(risk_level))}</div></div>'
                 f'<div class="fact"><div class="fact-label">风险分数</div><div class="fact-value">{html.escape(str(risk.get("score", "—")))}</div></div>'
+                f'<div class="fact"><div class="fact-label">碰撞次数</div><div class="fact-value">{html.escape(str(collision_count if collision_count is not None else "—"))}</div></div>'
                 f'<div class="fact"><div class="fact-label">遥测行数</div><div class="fact-value">{html.escape(str(result.get("source_row_count", "—")))}</div></div>'
                 '</div>'
+                '<p class="plain-summary">运行状态图可以帮助普通用户定位风险时刻；完整 CSV 和 JSON 请下载数据包交给专业人员复核。</p>'
             )
             visualization = result.get("visualization") or {}
             chart_name = visualization.get("chart_name")
@@ -538,12 +643,12 @@ def _task_detail_page(task, workflow):
     """.replace("__TASK_ID__", json.dumps(task_id, ensure_ascii=False))
     content = f"""
     <div class="stack">
-      <section class="panel"><h2>任务概览</h2><div class="detail-grid">{overview}</div><div class="workflow-actions">{''.join(actions)}</div></section>
+      <section class="panel"><h2>任务概览</h2><div class="detail-grid">{overview}</div>{_evidence_strip(task, result)}<div class="workflow-actions">{''.join(actions)}</div></section>
       {next_step_section}
       {external_section}
       <section class="panel"><h2>结果</h2><div class="result">{result_section}</div></section>
       <section class="panel"><h2>产物与哈希</h2>{_artifact_table(task.get('artifacts', []))}</section>
-      <section class="panel"><h2>工作流</h2>{workflow_section}</section>
+      <section class="panel"><h2>工作流进度</h2>{_workflow_timeline(workflow, task)}<details><summary>查看任务明细</summary>{workflow_section}</details></section>
       <section class="panel"><h2>输入快照</h2><pre>{_json_block(task.get('payload', {}))}</pre></section>
     </div>
     {action_script}{poll_script}
@@ -889,6 +994,38 @@ MODERN_BASE_STYLE = """
   .fact { border: 1px solid var(--line); border-radius: 6px; padding: 14px; background: #f8fafc; }
   .fact-label { color: var(--muted); font-size: 12px; }
   .fact-value { margin-top: 5px; font-size: 24px; font-weight: 800; line-height: 1.25; }
+  .result-hero { display: flex; align-items: stretch; justify-content: space-between; gap: 18px; padding: 18px 20px; border: 1px solid #b8dcd7; border-left: 5px solid var(--teal); border-radius: 7px; background: linear-gradient(110deg, #f0fbf9 0%, #fff 70%); }
+  .result-hero-copy { min-width: 0; }
+  .result-hero-copy h3 { margin: 7px 0 4px; font-size: 25px; }
+  .result-hero-copy h3 strong { color: var(--teal); }
+  .result-hero-copy p { margin: 0; color: #376661; font-size: 13px; }
+  .result-hero-score { display: grid; align-content: center; min-width: 112px; padding-left: 18px; border-left: 1px solid #b8dcd7; }
+  .result-hero-score span { color: var(--muted); font-size: 12px; }
+  .result-hero-score strong { margin-top: 2px; color: var(--navy); font-size: 32px; line-height: 1; }
+  .result-facts { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .evidence-strip { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 5px 0 15px; }
+  .evidence-item { min-width: 0; padding: 9px 11px; border: 1px solid var(--line); border-radius: 5px; background: #fbfdff; }
+  .evidence-item span, .evidence-item strong { display: block; }
+  .evidence-item span { color: var(--muted); font-size: 11px; }
+  .evidence-item strong { margin-top: 2px; color: var(--ink); font-size: 13px; overflow-wrap: anywhere; }
+  .evidence-item strong.success { color: #147a6b; }
+  .evidence-item strong.warn { color: #a05a0d; }
+  .workflow-timeline { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0; margin: 4px 0 16px; padding: 0; list-style: none; }
+  .workflow-stage { position: relative; min-width: 0; padding: 13px 10px 4px 0; border-top: 3px solid var(--line); }
+  .workflow-stage:not(:last-child)::after { content: ""; position: absolute; top: -3px; left: 26px; right: 0; border-top: 3px solid var(--line); z-index: 0; }
+  .workflow-stage.completed, .workflow-stage.current { border-top-color: var(--teal); }
+  .workflow-stage.completed:not(:last-child)::after, .workflow-stage.current:not(:last-child)::after { border-top-color: var(--teal); }
+  .workflow-stage.error { border-top-color: var(--red); }
+  .workflow-stage-number { position: relative; z-index: 1; display: grid; place-items: center; width: 28px; height: 28px; border: 3px solid var(--line); border-radius: 50%; background: #fff; color: var(--muted); font: 11px Consolas, monospace; }
+  .workflow-stage.completed .workflow-stage-number, .workflow-stage.current .workflow-stage-number { border-color: var(--teal); color: var(--teal); }
+  .workflow-stage.error .workflow-stage-number { border-color: var(--red); color: var(--red); }
+  .workflow-stage-copy { display: block; margin-top: 8px; padding-right: 7px; }
+  .workflow-stage-copy strong, .workflow-stage-copy small { display: block; }
+  .workflow-stage-copy strong { font-size: 13px; }
+  .workflow-stage-copy small { margin-top: 2px; color: var(--muted); font-size: 11px; line-height: 1.45; }
+  .workflow-stage-state { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; }
+  .workflow-stage-state a { margin-left: 4px; font-weight: 700; }
+  .workflow-stage.pending .workflow-stage-state { color: #8b98a8; }
   .links { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 18px; }
   .links a { color: var(--blue); border: 1px solid var(--line); border-radius: 6px; padding: 12px; text-decoration: none; background: #fff; }
   .links a:hover { border-color: var(--blue); background: var(--blue-soft); }
@@ -993,7 +1130,7 @@ MODERN_BASE_STYLE = """
   th { color: var(--muted); width: 30%; font-weight: 700; }
   code { overflow-wrap: anywhere; }
   @media (max-width: 900px) { .app-layout { grid-template-columns: 188px minmax(0, 1fr); gap: 14px; } .workflow-sidebar { padding-left: 7px; padding-right: 7px; } .workflow-nav-step { grid-template-columns: 26px minmax(0, 1fr); padding-left: 6px; padding-right: 6px; } }
-  @media (max-width: 780px) { .brand-row { align-items: flex-start; flex-direction: column; } .header-state { text-align: left; } .app-layout { display: block; } .workflow-sidebar { position: static; min-height: 0; padding: 12px 16px; border-right: 0; border-bottom: 1px solid var(--line); } .sidebar-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; padding: 0 0 8px; } .workflow-nav-list { grid-template-columns: repeat(4, minmax(0, 1fr)); } .workflow-nav-step { grid-template-columns: 1fr; gap: 2px; padding: 8px; border-left: 0; border-bottom: 3px solid transparent; } .workflow-nav-step.active { border-left: 0; border-bottom-color: var(--teal); } .workflow-nav-step small { display: none; } .sidebar-help { display: none; } main { padding: 20px 16px 40px; } .hero-grid, .replay-grid { grid-template-columns: 1fr; } .process-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .facts, .links, .form-grid, .detail-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 780px) { .brand-row { align-items: flex-start; flex-direction: column; } .header-state { text-align: left; } .app-layout { display: block; } .workflow-sidebar { position: static; min-height: 0; padding: 12px 16px; border-right: 0; border-bottom: 1px solid var(--line); } .sidebar-heading { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; padding: 0 0 8px; } .workflow-nav-list { grid-template-columns: repeat(4, minmax(0, 1fr)); } .workflow-nav-step { grid-template-columns: 1fr; gap: 2px; padding: 8px; border-left: 0; border-bottom: 3px solid transparent; } .workflow-nav-step.active { border-left: 0; border-bottom-color: var(--teal); } .workflow-nav-step small { display: none; } .sidebar-help { display: none; } main { padding: 20px 16px 40px; } .hero-grid, .replay-grid { grid-template-columns: 1fr; } .process-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .facts, .detail-grid, .result-facts { grid-template-columns: 1fr; } .evidence-strip { grid-template-columns: 1fr; } .workflow-timeline { grid-template-columns: 1fr; gap: 0; } .workflow-stage { display: grid; grid-template-columns: 36px minmax(0, 1fr); column-gap: 8px; padding: 0 0 14px; border-top: 0; border-left: 3px solid var(--line); } .workflow-stage:not(:last-child)::after { top: 28px; bottom: 0; left: -3px; right: auto; border-top: 0; border-left: 3px solid var(--line); } .workflow-stage.completed, .workflow-stage.current { border-left-color: var(--teal); } .workflow-stage.completed:not(:last-child)::after, .workflow-stage.current:not(:last-child)::after { border-left-color: var(--teal); } .workflow-stage.error { border-left-color: var(--red); } .workflow-stage-number { grid-row: span 2; } .workflow-stage-copy { margin-top: 0; } .workflow-stage-state { margin-top: 2px; } .result-hero { align-items: flex-start; flex-direction: column; gap: 10px; } .result-hero-score { width: 100%; min-width: 0; padding: 10px 0 0; border-top: 1px solid #b8dcd7; border-left: 0; } }
   @media (max-width: 520px) { .app-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; } .app-nav a { padding-left: 4px; } .process-grid { grid-template-columns: 1fr; } .workflow-actions { align-items: stretch; flex-direction: column; } .workflow-actions button, .workflow-actions a { width: 100%; justify-content: center; } }
   .replay-heading { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
   .replay-heading h3, .relative-view h3 { margin: 0 0 3px; font-size: 17px; }

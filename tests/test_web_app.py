@@ -60,6 +60,45 @@ class WebAppHttpTests(unittest.TestCase):
         self.assertIn("相对位置示意", page)
         self.assertIn("按帧序近似对齐", page)
 
+    def test_task_detail_explains_result_and_evidence(self):
+        task = {
+            "task_id": "task_risk_explain",
+            "kind": "risk_analysis",
+            "status": "completed",
+            "workflow_id": "workflow_explain",
+            "workflow_step": 4,
+            "execution_mode": "local_carla",
+            "evidence_level": "external_verified",
+            "payload": {"run_dir": "F:\\Carla\\run"},
+            "result": {
+                "observed_risk": {"level": "high", "score": 68.4},
+                "source_row_count": 200,
+                "collision_count": 1,
+                "visualization": {},
+            },
+            "artifacts": [],
+        }
+        workflow = {
+            "tasks": [
+                {"task_id": "task_generation", "kind": "generation", "status": "completed", "workflow_step": 1},
+                {"task_id": "task_validation", "kind": "validation", "status": "completed", "workflow_step": 2},
+                {"task_id": "task_carla", "kind": "carla", "status": "completed", "workflow_step": 3},
+                task,
+            ]
+        }
+        page = _task_detail_page(task, workflow)
+        for marker in (
+            'class="result-hero"',
+            'class="evidence-strip"',
+            'class="workflow-timeline"',
+            '实测风险',
+            '证据已核验',
+            '风险分数',
+            '碰撞次数',
+            '风险分析',
+        ):
+            self.assertIn(marker, page)
+
     def test_replay_endpoints_serve_only_frames_from_task_run(self):
         with tempfile.TemporaryDirectory(dir=PROJECT_ROOT) as directory:
             run_dir = Path(directory)
