@@ -430,11 +430,21 @@ def _task_detail_page(task, workflow):
         )
     elif task.get("kind") == "validation" and task.get("status") == "completed" and result.get("valid"):
         actions.insert(0, f'<button class="primary-action" id="compile-validation" data-task="{html.escape(task_id)}">重新编译 CARLA 配置</button>')
+        single_record = result.get("record_count") == 1
+        compile_hint = (
+            "这是单场景校验，点击上方按钮即可生成 CARLA 配置；完成后本页会出现“启动本机 CARLA 实测”。"
+            if single_record
+            else "当前批次包含多个场景，不能直接编译成一个 CARLA 配置；请回到“设计场景”把数量设为 1。"
+        )
+        regenerate_link = (
+            ""
+            if single_record
+            else '<div class="workflow-actions"><a class="primary-link" href="/generation">重新生成单个场景</a></div>'
+        )
         next_step_section = (
             '<section class="next-step-panel"><span class="section-kicker">NEXT STEP</span>'
             '<h2>校验已通过，正在补齐 CARLA 配置</h2>'
-            f'<p>{"这是单场景校验，点击上方按钮即可生成 CARLA 配置；完成后本页会出现“启动本机 CARLA 实测”。" if result.get("record_count") == 1 else "当前批次包含多个场景，不能直接编译成一个 CARLA 配置；请回到“设计场景”把数量设为 1。"}</p>'
-            f'{"" if result.get("record_count") == 1 else "<div class=\"workflow-actions\"><a class=\"primary-link\" href=\"/generation\">重新生成单个场景</a></div>"}</section>'
+            f'<p>{compile_hint}</p>{regenerate_link}</section>'
         )
     if task.get("parent_task_id"):
         parent = html.escape(str(task["parent_task_id"]))
@@ -808,14 +818,28 @@ def _workflow_page(kind):
         (PROJECT_ROOT / "tools" / "web_assets" / "design_preview.html").read_text(encoding="utf-8")
         if kind == "generation" else ""
     )
-    content = f"""
+    if kind == "generation":
+        content = f"""
+    <section class="generation-workspace">
+      <section class="panel generation-form-panel">
+        <div class="workspace-heading"><span class="section-kicker">PARAMETERS</span><h2>参数与预览</h2><p>先设定设计条件，再提交生成任务。</p></div>
+        <p class="design-boundary"><strong>目标风险是设计条件</strong>，不是 CARLA 实测结论。3D 道路只用于理解参数关系，具体结果以生成任务和后续 CARLA 实测为准。</p>
+        <form id="workflow-form">{config['fields']}<div class="workflow-actions"><button type="submit">提交任务</button><button type="reset" class="secondary">清空</button><a href="/tasks" style="padding:9px 0">查看全部任务</a></div></form>
+        <p id="status" class="status-line" role="status">等待提交</p>
+        <div id="result"></div>
+      </section>
+      <section class="generation-preview">{preview}</section>
+    </section>
+    {script}
+    """
+    else:
+        content = f"""
     <section class="panel">
       <h2>{html.escape(config['title'])}</h2>
       <form id="workflow-form">{config['fields']}<div class="workflow-actions"><button type="submit">提交任务</button><button type="reset" class="secondary">清空</button><a href="/tasks" style="padding:9px 0">查看全部任务</a></div></form>
       <p id="status" class="status-line" role="status">等待提交</p>
       <div id="result"></div>
     </section>
-    {preview}
     {script}
     """
     return _page(config["title"], content, subtitle=config["subtitle"])
@@ -1162,7 +1186,63 @@ MODERN_BASE_STYLE = """
   .replay-readouts strong { display: block; margin-top: 2px; font-size: 16px; }
   .replay-event { margin: 10px 0 0 !important; min-height: 20px; font-size: 12px; color: #8a500d; }
   .replay-unavailable .replay-grid { display: none; }
+  .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr); gap: 18px; }
+  .recent-tasks { display: grid; gap: 8px; }
+  .recent-task { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; padding: 11px 12px; border: 1px solid var(--line); border-radius: 6px; background: #fbfdff; color: var(--ink); text-decoration: none; }
+  .recent-task:hover { border-color: var(--blue); background: var(--blue-soft); }
+  .recent-task > span:first-child { min-width: 0; }
+  .recent-task strong, .recent-task small { display: block; overflow-wrap: anywhere; }
+  .recent-task small { margin-top: 2px; color: var(--muted); font: 11px Consolas, monospace; }
+  .recent-task-meta { display: inline-flex; align-items: center; gap: 6px; flex: 0 0 auto; color: var(--muted); font-size: 12px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #9aa9b8; }
+  .status-dot.completed { background: var(--teal); }
+  .status-dot.running { background: var(--blue); }
+  .status-dot.failed { background: var(--red); }
+  .status-dot.queued, .status-dot.awaiting_confirmation { background: var(--orange); }
+  .risk-bars { display: grid; gap: 12px; margin-top: 18px; }
+  .risk-bar-row { display: grid; grid-template-columns: 62px minmax(0, 1fr) 34px; align-items: center; gap: 9px; font-size: 12px; }
+  .risk-bar-row > span { color: var(--muted); }
+  .risk-bar-track { height: 10px; overflow: hidden; border-radius: 3px; background: #edf2f7; }
+  .risk-bar { display: block; height: 100%; min-width: 2px; border-radius: 3px; background: var(--blue); }
+  .risk-bar.medium { background: var(--orange); }
+  .risk-bar.high { background: #d46b2c; }
+  .risk-bar.critical { background: var(--red); }
+  .matrix-note { margin: 16px 0 0; padding: 10px 12px; border-left: 3px solid var(--orange); background: var(--orange-soft); color: #70400b; font-size: 12px; line-height: 1.65; }
+  .shortcut-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; }
+  .shortcut-grid a { display: grid; gap: 4px; min-width: 0; padding: 13px; border: 1px solid var(--line); border-radius: 6px; color: var(--ink); background: #fff; text-decoration: none; }
+  .shortcut-grid a:hover { border-color: var(--blue); background: var(--blue-soft); }
+  .shortcut-grid span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+  .empty-state { padding: 14px; border: 1px dashed var(--line); color: var(--muted); font-size: 13px; }
+  .error-text { color: var(--red); }
+  .library-insight-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(280px, .95fr); gap: 18px; margin-top: 18px; }
+  .library-insight { min-width: 0; }
+  .insight-heading h2 { margin: 5px 0 4px; font-size: 19px; }
+  .insight-heading p { margin: 0; color: var(--muted); font-size: 13px; }
+  .risk-matrix-wrap { margin-top: 14px; overflow-x: auto; }
+  .risk-matrix { min-width: 430px; table-layout: fixed; }
+  .risk-matrix th, .risk-matrix td { text-align: center; }
+  .risk-matrix th:first-child { width: 92px; text-align: left; }
+  .risk-matrix td { font-weight: 700; background: #f8fafc; }
+  .risk-matrix td.has-data { background: var(--teal-soft); color: #155e59; }
+  .risk-matrix td.empty-cell { color: #a2afbd; font-weight: 400; }
+  .filter-summary { margin-top: 12px; color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+  .generator-comparison { display: grid; gap: 9px; margin-top: 14px; }
+  .generator-card { display: grid; grid-template-columns: 1fr repeat(3, auto); align-items: center; gap: 10px; padding: 11px 12px; border: 1px solid var(--line); background: #fbfdff; }
+  .generator-card > strong { color: var(--blue); font: 13px Consolas, monospace; }
+  .generator-card > span { color: var(--muted); font-size: 11px; white-space: nowrap; }
+  .generator-card b { display: block; margin-top: 2px; color: var(--ink); font-size: 15px; }
+  .generation-workspace { display: grid; grid-template-columns: minmax(300px, .9fr) minmax(0, 1.1fr); gap: 18px; align-items: start; }
+  .generation-form-panel { min-width: 0; }
+  .workspace-heading { margin-bottom: 15px; }
+  .workspace-heading h2 { margin: 5px 0 3px; }
+  .workspace-heading p { margin: 0; color: var(--muted); font-size: 13px; }
+  .design-boundary { margin: 0 0 16px; padding: 11px 13px; border-left: 4px solid var(--orange); background: var(--orange-soft); color: #70400b; font-size: 13px; line-height: 1.7; }
+  .design-boundary strong { color: #854d0e; }
+  .generation-preview { min-width: 0; }
+  .generation-preview .design-preview { margin: 0; }
   @media (max-width: 780px) { .replay-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 780px) { .dashboard-grid, .library-insight-grid, .generation-workspace { grid-template-columns: 1fr; } .shortcut-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .generator-card { grid-template-columns: 1fr repeat(3, minmax(54px, auto)); } }
+  @media (max-width: 520px) { .shortcut-grid { grid-template-columns: 1fr; } .generator-card { grid-template-columns: 1fr 1fr; } .generator-card > span { white-space: normal; } }
 </style>
 """
 
@@ -1188,6 +1268,13 @@ def _page(title, content, *, subtitle="面向 CARLA 的极端场景仿真测试�
 
 def _home_page(summary):
     summary = summary or {}
+    observed_counts = summary.get("observed_risk_level_counts") or {}
+    risk_order = (("low", "低风险", "low"), ("medium", "中风险", "medium"), ("high", "高风险", "high"), ("critical", "极高风险", "critical"))
+    risk_total = max(sum(int(observed_counts.get(key, 0) or 0) for key, _, _ in risk_order), 1)
+    risk_rows = "".join(
+        f'<div class="risk-bar-row"><span>{label}</span><div class="risk-bar-track"><i class="risk-bar {tone}" style="width:{int((int(observed_counts.get(key, 0) or 0) / risk_total) * 100)}%"></i></div><strong>{int(observed_counts.get(key, 0) or 0)}</strong></div>'
+        for key, label, tone in risk_order
+    )
     content = f"""
     <section class="hero-grid">
       <section class="panel hero-panel">
@@ -1214,6 +1301,32 @@ def _home_page(summary):
       </div>
     </section>
     <section class="panel beginner-note"><strong>第一次使用？</strong> 从“设计场景”开始即可。页面里的“风险档位”是设计条件，不等于真实危险程度；只有完成 CARLA 运行后，才会出现实测风险证据。</section>
+    <section class="dashboard-grid section-block">
+      <section class="panel recent-panel">
+        <div class="section-heading compact-heading"><span class="section-kicker">RECENT WORK</span><h2>最近任务</h2><p>从最近一次提交继续查看结果，失败任务会保留在记录中。</p></div>
+        <div id="recent-tasks" class="recent-tasks" role="status"><div class="empty-state">正在读取任务记录…</div></div>
+        <div class="workflow-actions"><a class="button-link" href="/tasks">查看全部任务</a></div>
+      </section>
+      <section class="panel risk-summary-panel">
+        <div class="section-heading compact-heading"><span class="section-kicker">OBSERVED RISK</span><h2>风险分布</h2><p>来自场景库已有 CARLA 运行证据。</p></div>
+        <div class="risk-bars">{risk_rows}</div>
+        <div class="matrix-note">目标风险与实测风险分开记录；设计目标不会自动变成实测结论。</div>
+      </section>
+    </section>
+    <section class="panel section-block shortcut-panel">
+      <div class="section-heading compact-heading"><span class="section-kicker">SHORTCUTS</span><h2>快捷入口</h2><p>按当前任务选择入口，减少在页面之间来回寻找。</p></div>
+      <div class="shortcut-grid"><a href="/generation"><strong>设计新场景</strong><span>设置天气、风险档和生成器</span></a><a href="/scenarios"><strong>比较场景库</strong><span>查看风险矩阵与生成器分布</span></a><a href="/tasks"><strong>继续运行任务</strong><span>查看状态、回放和证据包</span></a><a href="/risk"><strong>分析运行目录</strong><span>读取 telemetry 与 metadata</span></a></div>
+    </section>
+    <script>
+      const recentStatus = {{queued:"排队中", running:"运行中", completed:"已完成", failed:"失败", cancelled:"已取消", awaiting_confirmation:"等待选择", confirmed_manual:"等待远端结果"}};
+      const recentKind = {{generation:"场景生成", validation:"场景校验", risk_analysis:"风险分析", carla:"CARLA 仿真"}};
+      const escapeRecent = value => String(value ?? "").replace(/[&<>\"']/g, c => ({{"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}}[c]));
+      fetch("/api/tasks", {{headers: {{Accept: "application/json"}}}}).then(response => response.json()).then(payload => {{
+        const items = (payload.items || []).slice(0, 5);
+        const box = document.getElementById("recent-tasks");
+        box.innerHTML = items.length ? items.map(task => `<a class="recent-task" href="/tasks/${{encodeURIComponent(task.task_id)}}"><span><strong>${{escapeRecent(recentKind[task.kind] || task.kind)}}</strong><small>${{escapeRecent(task.task_id)}}</small></span><span class="recent-task-meta"><b class="status-dot ${{task.status}}"></b>${{escapeRecent(recentStatus[task.status] || task.status)}}</span></a>`).join("") : '<div class="empty-state">还没有任务记录，从“设计场景”开始。</div>';
+      }}).catch(() => {{ document.getElementById("recent-tasks").innerHTML = '<div class="empty-state error-text">任务记录暂时不可用，请打开运行记录重试。</div>'; }});
+    </script>
     """
     return _page("工作台", content, subtitle="从场景设计到风险证据的一站式本机工作流")
 
@@ -1226,13 +1339,43 @@ def _scenario_library_page():
       <div class="form-grid" style="margin-bottom:14px"><div class="field"><label for="library-search">搜索场景编号或库 ID</label><input id="library-search" type="search" placeholder="例如 high、rain、cvae"></div><div class="field"><label for="library-risk">实测风险</label><select id="library-risk"><option value="">全部风险档位</option><option value="low">低风险</option><option value="medium">中风险</option><option value="high">高风险</option><option value="critical">极高风险</option></select></div></div>
       <div class="workflow-actions"><button type="button" class="secondary" id="library-reset">清除筛选</button><span id="library-count" class="status-line" role="status">正在读取场景库…</span></div>
       <div class="table-wrap"><table class="task-table" style="min-width:700px"><thead><tr><th>场景编号</th><th>生成方式</th><th>设计风险</th><th>实测风险</th><th>分数</th><th>碰撞</th><th>操作</th></tr></thead><tbody id="library-rows"></tbody></table></div>
+      <div id="library-filter-summary" class="filter-summary" role="status">筛选结果摘要：正在读取…</div>
+    </section>
+    <section class="library-insight-grid">
+      <section class="panel library-insight" id="risk-matrix">
+        <div class="insight-heading"><span class="section-kicker">TARGET × OBSERVED</span><h2>风险矩阵</h2><p>横轴是设计目标，纵轴是 CARLA 实测风险；数字表示当前筛选结果中的场景数量。</p></div>
+        <div class="risk-matrix-wrap"><table class="risk-matrix"><thead><tr><th>实测 / 目标</th><th>低</th><th>中</th><th>高</th><th>极高</th></tr></thead><tbody id="risk-matrix-body"></tbody></table></div>
+        <p class="matrix-note">设计风险仅是输入条件，实测风险才来自运行证据。</p>
+      </section>
+      <section class="panel library-insight" id="generator-comparison">
+        <div class="insight-heading"><span class="section-kicker">GENERATOR COMPARISON</span><h2>生成器比较</h2><p>对比场景数量、平均风险分数和发生碰撞的场景数，帮助选择下一轮生成策略。</p></div>
+        <div class="generator-comparison" id="generator-comparison-body"></div>
+      </section>
     </section>
     <section class="panel" style="margin-top:18px"><span class="section-kicker">HOW TO READ IT</span><h2>普通用户先看什么</h2><p class="muted">先看“实测风险”和“碰撞”，再看“证据”是否完整。设计风险只是输入条件，不能代替 CARLA 实测结果。打开某个场景后，页面会把专业字段和原始参数放在详情中。</p></section>
     <script>
       const escLibrary = value => String(value ?? "").replace(/[&<>'"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
       const riskLabel = value => ({low:"低", medium:"中", high:"高", critical:"极高"}[value] || value || "未知");
       const riskBadge = value => `<span class="badge ${escLibrary(value)}">${riskLabel(value)}</span>`;
+      const riskOrder = ["low", "medium", "high", "critical"];
       let libraryRows = [];
+      function renderInsights(rows) {
+        const matrix = riskOrder.map(observed => `<tr><th>${riskLabel(observed)}</th>${riskOrder.map(target => {
+          const count = rows.filter(row => row.target_risk_levels === target && row.observed_risk_level === observed).length;
+          return `<td class="${count ? "has-data" : "empty-cell"}">${count || "—"}</td>`;
+        }).join("")}</tr>`).join("");
+        document.getElementById("risk-matrix-body").innerHTML = matrix;
+        const groups = {};
+        rows.forEach(row => {
+          const generator = row.generators || "未标注";
+          const group = groups[generator] || (groups[generator] = {count: 0, score: 0, scored: 0, collisions: 0});
+          group.count += 1;
+          if (row.risk_score_mean != null && Number.isFinite(Number(row.risk_score_mean))) { group.score += Number(row.risk_score_mean); group.scored += 1; }
+          if (row.collision_observed) group.collisions += 1;
+        });
+        const cards = Object.entries(groups).sort((a, b) => b[1].count - a[1].count).map(([generator, group]) => `<article class="generator-card"><strong>${escLibrary(generator.toUpperCase())}</strong><span>场景数量 <b>${group.count}</b></span><span>平均风险分数 <b>${group.scored ? (group.score / group.scored).toFixed(1) : "—"}</b></span><span>碰撞场景 <b>${group.collisions}</b></span></article>`).join("");
+        document.getElementById("generator-comparison-body").innerHTML = cards || '<div class="empty-state">当前筛选没有可比较的场景。</div>';
+      }
       function renderLibrary() {
         const search = document.getElementById("library-search").value.trim().toLowerCase();
         const risk = document.getElementById("library-risk").value;
@@ -1241,7 +1384,9 @@ def _scenario_library_page():
           return (!search || text.includes(search)) && (!risk || row.observed_risk_level === risk);
         });
         document.getElementById("library-count").textContent = `显示 ${rows.length} / ${libraryRows.length} 个场景`;
+        document.getElementById("library-filter-summary").textContent = `筛选结果摘要：${rows.length} 个场景 · ${new Set(rows.map(row => row.generators).filter(Boolean)).size} 种生成器 · ${rows.filter(row => row.collision_observed).length} 个碰撞场景`;
         document.getElementById("library-rows").innerHTML = rows.map(row => `<tr><td><code>${escLibrary(row.sample_id)}</code></td><td>${escLibrary(row.generators)}</td><td>${riskBadge(row.target_risk_levels)}</td><td>${riskBadge(row.observed_risk_level)}</td><td>${row.risk_score_mean == null ? "—" : Number(row.risk_score_mean).toFixed(2)}</td><td>${row.collision_observed ? "有" : "无"}</td><td><a class="button-link" href="/scenarios/${encodeURIComponent(row.library_id)}">查看详情</a></td></tr>`).join("");
+        renderInsights(rows);
       }
       async function fetchJson(url) {
         const controller = new AbortController();

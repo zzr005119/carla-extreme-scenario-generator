@@ -64,7 +64,7 @@ flowchart LR
 | M04 | 仿真执行与多传感器采集 | 已验证实现 / 原型 | `scenes/scene_04_parameterized.py`、`core/sensor_pipeline.py`、`core/route_follower.py`、`tools/check_scenario_runner_acceptance.py`、`batch_runner.py` | CARLA 0.9.16 实机回归；`seed_v1_high_0165` 通过 RGB、Depth、SemSeg、Collision、waypoint 路线、服务健康和清理统一验收 |
 | M05 | 风险评估与结果分析 | 已验证实现 | `core/risk_metrics.py`、`analysis/` | `heuristic_v2`、TTC、车距、碰撞和遥测分析；风险反馈 V5 与 27 维代理冻结 |
 | M06 | 实验编排与复现管理 | 已验证实现 / 原型 | `batch_runner.py`、`core/web_task_orchestrator.py`、`tools/measure_stage5_metrics.py`、`tools/server_*.cmd`、`configs/` | 批次调度、种子、配置哈希、服务器工作流、质量门和阶段五指标基线；Web 离线任务状态/结果持久化；CARLA 任务默认本机客户端运行，远端任务仍显式确认后登记 |
-| M07 | 可视化管理界面 | 已实现申请版本 Web 工作流 | `tools/web_app.py`、`tools/web_replay.js`、`tools/web_app.cmd`、`tools/scenario_dashboard.py`、`tools/scenario_dashboard.cmd`、`core/web_task_orchestrator.py`、`core/web_visualization.py` | 统一 Web 入口支持 Dashboard、场景库、生成/校验/风险分析、本机 CARLA、远端结果导入、SVG 运行状态图、传感器帧回放、相对车距示意、完整 ZIP 导出和产物哈希；历史帧按序近似对齐，相对车距不是真实地图轨迹；不含多用户、权限、自动启动 CARLA 服务或自动轮询服务器 Job |
+| M07 | 可视化管理界面 | 已实现申请版本 Web 工作流 | `tools/web_app.py`、`tools/web_replay.js`、`tools/web_app.cmd`、`tools/scenario_dashboard.py`、`tools/scenario_dashboard.cmd`、`core/web_task_orchestrator.py`、`core/web_visualization.py` | 统一 Web 入口支持工作台 Dashboard（最近任务、实测风险分布、快捷入口）、场景库筛选与风险矩阵、生成器比较、生成/校验/风险分析、本机 CARLA、远端结果导入、生成页参数与本地 Three.js 3D 预览、结果解释、SVG 运行状态图、传感器帧回放、相对车距示意、完整 ZIP 导出和产物哈希；明确区分设计风险与实测风险；历史帧按序近似对齐，相对车距不是真实地图轨迹；不含多用户、权限、自动启动 CARLA 服务或自动轮询服务器 Job |
 | M08 | 阶段五最小演示编排 | 已验证实现 / 离线原型 | `tools/stage5_minimal_demo.py`、`tools/stage5_demo.cmd`、`docs/scenario_runner_full_acceptance_v1.md` | M01–M08 离线组合、静态适配、历史证据读取和 `demo_manifest.json` 已通过；ScenarioRunner 关联完整验收作为独立实机证据登记，默认演示仍不连接 CARLA |
 
 ## 🔗 详细模块映射

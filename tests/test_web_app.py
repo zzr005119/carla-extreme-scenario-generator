@@ -8,7 +8,7 @@ from urllib.error import HTTPError
 from urllib.request import urlopen
 
 from tools.scenario_dashboard import load_dashboard_data
-from tools.web_app import WebAppHandler, _task_detail_page
+from tools.web_app import WebAppHandler, _home_page, _scenario_library_page, _task_detail_page
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -188,6 +188,43 @@ class WebAppHttpTests(unittest.TestCase):
         validation = self.get_bytes("/validation")[2].decode("utf-8")
         for marker in ("workflow-sidebar", "测试流程总控", "validation-table", "启动本机 CARLA", "/carla", "/compile"):
             self.assertIn(marker, validation)
+
+    def test_workbench_home_surfaces_recent_work_and_risk_summary(self):
+        home = _home_page({
+            "entry_count": 117,
+            "accepted_run_evidence_count": 351,
+            "observed_risk_level_counts": {"low": 7, "medium": 38, "high": 35, "critical": 37},
+        })
+        for marker in (
+            "最近任务",
+            "风险分布",
+            "快捷入口",
+            "目标风险与实测风险",
+            "风险矩阵",
+        ):
+            self.assertIn(marker, home)
+
+    def test_scenario_library_surfaces_comparison_contract(self):
+        page = _scenario_library_page()
+        for marker in (
+            "library-summary",
+            "risk-matrix",
+            "generator-comparison",
+            "筛选结果摘要",
+            "设计风险仅是输入条件",
+        ):
+            self.assertIn(marker, page)
+
+    def test_generation_workspace_explains_design_boundary_and_layout(self):
+        page = self.get_bytes("/generation")[2].decode("utf-8")
+        for marker in (
+            "generation-workspace",
+            "design-boundary",
+            "参数与预览",
+            "目标风险是设计条件",
+            "preview-stage",
+        ):
+            self.assertIn(marker, page)
 
     def test_workflow_pages_are_operational_forms(self):
         expected = {
