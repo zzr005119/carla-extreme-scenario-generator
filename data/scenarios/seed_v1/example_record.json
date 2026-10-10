@@ -1,6 +1,6 @@
 {
   "schema_version": "1.0",
-  "sample_id": "seed_v1_high_0165",
+  "sample_id": "invalid",
   "family": "multi_hazard_parameter_v1",
   "conditions": {
     "target_risk_level": "high",
