@@ -1,0 +1,672 @@
+{
+  "software_name": "基于CARLA的自动驾驶极端场景生成与仿真测试系统",
+  "business_understanding_required": true,
+  "source_documents": [
+    {
+      "path": "PROJECT.md",
+      "size": 109241
+    },
+    {
+      "path": "docs/generator_diffusion_comparison_v1.md",
+      "size": 3812
+    },
+    {
+      "path": "docs/software_copyright_application_plan_20261015.md",
+      "size": 7517
+    },
+    {
+      "path": "docs/software_copyright_interface_spec_v1.md",
+      "size": 29167
+    },
+    {
+      "path": "docs/software_copyright_material_ledger_v1.md",
+      "size": 12968
+    },
+    {
+      "path": "docs/software_copyright_module_mapping_v1.md",
+      "size": 21947
+    },
+    {
+      "path": "docs/stage5_minimal_demo_and_interface_catalog_v1.md",
+      "size": 9686
+    },
+    {
+      "path": "docs/stage5_user_operation_guide_v1.md",
+      "size": 7884
+    },
+    {
+      "path": "docs/stage5_web_product_flow_v2.md",
+      "size": 10852
+    },
+    {
+      "path": "tools/web_assets/README.md",
+      "size": 2766
+    },
+    {
+      "path": "data/scenarios/scenario_library_v1/README.md",
+      "size": 2751
+    }
+  ],
+  "project_evidence_file": "业务理解证据.md",
+  "product_positioning": "面向自动驾驶极端场景研究与仿真测试的本地应用软件，以参数化场景生成、只读场景库、约束校验、显式CARLA执行、遥测风险分析和证据导出组成可追溯流程。当前为Python命令行与本地单进程Web形态，不按多用户生产平台申报；软件名称、版本和登记范围待用户确认。",
+  "industry": "自动驾驶仿真测试与交通场景研究",
+  "target_users": [
+    "需要生成天气、前车急刹和行人横穿等参数化测试场景的高校及科研团队",
+    "需要检查场景配置、执行CARLA测试和复核遥测结果的自动驾驶仿真测试人员",
+    "需要对照历史场景、整理运行证据和复现实验的项目研发人员"
+  ],
+  "core_value": "把分散的场景条件、校验结果、运行记录、风险指标和来源文件关联到同一工作流，减少重复录入和人工查找结果；同时明确区分目标风险、历史或新运行实测风险、静态校验及缺失证据，不以页面展示代替实机验收。",
+  "business_features": [
+    "条件化场景生成与设计预览",
+    "场景结构、语义与参数级物理约束校验",
+    "独立场景库只读查询与比较",
+    "CARLA单场景执行与传感器采集",
+    "仿真遥测风险评估与结果回放",
+    "任务关联、失败诊断与证据导出",
+    "离线最小演示与有限交换适配"
+  ],
+  "business_feature_details": {
+    "条件化场景生成与设计预览": "支持LHS、条件GMM、条件表格CVAE和轻量条件Diffusion，根据目标风险档、天气标签、数量和种子生成JSON/JSONL记录；GMM、CVAE和Diffusion需要匹配的模型产物。Web数量为1-64，生成是否满足条件以任务结果为准。本地Town10HD_Opt三维预览随天气选项联动，但车辆、行人和道路位置是固定示意，不是生成候选或实测轨迹。",
+    "场景结构、语义与参数级物理约束校验": "接受JSON/JSONL路径或粘贴的单条JSON，检查字段结构、枚举、参数范围、条件关系及参数级物理约束，返回逐条错误和警告。单条记录有效时可结合基础配置编译CARLA配置；多条记录只批量校验，不直接编译为一个运行配置。静态通过不保证仿真、传感器或路线验收成功。",
+    "独立场景库只读查询与比较": "当前快照含117个独立场景和351条历史来源批次严格验收证据。Web列表按关键词和实测风险筛选，同步查看设计风险与实测风险矩阵、生成器数量和风险统计；详情展示参数、证据粒度及质量层级。CLI和受控查询接口提供更细条件与CSV导出。Web不写入场景库，36个逐次证据条目与81个聚合证据条目分开解释，真实性未评估。",
+    "CARLA单场景执行与传感器采集": "有效的单场景配置可进入显式CARLA执行。当前Web默认调用本机Scene 04客户端，服务须事先启动且客户端、服务端版本一致为0.9.16；这不改变项目实机任务服务器优先的执行规则。运行器记录配置、元数据、遥测和按配置启用的RGB、深度、语义分割及碰撞信息。远端执行通过既有工具和人工结果导入衔接，不宣称自动服务器调度。",
+    "仿真遥测风险评估与结果回放": "读取运行目录或指定遥测、元数据和配置，使用heuristic_v2计算风险分数、等级、分量及诊断，生成速度、TTC、车距和行人距离时间线。存在可读取原始帧时支持RGB、Depth、SemSeg回放和相对车距示意；历史帧近似对齐，不是真实地图轨迹。只有真实CARLA遥测才能称为实测风险，评分不是事故概率。",
+    "任务关联、失败诊断与证据导出": "记录生成、校验、CARLA和风险分析任务的输入、状态、上下游关系、结果和日志，按工作流显示进度并登记产物SHA-256。符合条件的失败本机CARLA任务可创建新重试记录，原失败记录保留；未结束任务可请求取消，但不承诺外部服务即时停止。详情提供完整数据包下载，内容以实际保留且可读取的任务与运行产物为准。",
+    "离线最小演示与有限交换适配": "命令行最小演示串联已有记录、校验、配置编译、只读查询、OpenSCENARIO最小交换适配、历史风险和Dashboard数据检查，输出demo_manifest.json及产物索引。默认carla_connected=false，不新生成实测风险；交换适配和个别历史验收不能扩大为完整ScenarioRunner、跨地图或批量兼容。"
+  },
+  "operation_flow": [
+    "使用项目专用环境进入本地Web工作台，先查看已有场景和历史证据；已有库与新任务结果分开保存。",
+    "进入“设计场景”，选择生成器、目标风险、天气、1-64条数量和随机种子；非LHS方式准备匹配模型产物。设计预览只用于查看条件示意。",
+    "提交生成并查看实际接受数量、汇总和失败原因；需要直接衔接CARLA时以单条候选为主，不把预览画面当作生成成功。",
+    "由生成结果继续校验，或在“校验配置”提交记录；阅读逐条结构、语义和物理约束结果，单条有效记录才编译CARLA配置。",
+    "需要实机时显式选择执行方式。项目执行优先使用服务器；Web本机入口只在已有本机0.9.16服务上调用客户端，不自动启动服务。远端结果经回收后人工导入。",
+    "运行结束后查看自动创建的风险分析，或提交已有运行目录；结合完成状态、传感器、路线和服务健康核实证据，再解释heuristic_v2风险。",
+    "在运行记录和任务详情查看时间线、日志、风险图及可用传感器回放，下载完整数据包并核对来源与产物哈希。",
+    "需要离线展示或复现时运行最小演示并检查demo_manifest.json；保持离线证据与历史或新增CARLA实测证据分层。"
+  ],
+  "application_purpose": "为自动驾驶极端场景研究提供参数生成、约束校验、仿真测试和证据整理工具。",
+  "main_functions": "本软件面向自动驾驶极端场景研究与仿真测试，提供条件化场景生成、配置校验、历史场景查询、仿真执行、风险分析和证据整理功能。用户可选择LHS、条件GMM、条件表格CVAE或轻量条件Diffusion，设置目标风险档、天气标签、数量和随机种子，生成统一JSON或JSONL场景记录；非LHS方式依赖匹配模型产物。设计页显示本地道路、天气和车辆行人示意，用于辅助理解条件，不把固定预览视为生成候选。系统检查记录结构、字段取值、条件关系及参数级物理约束，返回逐条错误与警告，并对通过检查的单条记录编译CARLA配置。已有场景库支持只读筛选和详情查询，展示生成来源、目标与实测风险、碰撞、参数、质量层级及运行证据；风险矩阵和生成器比较按筛选结果聚合，命令行支持细化条件查询与CSV导出。用户可在已启动的CARLA0.9.16服务上显式运行单场景，按配置保存元数据、遥测、RGB、深度、语义分割和碰撞信息；远端运行通过既有工具执行并回收后导入。风险分析读取运行目录或指定文件，以heuristic_v2计算仿真风险分数、等级及诊断，展示速度、碰撞、TTC、前车间距和行人距离，并在原始文件可用时提供传感器回放与相对车距示意。任务管理保存输入、状态、结果、日志和上下游关系，显示工作流时间线、产物路径及SHA-256，支持符合条件的本机失败重试和完整数据包导出。离线最小演示串联已有记录、校验编译、库查询、最小OpenSCENARIO交换适配及历史风险读取，生成复现清单。软件将目标风险作为设计条件，仅将真实CARLA遥测分析结果解释为实测风险；不将静态校验、离线演示、启发式评分或近似回放表述为实车安全结论。",
+  "technical_characteristics": "采用15维参数化场景、统一JSON契约和分层校验；连接CARLA0.9.16，基于遥测启发式评估风险；以任务关联与SHA-256追踪证据，提供本地Web和CLI入口。",
+  "software_technical_option": "应用软件",
+  "software_category": "应用软件",
+  "manual_sections": [
+    {
+      "title": "一、相关文档",
+      "intent": "以配套总体设计、接口、操作和测试证据建立索引，不将计划表视为验收结果。",
+      "paragraphs": [
+        "系统的模块职责、数据契约、操作入口和验证条件分别记录在模块映射、接口规格、阶段五用户操作说明及相关测试资料中。"
+      ],
+      "include_feature_overview": false,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    },
+    {
+      "title": "二、说明",
+      "intent": "说明软件用途、适用人员、既有场景与新运行结果之间的关系。",
+      "paragraphs": [
+        "系统用于组织天气、前车急刹和行人横穿等参数化仿真场景，适合研究人员生成候选、检查配置、对照历史结果并复核运行证据。",
+        "已有场景库是只读快照，新生成的候选先保存在独立任务中。目标风险只是设计条件，风险结论需结合实际运行来源解读。"
+      ],
+      "include_feature_overview": false,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    },
+    {
+      "title": "三、功能特点",
+      "intent": "按生成、校验、仿真、分析和证据追溯概述已实现能力及限制。",
+      "paragraphs": [
+        "统一场景记录贯穿生成、校验和配置编译，工作流关联各步骤的输入、结果与产物。三维设计预览不代替候选校验，运行状态和原始证据也不由图片推断。"
+      ],
+      "include_feature_overview": true,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    },
+    {
+      "title": "四、系统要求",
+      "intent": "区分本地浏览与离线处理、模型生成、真实CARLA运行所需条件，具体硬件和系统版本待用户确认。",
+      "paragraphs": [
+        "浏览历史场景、校验和分析已有遥测不需要启动CARLA服务；真实仿真需要匹配的0.9.16客户端与服务端，模型生成还需要对应依赖和模型产物。"
+      ],
+      "include_feature_overview": false,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    },
+    {
+      "title": "五、工作台",
+      "intent": "查看已有场景概况、历史风险分布和最近任务，选择后续处理入口。",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    },
+    {
+      "title": "六、场景库查询与比较",
+      "intent": "按关键词和实测风险筛选，查看风险矩阵与生成器统计。",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    },
+    {
+      "title": "七、场景详情",
+      "intent": "核对单条历史场景的参数、风险和证据粒度。",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    },
+    {
+      "title": "八、设计场景与设计预览",
+      "intent": "选择生成条件并提交候选生成，区分固定预览与实际生成结果。",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    },
+    {
+      "title": "九、校验配置与单场景编译",
+      "intent": "检查逐条错误和警告，仅为单条有效记录编译CARLA配置。",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    },
+    {
+      "title": "十、运行记录与任务详情",
+      "intent": "查看状态、输入、关联步骤与产物，处理失败并导出数据包。",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    },
+    {
+      "title": "十一、CARLA单场景执行与远端结果导入",
+      "intent": "显式执行仿真或导入回收结果，核对运行和证据状态。",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    },
+    {
+      "title": "十二、风险分析与传感器回放",
+      "intent": "核实遥测来源，解释风险及事件，并在原始帧可用时回放。",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    },
+    {
+      "title": "十三、离线最小演示与复现",
+      "intent": "串联静态产物与历史证据，保持不连接CARLA的离线边界。",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    },
+    {
+      "title": "十四、常见问题解答",
+      "intent": "解释模型产物缺失、多条记录不能直接编译、服务连接失败和历史帧缺失等实际问题。",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    },
+    {
+      "title": "十五、术语表",
+      "intent": "统一目标风险、实测风险、证据粒度、TTC及传感器名称，避免将启发式指标理解为事故概率。",
+      "paragraphs": [],
+      "include_feature_overview": false,
+      "include_operation_modules": false,
+      "include_operation_flow": false
+    }
+  ],
+  "manual_modules": [
+    {
+      "title": "工作台",
+      "evidence": [
+        "tools/web_app.py",
+        "docs/stage5_web_product_flow_v2.md"
+      ],
+      "purpose": "集中显示已有场景概况、历史实测风险分布、最近任务和主要操作入口。",
+      "usage": "开始一次场景测试，或返回软件继续查看最近尚未处理完的任务。",
+      "entry": "通过tools/web_app.cmd启动本地Web后进入/dashboard，也可点击导航中的“工作台”。",
+      "visible_elements": [
+        "场景及证据数量、风险分布",
+        "设计场景、校验配置、运行仿真和看懂风险入口",
+        "最近任务及状态",
+        "场景库和运行记录快捷入口"
+      ],
+      "operation_steps": [
+        "查看场景与历史证据概况，确认当前浏览的是既有库快照。",
+        "需要新测试时进入“设计场景”；需要比较历史参数时进入“场景库”。",
+        "在最近任务中选择一条记录，继续查看该任务的输入、状态和结果。"
+      ],
+      "validation_rules": [
+        "总览读取既有数据，不产生新场景或新的实测风险。",
+        "没有历史任务时显示空状态，不补造任务或运行结论。"
+      ],
+      "feedback": [
+        "进入所选页面或任务详情，最近任务显示当前已保存状态。"
+      ],
+      "screenshot": "【截图预留：工作台总览，保留场景数、历史风险分布和最近任务区域。】"
+    },
+    {
+      "title": "场景库查询与比较",
+      "evidence": [
+        "tools/web_app.py",
+        "core/scenario_query.py",
+        "data/scenarios/scenario_library_v1/summary.json",
+        "data/scenarios/scenario_library_v1/README.md"
+      ],
+      "purpose": "从只读历史场景中筛选测试参考，并比较筛选集合的设计目标、实测风险和生成器统计。",
+      "usage": "查找已有的夜间、降雨或高风险场景，决定下一轮参数设计或选择需要进一步复核的条目。",
+      "entry": "点击“场景库”进入/scenarios；更细的受控条件查询使用现有命令行入口。",
+      "visible_elements": [
+        "关键词搜索框、实测风险下拉框和清除筛选按钮",
+        "场景编号、生成方式、设计风险、实测风险、分数、碰撞和详情链接",
+        "筛选数量摘要、设计目标与实测风险矩阵",
+        "生成器数量、平均风险分数和碰撞场景数"
+      ],
+      "operation_steps": [
+        "输入关键词或选择实测风险档位，查看列表和筛选数量变化。",
+        "结合矩阵比较设计档与实测档，查看相同筛选集合的生成器统计。",
+        "点击“查看详情”核对单个场景；需要恢复全库时点击“清除筛选”。"
+      ],
+      "validation_rules": [
+        "当前快照为117个独立场景及351条历史来源验收证据，不能当作本轮新增运行。",
+        "网页只提供现有搜索框与实测风险筛选，不把CLI全部查询参数写成网页控件。",
+        "没有匹配项时显示空结果；读取失败需检查本地服务，不能显示为成功。",
+        "比较统计只描述当前库或筛选集合，不证明生成器总体优劣。"
+      ],
+      "feedback": [
+        "列表、风险矩阵及生成器比较随筛选同步更新。",
+        "页面显示匹配条数或明确的数据读取失败提示，场景库内容不被修改。"
+      ],
+      "screenshot": "【截图预留：场景库筛选结果及同一筛选集合的风险矩阵、生成器比较。】"
+    },
+    {
+      "title": "场景详情",
+      "evidence": [
+        "tools/web_app.py",
+        "data/scenarios/scenario_library_v1/README.md",
+        "docs/software_copyright_module_mapping_v1.md"
+      ],
+      "purpose": "核对单个历史场景的参数、风险和运行证据粒度，决定该条目是否适合引用或复现。",
+      "usage": "列表中发现感兴趣的场景，需要进一步了解危险条件、历史碰撞和证据完整程度。",
+      "entry": "从场景库点击“查看详情”，进入/scenarios/{library_id}。",
+      "visible_elements": [
+        "样本ID、库ID、生成器",
+        "实测风险、碰撞、质量层级",
+        "严格验收数量与证据粒度",
+        "场景参数表及返回场景库链接"
+      ],
+      "operation_steps": [
+        "核对样本与库标识，避免将相似编号混为同一场景。",
+        "阅读风险、碰撞、质量和证据粒度，再展开理解具体场景参数。",
+        "将聚合条目与逐次证据条目分开引用，完成后返回场景库继续比较。"
+      ],
+      "validation_rules": [
+        "详情为只读，不提供直接修改、入库审批或自动复现实机按钮。",
+        "聚合证据不能补造逐次路径，历史未知CARLA版本不能按当前0.9.16运行基线回填。",
+        "当前全部条目的真实性未评估，质量层级不等于真实道路代表性。"
+      ],
+      "feedback": [
+        "显示所选条目的历史风险、验收数量、质量层级和参数；不存在的条目返回未找到。"
+      ],
+      "screenshot": "【截图预留：单条场景详情，保留风险、证据粒度和场景参数。】"
+    },
+    {
+      "title": "设计场景与设计预览",
+      "evidence": [
+        "tools/web_app.py",
+        "tools/web_assets/README.md",
+        "core/web_task_orchestrator.py",
+        "docs/generator_diffusion_comparison_v1.md"
+      ],
+      "purpose": "按测试意图生成候选记录，同时用本地道路和天气示意辅助检查设计条件。",
+      "usage": "准备一组指定天气及目标风险的候选，或生成一条可直接衔接校验和CARLA执行的场景。",
+      "entry": "点击“设计场景”进入/generation。",
+      "visible_elements": [
+        "LHS、GMM、CVAE、Diffusion生成器选项",
+        "目标风险档、天气标签、生成数量、随机种子和模型产物路径",
+        "三维道路与车辆行人示意、立体与俯视、天气选择和视角复位",
+        "提交任务、清空、任务状态及生成结果摘要"
+      ],
+      "operation_steps": [
+        "选择生成器和目标风险，填写天气标签、数量与种子；非LHS方式提供匹配模型产物。",
+        "通过天气选择和视角控制检查设计示意，确认标签中没有未知或冲突条件。",
+        "提交任务，阅读实际接受数量、产物和失败说明，不只看预览是否显示。",
+        "需要直接运行CARLA时生成数量设为1，完成后点击“校验并准备CARLA”继续。"
+      ],
+      "validation_rules": [
+        "数量为1-64的整数，种子为整数，风险档为low、medium、high、critical。",
+        "GMM、CVAE和Diffusion依赖匹配模型产物与运行依赖，不能因页面存在选项就宣称本机产物已齐全。",
+        "部分条件可能因候选筛选预算或约束失败而未生成足量记录，应检查结果与日志。",
+        "预览采用固定示例位置，不代表生成候选、实测风险或真实轨迹；预览加载失败时仍可提交原有表单。"
+      ],
+      "feedback": [
+        "显示任务编号、排队或运行状态，完成时给出接受数量和JSONL等产物。",
+        "生成失败显示错误，成功结果可继续校验或查看任务详情。"
+      ],
+      "screenshot": "【截图预留：生成表单与设计预览，以及一次真实离线生成完成后的数量和产物摘要。】"
+    },
+    {
+      "title": "校验配置与单场景编译",
+      "evidence": [
+        "tools/web_app.py",
+        "core/web_task_orchestrator.py",
+        "core/scenario_validator.py",
+        "docs/stage5_web_product_flow_v2.md"
+      ],
+      "purpose": "在仿真前检查候选记录，并为有效的单条场景准备CARLA配置。",
+      "usage": "接续生成结果，或检查外部准备的项目格式JSON/JSONL，定位导致配置不可用的字段。",
+      "entry": "点击“校验配置”进入/validation，或从已完成生成任务继续校验。",
+      "visible_elements": [
+        "记录路径、单条JSON文本框、基础CARLA配置路径",
+        "校验通过后编译CARLA配置复选框",
+        "逐条校验表、错误路径、物理约束错误与警告",
+        "编译配置产物、重新编译CARLA配置及启动本机CARLA实测按钮"
+      ],
+      "operation_steps": [
+        "选择记录路径或粘贴单条JSON，核对基础配置；两个记录输入不要混用。",
+        "提交并逐条检查结构、语义和参数级物理约束反馈。",
+        "修正报错后重新提交；需要直接执行时保留单条有效记录并请求编译。",
+        "旧单条校验已通过但没有配置时使用“重新编译CARLA配置”，完成后再进入实机流程。"
+      ],
+      "validation_rules": [
+        "粘贴内容必须是可解析的单条JSON，记录和基础配置路径必须指向可读取文件。",
+        "只有单条且有效的记录可编译；多条JSONL可批量校验，不能直接当作一个CARLA配置。",
+        "校验任务处理完成不等于记录有效，需检查valid结果及逐条问题。",
+        "静态通过不证明CARLA连接、Actor、路线、传感器或实测风险通过。"
+      ],
+      "feedback": [
+        "显示记录数、有效状态、逐条错误或警告；有效单条编译后登记配置产物。",
+        "满足单场景执行条件时出现明确的CARLA后续操作，否则保留修正提示。"
+      ],
+      "screenshot": "【截图预留：单条校验及配置编译成功结果，另保留一个带字段路径的校验失败示例。】"
+    },
+    {
+      "title": "运行记录与任务详情",
+      "evidence": [
+        "tools/web_app.py",
+        "core/web_task_orchestrator.py",
+        "docs/stage5_web_product_flow_v2.md"
+      ],
+      "purpose": "集中查找任务，核对工作流、输入、结果和失败原因，并导出可读取的完整证据。",
+      "usage": "继续尚未结束的测试，排查某一步失败，或整理一次测试的可追溯数据包。",
+      "entry": "点击“运行记录”进入/tasks，再点击任务编号或“详情”进入/tasks/{task_id}。",
+      "visible_elements": [
+        "任务编号、类型、状态、时间、结果摘要及详情",
+        "任务输入、逐条校验或风险摘要、工作流阶段和父子任务链接",
+        "错误信息、产物路径、大小与SHA-256",
+        "适用状态下的取消、重试、下一步操作和下载完整数据包"
+      ],
+      "operation_steps": [
+        "按任务编号、类型和状态找到目标记录，进入详情而不是只读列表摘要。",
+        "核对输入与工作流关系，查看当前结果或错误，必要时打开相邻步骤。",
+        "未结束任务可请求取消；失败本机CARLA任务按实机流程处理，不覆盖原失败记录。",
+        "需要归档时点击“下载完整数据包”，核对包含的配置、遥测、日志和产物清单。"
+      ],
+      "validation_rules": [
+        "失败、取消、等待远端结果与已完成必须分别解释，不能统一视为成功。",
+        "取消状态不保证独立外部CARLA服务已即时停止，应另行确认服务状态。",
+        "下载内容取决于实际保留文件，不保证补齐已删除的传感器帧。",
+        "旧任务缺少产物哈希时不得补造历史值；新产物SHA-256只证明内容身份，不证明风险有效性。"
+      ],
+      "feedback": [
+        "任务状态与详情结果更新，已登记产物可追溯到来源任务。",
+        "下载ZIP用于离线复核，错误与取消记录仍可查看。"
+      ],
+      "screenshot": "【截图预留：运行记录列表及一条任务详情，保留工作流、输入、产物哈希与下载入口。】"
+    },
+    {
+      "title": "CARLA单场景执行与远端结果导入",
+      "evidence": [
+        "tools/web_app.py",
+        "core/web_task_orchestrator.py",
+        "scenes/scene_04_parameterized.py",
+        "docs/stage5_user_operation_guide_v1.md",
+        "AGENTS.md"
+      ],
+      "purpose": "对有效单场景执行真实仿真，或把外部已完成运行的证据关联回当前任务。",
+      "usage": "静态检查已通过，需获取新的遥测与传感器证据，或已有服务器运行结果需要统一查看。",
+      "entry": "在已完成且具备编译配置的单场景校验任务详情继续；远端兼容任务从对应CARLA任务详情导入结果。",
+      "visible_elements": [
+        "启动本机CARLA实测按钮及服务版本提示",
+        "CARLA任务状态、客户端日志与风险子任务链接",
+        "失败任务的重试本机CARLA按钮",
+        "兼容任务的外部确认、结果目录、远端任务标识和导入并分析"
+      ],
+      "operation_steps": [
+        "按项目规则优先确认服务器执行条件；使用本机回退入口前，确认本机0.9.16服务与客户端版本一致且端口2000可达。",
+        "本机执行时明确点击启动，等待客户端结束后查看风险分析链接和原始运行状态。",
+        "连接或运行失败时先排查服务与配置，条件恢复后对失败本机任务创建新重试，保留旧记录。",
+        "采用远端兼容方式时，通过既有工具执行并回收结果，再选择含metadata.json和telemetry.csv的目录导入并分析。"
+      ],
+      "validation_rules": [
+        "Web启动的是客户端，不会自动启动CARLA服务；不得在无服务时伪造运行成功。",
+        "实机必须使用项目专用环境及一致的0.9.16客户端、服务端，不执行0.9.15历史配置链路。",
+        "运行完成还需结合传感器、路线和服务健康复核，客户端退出码为0不足以证明严格验收。",
+        "仅失败的本机CARLA任务适用重试；远端确认只做执行登记，不启动服务器Job或自动轮询。",
+        "导入目录必须含所需文件；页面证据等级不能替代完整严格验收或证明来源真实性。"
+      ],
+      "feedback": [
+        "本机运行成功后关联实际运行目录并自动创建风险分析任务；失败时显示错误和日志。",
+        "远端导入保留来源信息并创建分析记录，不将人工导入描述为自动服务器调度。"
+      ],
+      "screenshot": "【截图预留：真实CARLA任务结果及版本、服务、传感器和路线证据；兼容导入界面按实际使用情况补充。】"
+    },
+    {
+      "title": "风险分析与传感器回放",
+      "evidence": [
+        "tools/web_app.py",
+        "core/web_task_orchestrator.py",
+        "core/web_visualization.py",
+        "tools/web_replay.js",
+        "core/risk_metrics.py",
+        "docs/stage5_web_product_flow_v2.md"
+      ],
+      "purpose": "解释一次运行的风险和证据状态，结合时间线与可用传感器画面复核事件。",
+      "usage": "运行完成后复核风险，或重新分析已保留的遥测与元数据，查找高风险发生的时间段。",
+      "entry": "点击“风险分析”进入/risk，或打开CARLA任务自动创建的风险分析任务详情。",
+      "visible_elements": [
+        "运行目录及可选遥测、元数据、配置和碰撞事件数输入",
+        "风险等级、分数、方法、碰撞次数、遥测行数和证据状态",
+        "速度、TTC、前车间距、行人距离时间线",
+        "可用的RGB、Depth、SemSeg回放与相对车距示意"
+      ],
+      "operation_steps": [
+        "指定真实运行目录，或核对同次运行的遥测、元数据和配置，不混用不同测试的文件。",
+        "提交后查看风险任务详情，先核查运行来源、完成状态及服务、传感器和路线情况。",
+        "对照风险与时间线定位事件，在原始帧可用时拖动回放查看相应画面。",
+        "需要复核时返回产物清单，结合原始遥测和元数据解释评分，而不只引用示意图。"
+      ],
+      "validation_rules": [
+        "必须存在可读取遥测；手工输入的碰撞数如有使用，应与原始事件记录核对。",
+        "observed_risk只有在输入来自真实CARLA运行时才具有实测含义，页面字段名不是来源证明。",
+        "heuristic_v2不等于事故概率；目标风险与实测等级不一致时保留差异。",
+        "回放依赖可读取原始帧，历史帧近似按序对齐，相对车距示意不是地图轨迹。"
+      ],
+      "feedback": [
+        "生成风险报告和时间线，存在图像时显示可用回放；缺少原始帧不编造图像。",
+        "页面保留风险来源与诊断信息，不能仅凭风险分数宣布实机严格验收通过。"
+      ],
+      "screenshot": "【截图预留：风险分析结果、运行状态与风险时间线，以及原始帧可用时的传感器回放。】"
+    },
+    {
+      "title": "离线最小演示与复现",
+      "evidence": [
+        "tools/stage5_minimal_demo.py",
+        "tools/stage5_demo.cmd",
+        "docs/stage5_minimal_demo_and_interface_catalog_v1.md"
+      ],
+      "purpose": "在不启动仿真的情况下核对主要接口能否组合，并集中输出静态产物和历史证据索引。",
+      "usage": "进行离线演示、检查部署文件，或为后续真实运行准备可追溯配置。",
+      "entry": "在项目目录使用项目专用环境运行tools/stage5_demo.cmd，并显式指定F盘输出目录。",
+      "visible_elements": [
+        "命令行步骤与完成或失败提示",
+        "input_record.json、compiled_carla_config.json",
+        "最小交换文件、适配清单和demo_manifest.json"
+      ],
+      "operation_steps": [
+        "选定已有场景记录、场景库及基础配置，指定F盘演示输出目录。",
+        "执行最小演示，等待步骤返回；出现失败时按输出检查输入记录和文件路径。",
+        "打开demo_manifest.json，核对步骤、产物与carla_connected=false。",
+        "需要新的实测风险时转入独立CARLA流程，不把演示中的历史风险视为本轮测量。"
+      ],
+      "validation_rules": [
+        "输入记录必须满足项目契约，文件和输出目录需可读取或写入。",
+        "默认只读已有记录、历史风险及静态适配，不启动CARLA或在线训练。",
+        "OpenSCENARIO为最小交换子集，不能据此宣称完整ScenarioRunner、跨地图或批量兼容。"
+      ],
+      "feedback": [
+        "成功时输出M01-M08离线最小链路通过及产物位置，清单标注离线模式。",
+        "失败保留错误，不登记为新实机证据。"
+      ],
+      "screenshot": "【截图预留：最小演示终端结果及demo_manifest.json中的离线模式、步骤和产物。】"
+    }
+  ],
+  "system_requirements": [
+    {
+      "item": "操作系统",
+      "minimum": "已知当前采用Windows本机工作流；最低系统版本未确定，待用户确认。",
+      "recommended": "填写实际开发与运行系统版本；服务器兼容路径单独说明，不推定任意平台均已支持。"
+    },
+    {
+      "item": "Python与基础运行环境",
+      "minimum": "当前项目规定使用Carla666-0916专用环境，环境检查记录Python3.12.13；不由此推定最低版本。",
+      "recommended": "采用项目已验证专用环境，后续申请字段由用户确认开发工具与实际版本。"
+    },
+    {
+      "item": "浏览器与设计预览",
+      "minimum": "浏览器需支持页面JavaScript；三维预览另需WebGL，失败不阻断生成表单。",
+      "recommended": "使用已配置的桌面浏览器；具体名称、版本及最低兼容范围待用户确认。"
+    },
+    {
+      "item": "CARLA实机",
+      "minimum": "真实执行要求客户端与服务端一致为0.9.16，且服务已显式启动并通过健康检查。",
+      "recommended": "遵循服务器优先规则；本机回退使用项目规定环境与服务，GPU、驱动、内存及磁盘需求待确认。"
+    },
+    {
+      "item": "模型与可选依赖",
+      "minimum": "非LHS生成需要对应模型产物和依赖；SB3、Gymnasium、PyBullet与MJX不是本地基础操作统一必需项。",
+      "recommended": "按拟登记功能与实际部署核对模型路径和依赖，不默认追加训练或安装研究环境。"
+    },
+    {
+      "item": "硬件及文件存储",
+      "minimum": "CPU、内存、显卡与空闲容量未形成同口径最低要求，不填写未经用户确认的数值。",
+      "recommended": "源码与文档留在项目目录，环境、模型、缓存及运行输出使用F盘或指定服务器目录；按实际传感器采集量预留空间。"
+    }
+  ],
+  "faq": [
+    {
+      "question": "预览能显示夜间暴雨，为什么任务仍可能生成失败？",
+      "answer": "预览只是固定示意。候选生成还受模型产物、条件约束和尝试预算影响，应查看实际接受数量与任务日志，不把画面显示当作候选已经生成。"
+    },
+    {
+      "question": "为什么GMM、CVAE或Diffusion没有产生结果？",
+      "answer": "核对模型产物是否可读取且类型匹配，运行依赖是否齐全，再查看具体错误。需要最小离线排查时可先使用不依赖模型产物的LHS，不默认重新训练。"
+    },
+    {
+      "question": "JSONL校验通过后为什么没有CARLA配置？",
+      "answer": "当前直接编译只支持单条有效记录。多条记录可批量检查，但应另行准备单条候选并请求编译，再进入CARLA执行。"
+    },
+    {
+      "question": "为什么校验任务显示处理完成，结果却未通过？",
+      "answer": "任务处理完成表示检查已执行完，不表示输入合法。查看有效标志和逐条错误，修正字段后重新提交。"
+    },
+    {
+      "question": "启动CARLA任务失败后怎样继续？",
+      "answer": "先确认执行位置、0.9.16版本、服务端口和配置。仅失败本机CARLA任务支持创建新重试；原失败记录会保留。服务器优先规则不因Web具有本机按钮而取消。"
+    },
+    {
+      "question": "为什么风险结果有分数但不能直接称为实测风险？",
+      "answer": "分数来自提交的遥测，必须核实遥测是否来自真实CARLA运行并结合服务、路线和传感器证据。人工或测试数据的同名字段不能证明实机来源，heuristic_v2也不是事故概率。"
+    },
+    {
+      "question": "为什么看不到RGB、深度或语义分割回放？",
+      "answer": "运行未启用该传感器、原始帧已删除或路径当前不可读取时不能回放。检查实际保留文件；不生成替代图像，也不把近似帧序对齐解释为精确同步。"
+    },
+    {
+      "question": "可以从网页把新候选直接加入117条场景库吗？",
+      "answer": "当前Web场景库只读，新候选与任务输出独立保存。候选工作区、写入审批和正式入库流程不属于当前已实现的Web功能。"
+    },
+    {
+      "question": "离线演示通过是否说明CARLA和风险评估已重新运行？",
+      "answer": "没有。默认carla_connected=false，只完成静态处理、接口组合与历史证据读取。新的实机结果必须从独立CARLA执行和验收取得。"
+    },
+    {
+      "question": "为什么历史条目只有聚合证据或CARLA版本未知？",
+      "answer": "这是原始留存范围。36条保留逐次证据，81条只有聚合证据；缺失的逐次路径和场景级版本不能根据当前环境补写。"
+    }
+  ],
+  "glossary": [
+    {
+      "term": "目标风险",
+      "definition": "生成时设定的low、medium、high或critical条件，即target_risk_level，不是已经测量的危险程度。"
+    },
+    {
+      "term": "实测风险",
+      "definition": "在确认来源为真实CARLA运行后，根据遥测得到的observed_risk；它仍是仿真指标，不等于实车安全概率。"
+    },
+    {
+      "term": "heuristic_v2",
+      "definition": "项目基于遥测、碰撞及配置计算风险分数和等级的启发式方法。"
+    },
+    {
+      "term": "TTC",
+      "definition": "根据相对速度和间距计算的预计碰撞时间类指标，用于理解接近风险，不能独立证明事故必然发生。"
+    },
+    {
+      "term": "逐次证据与聚合证据",
+      "definition": "逐次证据保存单次运行的相关记录；聚合证据只保存场景级汇总和来源关系，不能还原未保留的每次运行文件。"
+    },
+    {
+      "term": "RGB、Depth、SemSeg",
+      "definition": "分别表示彩色图像、深度图像和语义分割图像；是否可回放取决于本次配置与实际文件留存。"
+    },
+    {
+      "term": "工作流与任务",
+      "definition": "工作流关联同一测试中的生成、校验、执行和分析步骤；任务记录其中一个步骤的输入、状态与产物。"
+    },
+    {
+      "term": "SHA-256",
+      "definition": "用于标识文件内容的摘要，可辅助核对产物是否变化，不单独证明仿真成功或数据来源真实。"
+    },
+    {
+      "term": "设计预览",
+      "definition": "基于本地道路与固定示例位置展示设计条件的三维示意，不是生成候选、实测风险或真实轨迹。"
+    },
+    {
+      "term": "OpenSCENARIO最小交换",
+      "definition": "项目已实现的有限场景字段交换适配，不代表完整标准语义、任意仿真器或跨地图批量兼容。"
+    }
+  ],
+  "model_authored": true,
+  "external_research_notes": "",
+  "confirmation_required": true,
+  "user_confirmed": false,
+  "confirmation_stage": "business",
+  "next_action": "请确认 草稿/业务理解.md 中的软件用途、行业、目标用户、核心功能、手册结构和申请口径；确认后运行 confirm_stage.py --stage business。",
+  "review_notes": [
+    "请整体确认：软件是否按本地科研与仿真测试工具定位，目标用户及七项核心功能是否符合本次申请范围。",
+    "软件全称建议为“基于CARLA的自动驾驶极端场景生成与仿真测试系统”，版本号单独建议V1.0；最终仍需明确确认。",
+    "拟按九个真实页面或流程组织操作章节，既有场景库只读，新候选不自动入库。",
+    "设计预览是固定示意；目标风险不等于实测风险；heuristic_v2不是事故概率；回放和相对车距不是精确地图轨迹。",
+    "四种生成器的参数入口存在，但冻结117条库只来自LHS/GMM/CVAE；Diffusion证据仅为离线对照。",
+    "当前Web默认本机客户端执行与项目服务器优先规则并存，远端仍为显式执行后人工导入，不承诺自动服务器Job调度。",
+    "2026-10-13和2026-10-15是历史计划日期，不推定已经冻结、提交或受理。",
+    "原始扫描含第三方临时环境，不能采用其总行数；修正后候选统计仍不是最终登记源程序量。",
+    "著作权人、日期、权利归属和实际硬件、系统版本后续另行确认；本稿不补造个人或登记信息。",
+    "本轮没有CARLA、训练、全量回归、M08、截图或Word排版验证；历史证据与本轮资料校验分开。"
+  ],
+  "proposed_version": "V1.0",
+  "scope_review_file": "../analysis/口径核查.md",
+  "source_reference_commit": "3920a29ec26e391cfe20e3f2affed58d43f5792b",
+  "review_date": "2026-10-22",
+  "final_software_freeze_confirmed": false,
+  "application_source_total_confirmed": false,
+  "unread_document_paths": [
+    "大创计划书提交版.pdf"
+  ]
+}
