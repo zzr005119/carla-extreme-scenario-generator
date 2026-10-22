@@ -645,7 +645,7 @@
   "model_authored": true,
   "external_research_notes": "",
   "confirmation_required": true,
-  "user_confirmed": false,
+  "user_confirmed": true,
   "confirmation_stage": "business",
   "next_action": "请确认 草稿/业务理解.md 中的软件用途、行业、目标用户、核心功能、手册结构和申请口径；确认后运行 confirm_stage.py --stage business。",
   "review_notes": [
@@ -668,5 +668,8 @@
   "application_source_total_confirmed": false,
   "unread_document_paths": [
     "大创计划书提交版.pdf"
-  ]
+  ],
+  "confirmation_note": "用户回复：目前可以，无修改意见。确认上轮展示的软件全称、V1.0、产品定位、行业、目标用户、核心功能、手册结构和申请口径；不包含尚未提供的著作权人、日期、权利归属和实际硬件系统信息，也不表示最终Markdown或正式生成确认。",
+  "confirmed_at": "2026-10-22T10:27:19+00:00",
+  "confirmed_content_sha256": "9287b263bf6698c0f7d23941d60dd43f0f797d70598421e3dfd4c9cc6a65079b"
 }
