@@ -15,7 +15,7 @@
 - **服务器输出与模型**：`/data/zhaozirong/software/output/carla-0.9.16`、`/data/zhaozirong/software/models/carla-extreme-scenario-generator`
 - **内网 Git 远端**：`lab` → `zhaozirong@192.168.110.170:/home/zhaozirong/git/carla-extreme-scenario-generator.git`
 - **CARLA 0.9.15 历史证据**：`artifacts/carla_0915_runtime_evidence/`（本地忽略目录）
-- **最后更新**：2026-09-28
+- **最后更新**：2026-10-22
 
 ## 当前阶段
 **大创已完成阶段四“仿真平台与对抗性测试代理”的硬质量门和当前证据收口，现进入阶段五“系统集成与持续产品化”。阶段四形成了 OpenSCENARIO 最小交换适配、对抗性代理契约、闭环编排、Gymnasium/SB3 工程链路、非学习基线、冻结代理训练与真实 CARLA 独立评估。18 个独立策略 pair 的 `54/54` 条运行通过版本、RGB、服务健康、`heuristic_v2` 和路线严格验收；LHS/high 的 9 个独立候选完成边界校准。现有证据证明工程链路可复现，但不证明 SAC 或 rule-guided LHS 的普遍优势，不支持把风险代理升级为实测风险或在线训练 reward。阶段四综合结论见 `docs/stage4_quality_gate_and_experiment_closure_v1.md`。**
@@ -283,6 +283,7 @@ CARLA 0.9.16 独立环境 `Carla666-0916` 已安装 Python API 0.9.16；客户�
 - 原 `C:\Users\z'z'r\AppData\Local\pip\cache` 仅为可再生成的 pip 下载缓存，已清理约 `15.94 GB`；后续 `PIP_CACHE_DIR` 指向 `F:\Carla\project-cache\pip`。
 - 原 `C:\Users\z'z'r\.cache\torch` 已迁移至 `F:\Carla\project-cache\torch`，原位置保留目录联接；`TORCH_HOME` 指向 F 盘。`HF_HOME` 和 `CONDA_PKGS_DIRS` 也已指向 `F:\Carla\project-cache` 下对应目录。
 - `C:\Users\z'z'r\.cache\codex-runtimes` 属于 Codex 运行时缓存，未迁移；`C:\Users\z'z'r\AppData\Local\Temp` 属于系统临时目录，未整体移动或删除。二者是当前明确记录的 C 盘例外。
+- 软著材料工具 OfficeCLI `1.0.151` 按 `software-copyright-materials` 的全局检测要求安装在 `%LOCALAPPDATA%\OfficeCLI`，作为 C 盘例外；用户 PATH 已注册，需重启 Codex 后复查命令和版本。申请资料保存在项目内 `软件著作权申请资料/`，工具二进制不纳入 Git。
 
 ## 当前风险与约束
 - `heuristic_v2` 的天气可见度来自 CARLA 参数代理，不是 RGB 图像实测能见度；指标用于同一场景族内部工程筛选。
